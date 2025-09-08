@@ -36,6 +36,12 @@
     <ClCompile Include="parser.cpp">
       <Filter>源文件\sql_compiler</Filter>
     </ClCompile>
+    <ClCompile Include="lexer.cpp">
+      <Filter>源文件\sql_compiler</Filter>
+    </ClCompile>
+    <ClCompile Include="semantic.cpp">
+      <Filter>源文件\sql_compiler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />

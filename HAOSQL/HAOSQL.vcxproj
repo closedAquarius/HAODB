@@ -128,7 +128,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="HAOSQL.cpp" />
+    <ClCompile Include="lexer.cpp" />
     <ClCompile Include="parser.cpp" />
+    <ClCompile Include="semantic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
