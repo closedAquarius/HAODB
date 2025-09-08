@@ -13,6 +13,8 @@
 
 #define MAX_AMOUNT 20
 
+using namespace std;
+
 //定义非终结符
 typedef struct NOterminal
 {
@@ -70,7 +72,7 @@ size_t find_first(noterminal* this_noterminal, production* this_production);
 size_t find_follow(noterminal* this_noterminal, production* this_production);
 void analyze_input(char* input, int table[128][128]);
 
-int start(std::vector<Token> tokens)
+int start_parser(std::vector<Token> tokens)
 {
     TERMINAL_HEAD.next = NULL;
     NOTERMINAL_HEAD.next = NULL;
