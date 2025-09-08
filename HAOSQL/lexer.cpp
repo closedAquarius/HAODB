@@ -1,18 +1,10 @@
 #include <iostream>
-#include <string>
 #include <vector>
 #include <unordered_set>
 #include <cctype>
 #include <iomanip>
+#include "dataType.h"
 using namespace std;
-
-// 四元式结构体
-struct Token {
-    int type;       // 种别码
-    string value;   // 单词
-    int line;       // 行号
-    int column;     // 列号
-};
 
 // 词法分析器
 class Lexer {

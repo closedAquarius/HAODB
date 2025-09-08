@@ -1,17 +1,12 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <string>
+#include "dataType.h"
 #include <algorithm>
 
 using namespace std;
 
-struct Quadruple {
-    string op;     // 操作符 (CREATE, SELECT, INSERT, DELETE, UPDATE, RESULT, etc.)
-    string arg1;   // 参数1
-    string arg2;   // 参数2
-    string result; // 结果
-};
+
 
 // --- 工具函数 ---
 string trim(const string& s) {
