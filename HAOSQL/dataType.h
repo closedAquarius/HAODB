@@ -1,11 +1,12 @@
 #pragma once
 
 #include <string>
+using namespace std;
 
 // 词法分析结果
 struct Token {
     int type;       // 种别码
-    std::string value;   // 单词
+    string value;   // 单词
     int line;       // 行号
     int column;     // 列号
 };

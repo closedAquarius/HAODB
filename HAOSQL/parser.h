@@ -1,6 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-int start(void);
+#include "dataType.h"
+
+int start_parser(std::vector<Token> tokens);
 
 #endif
