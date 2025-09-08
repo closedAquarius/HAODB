@@ -50,5 +50,8 @@
     <ClInclude Include="parser.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="dataType.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

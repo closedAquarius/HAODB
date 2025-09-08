@@ -2,12 +2,15 @@
 //
 
 #include <iostream>
+#include <vector>
+#include "dataType.h"
 #include "parser.h"
 
 int main()
 {
     std::cout << "Hello World!\n";
-    start();
+    std::vector<Token> tokens;
+    start(tokens);
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

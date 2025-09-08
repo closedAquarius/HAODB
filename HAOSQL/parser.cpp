@@ -3,7 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <vector>
 #include "parser.h"
+#include "dataType.h"
 
 #ifndef success
 #define success 1
@@ -68,7 +70,7 @@ size_t find_first(noterminal* this_noterminal, production* this_production);
 size_t find_follow(noterminal* this_noterminal, production* this_production);
 void analyze_input(char* input, int table[128][128]);
 
-int start(void)
+int start(std::vector<Token> tokens)
 {
     TERMINAL_HEAD.next = NULL;
     NOTERMINAL_HEAD.next = NULL;
