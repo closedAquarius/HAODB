@@ -1,0 +1,28 @@
+# Visual Studio
+.vs/
+*.VC.db
+*.opendb
+*.vc.db*
+*.suo
+*.user
+*.userosscache
+*.sdf
+ipch/
+*.pdb
+
+# VS C++ 构建产物
+x64/
+Debug/
+Release/
+*.obj
+*.tlog
+*.log
+
+# 常见临时/缓存
+*.cache
+*.tmp
+*.log
+*.ilk
+
+# 你项目里的生成目录
+HAOSQL/x64/

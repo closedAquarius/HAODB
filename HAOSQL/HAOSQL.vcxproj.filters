@@ -25,10 +25,24 @@
     <Filter Include="源文件\utils">
       <UniqueIdentifier>{b17b17be-ffef-426a-86ba-bbd1f59af360}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\sql_compiler\data">
+      <UniqueIdentifier>{31b04dfd-81f1-430e-9389-2b70fb3436bf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HAOSQL.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="parser.cpp">
+      <Filter>源文件\sql_compiler</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="test.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="parser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
