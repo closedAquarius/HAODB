@@ -127,8 +127,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
     <ClCompile Include="lexer.cpp" />
+    <ClCompile Include="page.cpp" />
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="semantic.cpp" />
   </ItemGroup>
@@ -138,7 +140,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dataType.h" />
+    <ClInclude Include="file_manager.h" />
     <ClInclude Include="lexer.h" />
+    <ClInclude Include="page.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="semantic.h" />
   </ItemGroup>
