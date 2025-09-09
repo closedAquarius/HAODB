@@ -133,6 +133,7 @@
     <ClCompile Include="semantic.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="sql_grammar.txt" />
     <Text Include="test.txt" />
   </ItemGroup>
   <ItemGroup>

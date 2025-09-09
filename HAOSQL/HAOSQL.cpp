@@ -10,6 +10,8 @@
 
 using namespace std;
 
+vector<Quadruple> sql_compiler(string sql);
+
 int main()
 {
     std::cout << "Hello World!\n";
@@ -22,7 +24,12 @@ vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
     vector<Token> tokens = lexer.analyze();
-    start_parser(tokens);
+
+    for (int i = 0; i < tokens.size(); ++i) {
+        std::cout << tokens[i].type << " " << tokens[i].value << " ";
+    }
+
+    //start_parser(tokens);
     SemanticAnalyzer analyzer; 
     return analyzer.analyze(tokens);
 }

@@ -25,7 +25,7 @@
     <Filter Include="源文件\utils">
       <UniqueIdentifier>{b17b17be-ffef-426a-86ba-bbd1f59af360}</UniqueIdentifier>
     </Filter>
-    <Filter Include="源文件\sql_compiler\data">
+    <Filter Include="源文件\sql_compiler\grammar">
       <UniqueIdentifier>{31b04dfd-81f1-430e-9389-2b70fb3436bf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -45,6 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
+    <Text Include="sql_grammar.txt">
+      <Filter>源文件\sql_compiler\grammar</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="parser.h">

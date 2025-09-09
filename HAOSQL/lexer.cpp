@@ -105,6 +105,7 @@ private:
 };
 
 // ²âÊÔÖ÷º¯Êı
+/*
 int main() {
     string sql = R"( 
         CREATE TABLE students (
@@ -135,3 +136,4 @@ int main() {
 
     return 0;
 }
+*/
