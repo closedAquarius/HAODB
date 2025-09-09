@@ -86,11 +86,8 @@ public:
 
     // 文法处理函数
     void eliminate_left_recursion(void);
-    void eliminate_indirect_recursion(noterminal* Ai, noterminal* Aj);
-    void eliminate_direct_recursion(noterminal* A);
     void remove_production(production* target);
     bool has_left_recursion();
-    void print_productions();
     size_t find_first(noterminal* this_noterminal, production* this_production);
     size_t find_follow(noterminal* this_noterminal, production* this_production);
 
