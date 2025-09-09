@@ -122,6 +122,7 @@ private:
 };
 
 // ²âÊÔÖ÷º¯Êı
+/*
 int main() {
     string sql = R"( 
         SELECT name, age FROM students WHERE age > 18 AND gpa > 3.5;
@@ -145,3 +146,4 @@ int main() {
 
     return 0;
 }
+*/
