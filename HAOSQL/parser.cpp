@@ -928,3 +928,26 @@ void SQLParser::emergency(int model)
     // 这里应该释放所有分配的内存
     exit(0);
 }
+
+int main()
+{
+    std::cout << "Hello World!\n";
+    vector<Token> tokens = {{ 0, "SELECT", 1, 1 },   // 关键字
+        { 2, "name", 1, 8 },     // 标识符
+        { 4, ",", 1, 12 },       // 分隔符
+        { 2, "age", 1, 14 },     // 标识符
+        { 0, "FROM", 1, 18 },    // 关键字
+        { 2, "students", 1, 23 },// 标识符
+        { 0, "WHERE", 1, 32 },   // 关键字
+        { 2, "age", 1, 38 },     // 标识符
+        { 1, ">", 1, 42 },       // 操作符
+        { 3, "18", 1, 44 },      // 常量
+        { 0, "AND", 1, 47 },     // 关键字
+        { 2, "grade", 1, 51 },   // 标识符
+        { 1, "=", 1, 57 },       // 操作符
+        { 3, "'A'", 1, 59 },     // 常量
+        { 4, ";", 1, 62 }        // 分隔符
+    };
+    SQLParser sqlParser;
+    sqlParser.start_parser(tokens);
+}
