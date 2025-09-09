@@ -1,4 +1,4 @@
-#ifndef SQL_PARSER_H
+/*#ifndef SQL_PARSER_H
 #define SQL_PARSER_H
 
 #include <stdio.h>
@@ -658,3 +658,5 @@ void SQLParser::emergency(int model)
 }
 
 #endif // SQL_PARSER_H
+
+*/

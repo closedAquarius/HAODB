@@ -10,17 +10,17 @@
 
 using namespace std;
 
-vector<Quadruple> sql_compiler(string sql);
+//vector<Quadruple> sql_compiler(string sql);
 
-int main()
+/*int main()
 {
     std::cout << "Hello World!\n";
     string sql;
     std::cin >> sql;
     vector<Quadruple> quadruple = sql_compiler(sql);
-}
+}*/
 
-vector<Quadruple> sql_compiler(string sql)
+/*vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
     vector<Token> tokens = lexer.analyze();
@@ -32,7 +32,7 @@ vector<Quadruple> sql_compiler(string sql)
     //start_parser(tokens);
     SemanticAnalyzer analyzer; 
     return analyzer.analyze(tokens);
-}
+}*/
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单

@@ -116,24 +116,53 @@ vector<Quadruple> SemanticAnalyzer::handleCreateTable() {
 vector<Quadruple> SemanticAnalyzer::handleSelect() {
     vector<Quadruple> out;
     expectKeyword("SELECT");
+
+    // 保存所有 SELECT 的临时变量
+    vector<string> selectTemps;
+
+    // 解析第一个列
     string col1 = expectIdent();
-    out.push_back({ "SELECT", col1, "-", newTemp() });
+    string t1 = newTemp();
+    out.push_back({ "SELECT", col1, "-", t1 });
+    selectTemps.push_back(t1);
+
+    // 解析更多列
     while (matchDelim(',')) {
         string col = expectIdent();
-        out.push_back({ "SELECT", col, "-", newTemp() });
+        string t = newTemp();
+        out.push_back({ "SELECT", col, "-", t });
+        selectTemps.push_back(t);
     }
+
+    // FROM 子句
     expectKeyword("FROM");
     string table = expectIdent();
-    out.push_back({ "FROM", table, "-", newTemp() });
+    string fromTemp = newTemp();
+    out.push_back({ "FROM", table, "-", fromTemp });
 
+    // WHERE 子句
+    string resultSource = fromTemp; // 默认数据来源
     if (matchKeyword("WHERE")) {
-        string cond = parseOr(out);
-        out.push_back({ "WHERE", cond, "-", newTemp() });
+        string cond = parseOr(out);   // 解析 WHERE 条件，返回条件临时变量
+        string whereTemp = newTemp();
+        // 把 FROM 的结果 和 条件 组合
+        out.push_back({ "WHERE", fromTemp, cond, whereTemp });
+        resultSource = whereTemp;     // 最终结果来源更新为 WHERE 的结果
     }
 
-    out.push_back({ "RESULT", "TO", "ALL", "-" });
+    // 生成 RESULT 四元式
+    string selectTuple = "(";
+    for (size_t i = 0; i < selectTemps.size(); ++i) {
+        if (i > 0) selectTuple += ",";
+        selectTuple += selectTemps[i];
+    }
+    selectTuple += ")";
+
+    out.push_back({ "RESULT", selectTuple, resultSource, "-" });
     return out;
 }
+
+
 
 // --- INSERT ---
 vector<Quadruple> SemanticAnalyzer::handleInsert() {

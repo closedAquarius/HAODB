@@ -1,4 +1,4 @@
-#ifndef PARSER_H
+/*#ifndef PARSER_H
 #define PARSER_H
 #include "dataType.h"
 
@@ -62,4 +62,4 @@ public:
     int start_parser(vector<Token>& tokens);
 };
 
-#endif
+#endif*/
