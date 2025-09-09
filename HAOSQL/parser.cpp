@@ -1,5 +1,4 @@
-/*#ifndef SQL_PARSER_H
-#define SQL_PARSER_H
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <string.h>
@@ -12,92 +11,23 @@
 #include <iomanip>
 
 #include "dataType.h"
+#include "parser.h"
 
 using namespace std;
 
-#ifndef success
 #define success 1
-#endif
-
 #define MAX_AMOUNT 50
 
-//定义非终结符
-typedef struct NOterminal
-{
-    string name;
-    int first_number;   //FIRST集的判定，初始为0
-    int follow_number;  //FOLLOW集的判定，初始为0
-    vector<string> FIRST;    //FIRST 集合
-    vector<string> FOLLOW;   //FOLLOW集合
-    struct NOterminal* next;
-} noterminal;
-
-//定义终结符
-typedef struct Terminal
-{
-    string name;            //当前的字符串
-    struct Terminal* next;
-} terminal;
-
-//定义产生式
-typedef struct PRODUCTION
-{
-    string source;              //产生的开始
-    vector<string> result;      //产生的结果
-    struct PRODUCTION* next;    //指向下一条
-} production;
-
-class SQLParser {
-private:
-    int amount = 0;
-    vector<string> TEST_STACK;
-    vector<Token> input_tokens;
-    vector<string> terminal_all;
-
-    terminal TERMINAL_HEAD, * current_terminal = &TERMINAL_HEAD;
-    noterminal NOTERMINAL_HEAD, * current_noterminal = &NOTERMINAL_HEAD;
-    production PRODUCTION_HEAD, * current_production = &PRODUCTION_HEAD;
-
-public:
-    SQLParser() {
-        TEST_STACK.resize(MAX_AMOUNT);
-        TERMINAL_HEAD.next = NULL;
-        NOTERMINAL_HEAD.next = NULL;
-        PRODUCTION_HEAD.next = NULL;
-    }
-
-    //函数声明
-    size_t read_grammar(const char* filename);
-    size_t test(void);
-    void Test_read(void);
-    size_t STACK_FULL();
-    void STACK_POP(void);
-    size_t STACK_EMPTY();
-    void init_stack(void);
-    void prediction(void);
-    void test_follow(void);
-    void emergency(int model);
-    void prediction_table(void);
-    void STACK_PUSH(string source);
-    void insert_to_terminal(string get);
-    void insert_to_noterminal(string get);
-    void eliminate_left_recursion(void);
-    void combine(vector<string>& destination, vector<string>& source);
-    size_t is_appeared(string tobejudged, vector<string>& source);
-    void insert_to_production(string source, vector<string>& result);
-    size_t find_first(noterminal* this_noterminal, production* this_production);
-    size_t find_follow(noterminal* this_noterminal, production* this_production);
-    void analyze_input(vector<Token>& tokens);
-
-    //新增函数
-    void load_terminals_from_tokens(vector<Token>& tokens);
-    noterminal* get_noterminal(string X);
-    bool is_terminal_string(string X);
-    size_t add_to_set(vector<string>& set, string item);
-    string token_to_terminal(Token& token);
-
-    int start_parser(vector<Token>& tokens);
-};
+SQLParser::SQLParser() {
+    amount = 0;
+    TEST_STACK.resize(MAX_AMOUNT);
+    TERMINAL_HEAD.next = NULL;
+    NOTERMINAL_HEAD.next = NULL;
+    PRODUCTION_HEAD.next = NULL;
+    current_terminal = &TERMINAL_HEAD;
+    current_noterminal = &NOTERMINAL_HEAD;
+    current_production = &PRODUCTION_HEAD;
+}
 
 //向集合中加入一个字符串，返回新增数（0或1）
 size_t SQLParser::add_to_set(vector<string>& set, string item)
@@ -133,7 +63,7 @@ bool SQLParser::is_terminal_string(string X)
 }
 
 //将Token转换为终结符字符串
-string SQLParser::token_to_terminal(Token& token)
+string SQLParser::token_to_terminal(const Token& token)
 {
     switch (token.type) {
     case 1: return token.value; // 关键字
@@ -187,9 +117,6 @@ int SQLParser::start_parser(vector<Token>& tokens)
     printf("\n求FOLLOW集\n\n");
     test_follow();
     prediction_table();
-
-    // 分析输入tokens
-    analyze_input(tokens);
 
     emergency(0);
     return 0;
@@ -411,7 +338,6 @@ size_t SQLParser::find_follow(noterminal* B, production* this_production)
     return added;
 }
 
-// 其他辅助函数的实现...
 void SQLParser::insert_to_terminal(string get)
 {
     terminal* Temp_terminal = new terminal;
@@ -544,12 +470,128 @@ void SQLParser::prediction(void)
     } while (changed);
 }
 
-// 简化版本的消除左递归 - 这里只是占位，完整实现较复杂
+// 消除左递归
 void SQLParser::eliminate_left_recursion(void)
 {
-    // 对于SQL语法，通常设计时就避免左递归
-    // 这里保留原函数结构但简化实现
-    printf("左递归消除完成（SQL语法设计时已避免左递归）\n");
+    printf("开始消除左递归...\n");
+
+    vector<production*> to_delete; // 记录需要删除的产生式
+
+    // 遍历所有非终结符
+    noterminal* current_nt = NOTERMINAL_HEAD.next;
+    while (current_nt != nullptr) {
+        string A = current_nt->name;
+
+        // 收集A的所有产生式
+        vector<production*> A_productions;
+        vector<production*> left_recursive_prods;
+        vector<production*> non_left_recursive_prods;
+
+        production* p = PRODUCTION_HEAD.next;
+        while (p != nullptr) {
+            if (p->source == A) {
+                A_productions.push_back(p);
+
+                // 检查是否为直接左递归 A → Aα
+                if (!p->result.empty() && p->result[0] == A) {
+                    left_recursive_prods.push_back(p);
+                }
+                else {
+                    non_left_recursive_prods.push_back(p);
+                }
+            }
+            p = p->next;
+        }
+
+        // 如果存在左递归产生式
+        if (!left_recursive_prods.empty()) {
+            printf("发现左递归：%s\n", A.c_str());
+
+            // 创建新的非终结符 A'
+            string A_prime = A + "'"; // 使用A'作为新的非终结符
+
+            // 确保A'是唯一的
+            int suffix = 1;
+            while (get_noterminal(A_prime) != nullptr) {
+                A_prime = A + "'" + to_string(suffix);
+                suffix++;
+            }
+
+            insert_to_noterminal(A_prime);
+            printf("创建新非终结符：%s\n", A_prime.c_str());
+
+            // 修改非左递归产生式：A → β 变为 A → βA'
+            for (auto* prod : non_left_recursive_prods) {
+                prod->result.push_back(A_prime);
+                printf("修改产生式：%s -> ", A.c_str());
+                for (const auto& symbol : prod->result) {
+                    printf("%s ", symbol.c_str());
+                }
+                printf("\n");
+            }
+
+            // 如果没有非左递归产生式，添加 A → A'
+            if (non_left_recursive_prods.empty()) {
+                vector<string> new_result = { A_prime };
+                insert_to_production(A, new_result);
+                printf("添加产生式：%s -> %s\n", A.c_str(), A_prime.c_str());
+            }
+
+            // 为左递归产生式创建新产生式：A → Aα 变为 A' → αA'
+            for (auto* prod : left_recursive_prods) {
+                vector<string> alpha;
+                // 获取α部分（去掉开头的A）
+                for (size_t i = 1; i < prod->result.size(); i++) {
+                    alpha.push_back(prod->result[i]);
+                }
+                alpha.push_back(A_prime); // 添加A'
+
+                insert_to_production(A_prime, alpha);
+                printf("添加产生式：%s -> ", A_prime.c_str());
+                for (const auto& symbol : alpha) {
+                    printf("%s ", symbol.c_str());
+                }
+                printf("\n");
+
+                // 标记要删除的产生式
+                to_delete.push_back(prod);
+            }
+
+            // 添加 A' → ε
+            vector<string> epsilon = { "^" };
+            insert_to_production(A_prime, epsilon);
+            printf("添加产生式：%s -> ^\n", A_prime.c_str());
+        }
+
+        current_nt = current_nt->next;
+    }
+
+    // 删除左递归产生式
+    for (auto* prod_to_delete : to_delete) {
+        delete_production(prod_to_delete);
+    }
+
+    printf("左递归消除完成\n");
+}
+
+// 辅助函数：删除指定的产生式
+void SQLParser::delete_production(production* prod_to_delete)
+{
+    production* prev = &PRODUCTION_HEAD;
+    production* current = PRODUCTION_HEAD.next;
+
+    while (current != nullptr) {
+        if (current == prod_to_delete) {
+            prev->next = current->next;
+            if (current == current_production) {
+                current_production = prev;
+            }
+            delete current;
+            break;
+        }
+        prev = current;
+        current = current->next;
+    }
 }
 
 // 栈操作函数
@@ -594,27 +636,186 @@ size_t SQLParser::STACK_FULL()
 // 预测分析表和语法分析实现
 void SQLParser::prediction_table(void)
 {
-    // 这里需要实现预测分析表的构建
-    // 由于代码较长，这里给出框架
-    printf("预测分析表构建完成\n");
+    // 用于存储预测分析表
+    // key: (非终结符, 终结符) -> value: 产生式编号(1-based)
+    PredictionTable table;
+    vector<production*> production_list; // 按顺序存储产生式指针
+
+    int prod_num = 1;
+
+    printf("\n预测分析表构建\n\n");
+
+    // 构建产生式列表并填充预测分析表
+    production* p = PRODUCTION_HEAD.next;
+    while (p != nullptr) {
+        string A = p->source;      // 产生式左部
+        vector<string>& alpha = p->result; // 产生式右部
+
+        production_list.push_back(p); // 保存产生式指针
+
+        // 计算FIRST(alpha)
+        vector<string> first_alpha;
+        compute_first_of_string(alpha, first_alpha);
+
+        // 对于FIRST(alpha)中的每个终结符a（除了ε）
+        for (const string& a : first_alpha) {
+            if (a != "^" && is_terminal_string(a)) {
+                auto key = make_pair(A, a);
+                if (table.find(key) != table.end()) {
+                    printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), a.c_str());
+                }
+                table[key] = prod_num;
+            }
+        }
+
+        // 如果ε∈FIRST(alpha)，则对FOLLOW(A)中的每个终结符b
+        bool epsilon_in_first = false;
+        for (const string& symbol : first_alpha) {
+            if (symbol == "^") {
+                epsilon_in_first = true;
+                break;
+            }
+        }
+
+        if (epsilon_in_first) {
+            noterminal* A_nt = get_noterminal(A);
+            if (A_nt) {
+                for (const string& b : A_nt->FOLLOW) {
+                    if (is_terminal_string(b)) {
+                        auto key = make_pair(A, b);
+                        if (table.find(key) != table.end()) {
+                            printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), b.c_str());
+                        }
+                        table[key] = prod_num;
+                    }
+                }
+            }
+        }
+
+        p = p->next;
+        prod_num++;
+    }
+
+    // 打印预测分析表
+    printf("预测分析表:\n");
+    printf("%-15s", " ");
+
+    // 打印表头（终结符）
+    for (const string& terminal : terminal_all) {
+        if (terminal != "^") { // 不打印空串符号
+            printf("%-15s", terminal.c_str());
+        }
+    }
+    printf("\n");
+
+    // 打印表格内容
+    noterminal* nt = NOTERMINAL_HEAD.next;
+    while (nt != nullptr) {
+        printf("%-15s", nt->name.c_str());
+
+        for (const string& terminal : terminal_all) {
+            if (terminal != "^") {
+                auto key = make_pair(nt->name, terminal);
+                auto it = table.find(key);
+                if (it != table.end()) {
+                    printf("%-15d", it->second);
+                }
+                else {
+                    printf("%-15s", " ");
+                }
+            }
+        }
+        printf("\n");
+        nt = nt->next;
+    }
+    printf("\n");
+
+    // 使用预测分析表进行语法分析
+    analyze_input(input_tokens, table, production_list);
 }
 
-void SQLParser::analyze_input(vector<Token>& tokens)
+// 计算字符串序列的FIRST集
+void SQLParser::compute_first_of_string(const vector<string>& symbols, vector<string>& first_set)
 {
-    printf("开始分析输入tokens...\n");
+    if (symbols.empty()) {
+        first_set.push_back("^");
+        return;
+    }
+
+    for (size_t i = 0; i < symbols.size(); i++) {
+        const string& X = symbols[i];
+
+        if (is_terminal_string(X)) {
+            // X是终结符，直接加入FIRST集
+            if (find(first_set.begin(), first_set.end(), X) == first_set.end()) {
+                first_set.push_back(X);
+            }
+            break;
+        }
+        else {
+            // X是非终结符
+            noterminal* X_nt = get_noterminal(X);
+            if (X_nt) {
+                // 加入FIRST(X) - {ε}
+                bool has_epsilon = false;
+                for (const string& symbol : X_nt->FIRST) {
+                    if (symbol == "^") {
+                        has_epsilon = true;
+                    }
+                    else {
+                        if (find(first_set.begin(), first_set.end(), symbol) == first_set.end()) {
+                            first_set.push_back(symbol);
+                        }
+                    }
+                }
+
+                // 如果ε不在FIRST(X)中，停止
+                if (!has_epsilon) {
+                    break;
+                }
+
+                // 如果这是最后一个符号且ε∈FIRST(X)，则ε∈FIRST(整个串)
+                if (i == symbols.size() - 1) {
+                    if (find(first_set.begin(), first_set.end(), "^") == first_set.end()) {
+                        first_set.push_back("^");
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+void SQLParser::analyze_input(vector<Token>& tokens, PredictionTable& table, vector<production*>& production_list)
+{
+    printf("开始语法分析...\n");
+
+    // 将tokens转换为终结符序列
+    vector<string> input_symbols;
+    for (const auto& token : tokens) {
+        input_symbols.push_back(token_to_terminal(token));
+    }
+    input_symbols.push_back("#"); // 添加结束符
 
     // 初始化分析栈
     init_stack();
-    STACK_PUSH("SQL_STMT");  // 压入开始符号
+    if (NOTERMINAL_HEAD.next) {
+        STACK_PUSH(NOTERMINAL_HEAD.next->name);  // 压入开始符号
+    }
+    else {
+        printf("错误：没有找到开始符号\n");
+        return;
+    }
 
-    int token_pos = 0;
+    print_analysis_step(input_symbols, 0);
 
-    while (!STACK_EMPTY() && token_pos < tokens.size())
+    int input_pos = 0;
+    bool analyzeSuccess = true;
+
+    while (!STACK_EMPTY() && input_pos < input_symbols.size() && analyzeSuccess)
     {
         string top = TEST_STACK[amount];  // 栈顶符号
-        string current = token_to_terminal(tokens[token_pos]);  // 当前输入符号
-
-        printf("栈顶: %s, 当前输入: %s\n", top.c_str(), current.c_str());
+        string current = input_symbols[input_pos];  // 当前输入符号
 
         if (is_terminal_string(top))
         {
@@ -622,32 +823,103 @@ void SQLParser::analyze_input(vector<Token>& tokens)
             if (top == current)
             {
                 // 匹配，出栈并移动输入指针
+                printf("匹配终结符: %s\n", top.c_str());
                 STACK_POP();
-                token_pos++;
-                printf("匹配成功，继续分析\n");
+                input_pos++;
             }
             else
             {
                 // 不匹配，报错
                 printf("语法错误：期望 %s，得到 %s\n", top.c_str(), current.c_str());
-                return;
+                analyzeSuccess = false;
             }
         }
         else
         {
-            // 栈顶是非终结符，这里需要查预测分析表
-            // 简化处理，直接出栈
-            STACK_POP();
-            printf("处理非终结符: %s\n", top.c_str());
+            // 栈顶是非终结符
+            auto key = make_pair(top, current);
+            auto it = table.find(key);
+
+            if (it != table.end())
+            {
+                int prod_num = it->second;
+                production* prod = production_list[prod_num - 1]; // 转为0-based索引
+
+                printf("使用产生式 %d: %s ->", prod_num, prod->source.c_str());
+                for (const string& symbol : prod->result) {
+                    printf(" %s", symbol.c_str());
+                }
+                printf("\n");
+
+                // 弹出非终结符
+                STACK_POP();
+
+                // 反向压入产生式右部（不压入空串）
+                if (!(prod->result.size() == 1 && prod->result[0] == "^"))
+                {
+                    for (int j = prod->result.size() - 1; j >= 0; j--)
+                    {
+                        STACK_PUSH(prod->result[j]);
+                    }
+                }
+            }
+            else
+            {
+                // 无对应产生式，报错
+                printf("语法错误：非终结符 %s 对于输入 %s 没有产生式\n",
+                    top.c_str(), current.c_str());
+                analyzeSuccess = false;
+            }
+        }
+
+        if (analyzeSuccess) {
+            print_analysis_step(input_symbols, input_pos);
         }
     }
 
-    if (STACK_EMPTY() && token_pos == tokens.size()) {
-        printf("\n语法分析成功！\n");
+    // 检查分析结果
+    if (analyzeSuccess && STACK_EMPTY() && input_pos == input_symbols.size() - 1 &&
+        input_symbols[input_pos] == "#") {
+        printf("\n语法分析成功！输入串符合文法规则。\n");
     }
     else {
         printf("\n语法分析失败！\n");
+        if (!STACK_EMPTY()) {
+            printf("栈未空，剩余符号：");
+            for (int i = 1; i <= amount; i++) {
+                printf("%s ", TEST_STACK[i].c_str());
+            }
+            printf("\n");
+        }
+        if (input_pos < input_symbols.size() - 1) {
+            printf("输入未完全消耗，剩余：");
+            for (size_t i = input_pos; i < input_symbols.size(); i++) {
+                printf("%s ", input_symbols[i].c_str());
+            }
+            printf("\n");
+        }
     }
+}
+
+// 打印分析步骤
+void SQLParser::print_analysis_step(const vector<string>& input_symbols, int input_pos)
+{
+    printf("分析栈: ");
+    if (amount == 0) {
+        printf("#");
+    }
+    else {
+        printf("#");
+        for (int i = 1; i <= amount; i++) {
+            printf("%s", TEST_STACK[i].c_str());
+        }
+    }
+
+    printf("\t剩余输入: ");
+    for (size_t i = input_pos; i < input_symbols.size(); i++) {
+        printf("%s", input_symbols[i].c_str());
+    }
+    printf("\n");
 }
 
 void SQLParser::emergency(int model)
@@ -656,7 +928,3 @@ void SQLParser::emergency(int model)
     // 这里应该释放所有分配的内存
     exit(0);
 }
-
-#endif // SQL_PARSER_H
-
-*/
