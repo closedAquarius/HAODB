@@ -105,12 +105,17 @@ int SQLParser::start_parser(vector<Token>& tokens)
     load_terminals_from_tokens(tokens);
 
     // 读取文法规则
-    read_grammar("grammar/sql_grammar.txt");
+    read_grammar("sql_grammar.txt");
     Test_read();
 
+
     printf("\n消除左递归\n\n\n");
+    if (has_left_recursion())
+        printf("有左递归");
     eliminate_left_recursion();
     Test_read();
+    print_productions();
+
 
     printf("\n求FIRST集\n\n");
     prediction();
@@ -475,123 +480,379 @@ void SQLParser::eliminate_left_recursion(void)
 {
     printf("开始消除左递归...\n");
 
-    vector<production*> to_delete; // 记录需要删除的产生式
+    // 检查是否有左递归
+    if (!has_left_recursion()) {
+        printf("未发现左递归，跳过消除步骤\n");
+        return;
+    }
 
-    // 遍历所有非终结符
-    noterminal* current_nt = NOTERMINAL_HEAD.next;
-    while (current_nt != nullptr) {
-        string A = current_nt->name;
+    printf("检测到左递归，开始消除...\n");
 
-        // 收集A的所有产生式
-        vector<production*> A_productions;
-        vector<production*> left_recursive_prods;
-        vector<production*> non_left_recursive_prods;
+    // 构建终结符数组
+    terminal_all.clear();
+    terminal* temp = TERMINAL_HEAD.next;
+    while (temp) {
+        terminal_all.push_back(temp->name);
+        temp = temp->next;
+    }
+
+    // 收集所有非终结符，按顺序处理（避免重复处理）
+    vector<string> processed_nonterminals;
+
+    // 单次遍历处理所有左递归
+    production* current_prod = PRODUCTION_HEAD.next;
+
+    while (current_prod) {
+        // 检查是否为直接左递归且未处理过
+        if (!current_prod->result.empty() &&
+            current_prod->source == current_prod->result[0] &&
+            find(processed_nonterminals.begin(), processed_nonterminals.end(), current_prod->source) == processed_nonterminals.end()) {
+
+            string A = current_prod->source;  // 原非终结符
+            printf("\n处理非终结符 %s 的左递归\n", A.c_str());
+
+            // 标记为已处理
+            processed_nonterminals.push_back(A);
+
+            string new_nt = A + "'";          // 新非终结符 A'
+
+            // 确保新非终结符名不冲突
+            while (get_noterminal(new_nt) != NULL) {
+                new_nt += "'";
+            }
+
+            // 收集所有 A 的产生式的内容（关键修复：先保存内容，再删除产生式）
+            vector<vector<string>> left_recursive_contents;   // 保存左递归产生式的内容
+            vector<vector<string>> non_left_recursive_contents; // 保存非左递归产生式的内容
+            vector<production*> to_delete; // 需要删除的产生式指针
+
+            production* p = PRODUCTION_HEAD.next;
+            while (p) {
+                if (p->source == A) {
+                    if (!p->result.empty() && p->result[0] == A) {
+                        // 左递归产生式，保存内容
+                        left_recursive_contents.push_back(p->result);
+                        to_delete.push_back(p);
+                        printf("  左递归产生式: %s ->", p->source.c_str());
+                        for (const auto& symbol : p->result) {
+                            printf(" %s", symbol.c_str());
+                        }
+                        printf("\n");
+                    }
+                    else {
+                        // 非左递归产生式，保存内容
+                        non_left_recursive_contents.push_back(p->result);
+                        to_delete.push_back(p);
+                        printf("  非左递归产生式: %s ->", p->source.c_str());
+                        for (const auto& symbol : p->result) {
+                            printf(" %s", symbol.c_str());
+                        }
+                        printf("\n");
+                    }
+                }
+                p = p->next;
+            }
+
+            printf("找到 %zu 个左递归产生式，%zu 个非左递归产生式\n",
+                left_recursive_contents.size(), non_left_recursive_contents.size());
+
+            // 添加新的非终结符 A'
+            insert_to_noterminal(new_nt);
+            printf("创建新非终结符: %s\n", new_nt.c_str());
+
+            // 删除所有原来的 A 产生式
+            printf("删除原有产生式...\n");
+            for (production* old_prod : to_delete) {
+                remove_production(old_prod);
+            }
+
+            // 创建新的产生式 A -> beta A'（对于每个非左递归的 A -> beta）
+            printf("创建新的 A 产生式...\n");
+            for (const auto& beta_content : non_left_recursive_contents) {
+                vector<string> new_result = beta_content;
+                new_result.push_back(new_nt);  // 添加 A'
+                insert_to_production(A, new_result);
+
+                printf("  创建: %s ->", A.c_str());
+                for (const auto& symbol : new_result) {
+                    printf(" %s", symbol.c_str());
+                }
+                printf("\n");
+            }
+
+            // 如果没有非左递归产生式，创建 A -> A'
+            if (non_left_recursive_contents.empty()) {
+                vector<string> new_result = { new_nt };
+                insert_to_production(A, new_result);
+                printf("  创建: %s -> %s\n", A.c_str(), new_nt.c_str());
+            }
+
+            // 创建新的产生式 A' -> alpha A'（对于每个左递归的 A -> A alpha）
+            printf("创建新的 %s 产生式...\n", new_nt.c_str());
+            for (const auto& alpha_content : left_recursive_contents) {
+                vector<string> alpha;
+                // 提取 alpha 部分（去掉第一个 A）
+                for (size_t i = 1; i < alpha_content.size(); i++) {
+                    alpha.push_back(alpha_content[i]);
+                }
+                alpha.push_back(new_nt);  // 添加 A'
+                insert_to_production(new_nt, alpha);
+
+                printf("  创建: %s ->", new_nt.c_str());
+                for (const auto& symbol : alpha) {
+                    printf(" %s", symbol.c_str());
+                }
+                printf("\n");
+            }
+
+            // 创建 A' -> ε
+            vector<string> epsilon = { "^" };
+            insert_to_production(new_nt, epsilon);
+            printf("  创建: %s -> ^\n", new_nt.c_str());
+
+            // 重新开始遍历（链表已改变）
+            printf("重新开始检查...\n");
+            current_prod = PRODUCTION_HEAD.next;
+        }
+        else {
+            current_prod = current_prod->next;
+        }
+    }
+
+    printf("左递归消除处理完成\n");
+
+    // 验证是否还有左递归
+    printf("验证消除结果...\n");
+    if (has_left_recursion()) {
+        printf("警告：消除后仍存在左递归！\n");
+    }
+    else {
+        printf("左递归消除成功！\n");
+    }
+}
+
+// 消除间接左递归：将 Ai -> Aj α 形式的产生式替换为 Ai -> β1 α | β2 α | ... | βk α
+// 其中 Aj -> β1 | β2 | ... | βk 是 Aj 的所有产生式
+void SQLParser::eliminate_indirect_recursion(noterminal* Ai, noterminal* Aj)
+{
+    vector<production*> to_remove;  // 需要删除的产生式
+    vector<production*> to_add;     // 需要添加的产生式
+
+    // 找到所有 Ai -> Aj α 形式的产生式
+    production* p = PRODUCTION_HEAD.next;
+    while (p) {
+        if (p->source == Ai->name &&
+            !p->result.empty() &&
+            p->result[0] == Aj->name) {
+
+            // 找到了一个间接左递归的产生式
+            to_remove.push_back(p);
+
+            // 获取 α 部分（除了第一个符号的其余部分）
+            vector<string> alpha;
+            for (int k = 1; k < p->result.size(); k++) {
+                alpha.push_back(p->result[k]);
+            }
+
+            // 找到 Aj 的所有产生式，用它们替换 Aj
+            production* aj_prod = PRODUCTION_HEAD.next;
+            while (aj_prod) {
+                if (aj_prod->source == Aj->name) {
+                    // 创建新产生式 Ai -> βk α
+                    production* new_prod = new production;
+                    new_prod->source = Ai->name;
+                    new_prod->result = aj_prod->result;  // βk
+
+                    // 添加 α 部分
+                    for (const auto& symbol : alpha) {
+                        new_prod->result.push_back(symbol);
+                    }
+                    new_prod->next = NULL;
+                    to_add.push_back(new_prod);
+                }
+                aj_prod = aj_prod->next;
+            }
+        }
+        p = p->next;
+    }
+
+    // 删除旧的产生式
+    for (production* old_prod : to_remove) {
+        remove_production(old_prod);
+    }
+
+    // 添加新的产生式
+    for (production* new_prod : to_add) {
+        current_production->next = new_prod;
+        current_production = new_prod;
+    }
+}
+
+// 消除直接左递归：将 A -> Aα | β 转换为 A -> βA', A' -> αA' | ε
+void SQLParser::eliminate_direct_recursion(noterminal* A)
+{
+    vector<vector<string>> alpha_productions;  // A -> Aα 中的 α 部分
+    vector<vector<string>> beta_productions;   // A -> β 中的 β 部分
+    vector<production*> to_remove;  // 需要删除的产生式
+
+    // 分类当前非终结符的产生式
+    production* p = PRODUCTION_HEAD.next;
+    while (p) {
+        if (p->source == A->name) {
+            if (!p->result.empty() && p->result[0] == A->name) {
+                // 这是直接左递归 A -> Aα
+                vector<string> alpha;
+                for (int i = 1; i < p->result.size(); i++) {
+                    alpha.push_back(p->result[i]);
+                }
+                alpha_productions.push_back(alpha);
+                to_remove.push_back(p);
+            }
+            else {
+                // 这是非左递归 A -> β
+                beta_productions.push_back(p->result);
+                to_remove.push_back(p);
+            }
+        }
+        p = p->next;
+    }
+
+    // 如果没有直接左递归，直接返回
+    if (alpha_productions.empty()) {
+        return;
+    }
+
+    printf("消除 %s 的直接左递归\n", A->name.c_str());
+
+    // 创建新的非终结符 A'
+    string new_nt_name = A->name + "'";
+    // 确保新非终结符名不冲突
+    while (get_noterminal(new_nt_name) != NULL) {
+        new_nt_name += "'";
+    }
+
+    insert_to_noterminal(new_nt_name);
+
+    // 删除所有旧的产生式
+    for (production* old_prod : to_remove) {
+        remove_production(old_prod);
+    }
+
+    // 创建新的产生式 A -> βA'
+    for (const auto& beta : beta_productions) {
+        production* new_prod = new production;
+        new_prod->source = A->name;
+        new_prod->result = beta;
+        new_prod->result.push_back(new_nt_name);  // 添加 A'
+        new_prod->next = NULL;
+
+        current_production->next = new_prod;
+        current_production = new_prod;
+    }
+
+    // 如果没有 β 产生式，添加 A -> A'
+    if (beta_productions.empty()) {
+        production* new_prod = new production;
+        new_prod->source = A->name;
+        new_prod->result.push_back(new_nt_name);
+        new_prod->next = NULL;
+
+        current_production->next = new_prod;
+        current_production = new_prod;
+    }
+
+    // 创建新的产生式 A' -> αA'
+    for (const auto& alpha : alpha_productions) {
+        production* new_prod = new production;
+        new_prod->source = new_nt_name;
+        new_prod->result = alpha;
+        new_prod->result.push_back(new_nt_name);  // 添加 A'
+        new_prod->next = NULL;
+
+        current_production->next = new_prod;
+        current_production = new_prod;
+    }
+
+    // 添加 A' -> ε
+    production* epsilon_prod = new production;
+    epsilon_prod->source = new_nt_name;
+    epsilon_prod->result.push_back("^");  // ε 用 ^ 表示
+    epsilon_prod->next = NULL;
+
+    current_production->next = epsilon_prod;
+    current_production = epsilon_prod;
+}
+
+// 辅助函数：从链表中删除指定的产生式
+void SQLParser::remove_production(production* target)
+{
+    if (target == NULL) return;
+
+    production* prev = &PRODUCTION_HEAD;
+    production* curr = PRODUCTION_HEAD.next;
+
+    while (curr != NULL) {
+        if (curr == target) {
+            prev->next = curr->next;
+            if (current_production == curr) {
+                current_production = prev;
+            }
+            delete curr;
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+}
+
+// 检查是否存在左递归（调试用）
+bool SQLParser::has_left_recursion()
+{
+    printf("检查左递归...\n");
+
+    noterminal* nt = NOTERMINAL_HEAD.next;
+    while (nt) {
+        printf("检查非终结符: %s\n", nt->name.c_str());
 
         production* p = PRODUCTION_HEAD.next;
-        while (p != nullptr) {
-            if (p->source == A) {
-                A_productions.push_back(p);
-
-                // 检查是否为直接左递归 A → Aα
-                if (!p->result.empty() && p->result[0] == A) {
-                    left_recursive_prods.push_back(p);
+        while (p) {
+            if (p->source == nt->name) {
+                printf("  检查产生式: %s ->", p->source.c_str());
+                for (const auto& symbol : p->result) {
+                    printf(" %s", symbol.c_str());
                 }
-                else {
-                    non_left_recursive_prods.push_back(p);
+                printf("\n");
+
+                // 检查产生式右部是否为空或第一个符号是否与左部相同
+                if (!p->result.empty() && p->result[0] == nt->name) {
+                    printf("  发现直接左递归: %s -> %s...\n", nt->name.c_str(), p->result[0].c_str());
+                    return true;
                 }
             }
             p = p->next;
         }
-
-        // 如果存在左递归产生式
-        if (!left_recursive_prods.empty()) {
-            printf("发现左递归：%s\n", A.c_str());
-
-            // 创建新的非终结符 A'
-            string A_prime = A + "'"; // 使用A'作为新的非终结符
-
-            // 确保A'是唯一的
-            int suffix = 1;
-            while (get_noterminal(A_prime) != nullptr) {
-                A_prime = A + "'" + to_string(suffix);
-                suffix++;
-            }
-
-            insert_to_noterminal(A_prime);
-            printf("创建新非终结符：%s\n", A_prime.c_str());
-
-            // 修改非左递归产生式：A → β 变为 A → βA'
-            for (auto* prod : non_left_recursive_prods) {
-                prod->result.push_back(A_prime);
-                printf("修改产生式：%s -> ", A.c_str());
-                for (const auto& symbol : prod->result) {
-                    printf("%s ", symbol.c_str());
-                }
-                printf("\n");
-            }
-
-            // 如果没有非左递归产生式，添加 A → A'
-            if (non_left_recursive_prods.empty()) {
-                vector<string> new_result = { A_prime };
-                insert_to_production(A, new_result);
-                printf("添加产生式：%s -> %s\n", A.c_str(), A_prime.c_str());
-            }
-
-            // 为左递归产生式创建新产生式：A → Aα 变为 A' → αA'
-            for (auto* prod : left_recursive_prods) {
-                vector<string> alpha;
-                // 获取α部分（去掉开头的A）
-                for (size_t i = 1; i < prod->result.size(); i++) {
-                    alpha.push_back(prod->result[i]);
-                }
-                alpha.push_back(A_prime); // 添加A'
-
-                insert_to_production(A_prime, alpha);
-                printf("添加产生式：%s -> ", A_prime.c_str());
-                for (const auto& symbol : alpha) {
-                    printf("%s ", symbol.c_str());
-                }
-                printf("\n");
-
-                // 标记要删除的产生式
-                to_delete.push_back(prod);
-            }
-
-            // 添加 A' → ε
-            vector<string> epsilon = { "^" };
-            insert_to_production(A_prime, epsilon);
-            printf("添加产生式：%s -> ^\n", A_prime.c_str());
-        }
-
-        current_nt = current_nt->next;
+        nt = nt->next;
     }
 
-    // 删除左递归产生式
-    for (auto* prod_to_delete : to_delete) {
-        delete_production(prod_to_delete);
-    }
-
-    printf("左递归消除完成\n");
+    printf("未发现直接左递归\n");
+    return false;
 }
 
-// 辅助函数：删除指定的产生式
-void SQLParser::delete_production(production* prod_to_delete)
+// 打印所有产生式（调试用）
+void SQLParser::print_productions()
 {
-    production* prev = &PRODUCTION_HEAD;
-    production* current = PRODUCTION_HEAD.next;
-
-    while (current != nullptr) {
-        if (current == prod_to_delete) {
-            prev->next = current->next;
-            if (current == current_production) {
-                current_production = prev;
-            }
-            delete current;
-            break;
+    printf("\n当前所有产生式：\n");
+    int count = 1;
+    production* p = PRODUCTION_HEAD.next;
+    while (p) {
+        printf("%d. %s ->", count++, p->source.c_str());
+        for (const auto& symbol : p->result) {
+            printf(" %s", symbol.c_str());
         }
-        prev = current;
-        current = current->next;
+        printf("\n");
+        p = p->next;
     }
+    printf("\n");
 }
 
 // 栈操作函数
@@ -927,6 +1188,21 @@ void SQLParser::emergency(int model)
     printf("分析完成，清理资源\n");
     // 这里应该释放所有分配的内存
     exit(0);
+}
+
+int main()
+{
+    std::cout << "Hello World!\n";
+    vector<Token> tokens = {
+        {1, "a", 1, 1},
+        {1, "b", 1, 2},
+        {1, "b", 1, 3},
+        {1, "c", 1, 4},
+        {1, "d", 1, 5},
+        {1, "e", 1, 6},
+    };
+    SQLParser sqlParser;
+    sqlParser.start_parser(tokens);
 }
 
 int main()

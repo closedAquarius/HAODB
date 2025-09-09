@@ -86,6 +86,11 @@ public:
 
     // 文法处理函数
     void eliminate_left_recursion(void);
+    void eliminate_indirect_recursion(noterminal* Ai, noterminal* Aj);
+    void eliminate_direct_recursion(noterminal* A);
+    void remove_production(production* target);
+    bool has_left_recursion();
+    void print_productions();
     size_t find_first(noterminal* this_noterminal, production* this_production);
     size_t find_follow(noterminal* this_noterminal, production* this_production);
 
@@ -95,17 +100,14 @@ public:
     void insert_to_production(string source, vector<string>& result);
 
     // 辅助函数
-    void combine(vector<string>& destination, vector<string>& source);
-    size_t is_appeared(string tobejudged, vector<string>& source);
     void load_terminals_from_tokens(vector<Token>& tokens);
     noterminal* get_noterminal(string X);
     bool is_terminal_string(string X);
     size_t add_to_set(vector<string>& set, string item);
     string token_to_terminal(const Token& token);
-    void delete_production(production* prod_to_delete);
 
     // 错误处理函数
     void emergency(int model);
 };
 
-#endif // SQL_PARSER_H
+#endif // SQL_PARSER_H#pragma once
