@@ -5,19 +5,26 @@
 #include <vector>
 #include "dataType.h"
 #include "parser.h"
+#include "lexer.h"
+#include "semantic.h"
 
 using namespace std;
 
 int main()
 {
     std::cout << "Hello World!\n";
-    sql_compiler();
+    string sql;
+    std::cin >> sql;
+    vector<Quadruple> quadruple = sql_compiler(sql);
 }
 
-void sql_compiler()
+vector<Quadruple> sql_compiler(string sql)
 {
-    vector<Token> tokens;
+    Lexer lexer(sql);
+    vector<Token> tokens = lexer.analyze();
     start_parser(tokens);
+    SemanticAnalyzer analyzer; 
+    return analyzer.analyze(tokens);
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

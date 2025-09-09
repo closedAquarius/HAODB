@@ -137,7 +137,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dataType.h" />
+    <ClInclude Include="lexer.h" />
     <ClInclude Include="parser.h" />
+    <ClInclude Include="semantic.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

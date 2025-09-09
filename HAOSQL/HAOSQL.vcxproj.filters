@@ -53,5 +53,11 @@
     <ClInclude Include="dataType.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="semantic.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="lexer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
