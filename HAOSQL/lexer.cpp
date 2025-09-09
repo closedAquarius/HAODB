@@ -93,27 +93,37 @@ private:
         return result;
     }
 
+    // 可识别浮点数
     string readNumber() {
         string result;
-        while (pos < input.size() && isdigit(input[pos])) {
-            result += input[pos];
-            pos++;
-            column++;
+        bool hasDot = false;
+
+        while (pos < input.size()) {
+            char c = input[pos];
+            if (isdigit(c)) {
+                result += c;
+                pos++;
+                column++;
+            }
+            else if (c == '.' && !hasDot) {
+                // 允许出现一次小数点
+                hasDot = true;
+                result += c;
+                pos++;
+                column++;
+            }
+            else {
+                break;
+            }
         }
         return result;
     }
+
 };
 
 // 测试主函数
 int main() {
     string sql = R"( 
-        CREATE TABLE students (
-            id INT PRIMARY KEY,
-            name VARCHAR(50) NOT NULL,
-            age INT,
-            gpa FLOAT
-        );
-
         SELECT name, age FROM students WHERE age > 18 AND gpa > 3.5;
     )";
 
