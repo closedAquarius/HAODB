@@ -1,16 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <unordered_set>
-#include <iomanip>
-
-#include "dataType.h"
 #include "parser.h"
 
 using namespace std;

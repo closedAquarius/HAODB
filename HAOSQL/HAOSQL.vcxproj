@@ -127,6 +127,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="executer.cpp" />
+    <ClCompile Include="executer.h" />
     <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
     <ClCompile Include="lexer.cpp" />

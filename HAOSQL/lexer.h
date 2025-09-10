@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <unordered_set>
+#include <cctype>
+#include <iomanip>
 #include <string>
 #include "dataType.h"
 

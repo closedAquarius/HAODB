@@ -1,7 +1,5 @@
 // file_manager.cpp
 #include "file_manager.h"
-#include <iostream>
-#include <sys/stat.h>
 
 FileManager::FileManager(const std::string& db_dir) : db_dir(db_dir) {}
 
