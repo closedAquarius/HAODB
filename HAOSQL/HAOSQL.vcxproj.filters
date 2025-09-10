@@ -48,6 +48,12 @@
     <ClCompile Include="page.cpp">
       <Filter>源文件\storage</Filter>
     </ClCompile>
+    <ClCompile Include="executer.h">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="executer.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
