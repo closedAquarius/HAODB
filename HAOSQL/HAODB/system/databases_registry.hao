@@ -1,0 +1,19 @@
+DatabaseRegistry global_registry = {
+    magic: "HAODBSYS",                    // 系统标识符
+    version: 10001,                       // 版本 1.0.001
+    database_count: 1,                    // 当前只有一个数据库
+    last_update: 2025-09-10 15:00:00,              
+    
+    databases: {
+        {
+            db_name: "Students",
+            db_path: "HAODB\Students",
+            db_id: 0001,                  // 数据库ID
+            status: 1,                    // 在线状态
+            create_time: 2025-09-10 14:00:00,
+            last_access: 2025-09-10 15:00:00,
+            owner: "admin",
+            auto_start: 1                 // 自动启动
+        }
+    }
+};

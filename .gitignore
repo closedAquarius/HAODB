@@ -1,5 +1,5 @@
 # Visual Studio
-.vs/*
+.vs/
 *.VC.db
 *.opendb
 *.vc.db*
@@ -28,3 +28,4 @@ Release/
 HAOSQL/x64/
 
 .vs/HAOSQL/v17/Browse.VC.db
+.vs/*
