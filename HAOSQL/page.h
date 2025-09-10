@@ -1,6 +1,9 @@
 #pragma once
 #include <string>
 #include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <iostream>
 
 const size_t PAGE_SIZE = 4096;
 

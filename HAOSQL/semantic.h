@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cctype>
+#include <algorithm>
+#include <sstream>
 #include "dataType.h"
 using namespace std;
 

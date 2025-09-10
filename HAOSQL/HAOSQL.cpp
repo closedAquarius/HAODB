@@ -1,12 +1,11 @@
 ﻿// HAOSQL.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
-#include <iostream>
-#include <vector>
 #include "dataType.h"
 #include "parser.h"
 #include "lexer.h"
 #include "semantic.h"
+#include "executer.h"
 
 using namespace std;
 
@@ -20,6 +19,20 @@ int main()
     getline(cin, sql);
     cout << sql << endl;
     vector<Quadruple> quadruple = sql_compiler(sql);
+
+    // 构建并执行计划
+    vector<string> columns;
+    Operator* root = buildPlan(quadruple, columns);
+    vector<Row> result = root->execute();
+
+    // 输出结果
+    cout << endl;
+    for (auto& row : result) {
+        for (auto& col : columns) {
+            cout << row.at(col) << "\t|";
+        }
+        cout << endl;
+    }
 }
 
 vector<Quadruple> sql_compiler(string sql)
@@ -53,7 +66,9 @@ vector<Quadruple> sql_compiler(string sql)
     }
     catch (const SemanticError& e) {
         std::cerr << "语义分析错误：" << e.what() << std::endl;
+        return {};
     }
+
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

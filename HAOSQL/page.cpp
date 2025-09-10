@@ -1,7 +1,4 @@
 #include "page.h"
-#include <cstring>
-#include <fstream>
-#include <iostream>
 
 Page::Page(PageType t, uint32_t id) {
     header.type = t;

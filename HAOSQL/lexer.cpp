@@ -1,9 +1,3 @@
-#include <iostream>
-#include <vector>
-#include <unordered_set>
-#include <cctype>
-#include <iomanip>
-#include "dataType.h"
 #include "lexer.h"
 
 using namespace std;
