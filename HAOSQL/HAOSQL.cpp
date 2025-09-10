@@ -10,32 +10,51 @@
 
 using namespace std;
 
-//vector<Quadruple> sql_compiler(string sql);
+vector<Quadruple> sql_compiler(string sql);
 
-/*
 int main()
 {
     std::cout << "Hello World!\n";
     string sql;
-    std::cin >> sql;
+    cout << "请输入 SQL 语句: ";
+    getline(cin, sql);
+    cout << sql << endl;
     vector<Quadruple> quadruple = sql_compiler(sql);
 }
-*/
 
-/*vector<Quadruple> sql_compiler(string sql)
+vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
     SQLParser sqlParser;
     vector<Token> tokens = lexer.analyze();
+    for (auto& t : tokens) {
+        cout << left << setw(10) << t.type
+            << setw(15) << t.value
+            << setw(10) << t.line
+            << setw(10) << t.column << endl;
+    }
 
     for (int i = 0; i < tokens.size(); ++i) {
         std::cout << tokens[i].type << " " << tokens[i].value << " ";
     }
 
     sqlParser.start_parser(tokens);
-    SemanticAnalyzer analyzer; 
-    return analyzer.analyze(tokens);
-}*/
+    SemanticAnalyzer analyzer;
+    try {
+        auto quads = analyzer.analyze(tokens);
+
+        std::cout << "四元式结果：" << std::endl;
+        for (auto& q : quads) {
+            std::cout << "(" << q.op << ", " << q.arg1 << ", "
+                << q.arg2 << ", " << q.result << ")" << std::endl;
+        }
+
+        return analyzer.analyze(tokens);
+    }
+    catch (const SemanticError& e) {
+        std::cerr << "语义分析错误：" << e.what() << std::endl;
+    }
+}
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单
