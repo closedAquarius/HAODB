@@ -126,7 +126,6 @@ int SQLParser::start_parser(vector<Token>& tokens)
     printf("\n求FOLLOW集\n\n");
     test_follow();
     prediction_table();
-
     emergency(0);
     return 0;
 }
@@ -1115,10 +1114,10 @@ void SQLParser::emergency(int model)
 {
     printf("分析完成，清理资源\n");
     // 这里应该释放所有分配的内存
-    exit(0);
+    // exit(0);
 }
 
-int main()
+/*int main()
 {
     std::cout << "Hello World!\n";
     std::vector<Token> tokens = {
@@ -1140,4 +1139,4 @@ int main()
     };
     SQLParser sqlParser;
     sqlParser.start_parser(tokens);
-}
+}*/
