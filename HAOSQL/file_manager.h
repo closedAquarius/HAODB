@@ -4,6 +4,8 @@
 #include <string>
 #include <fstream>
 #include <unordered_map>
+#include <iostream>
+#include <sys/stat.h>
 
 class FileManager {
 public:

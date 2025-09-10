@@ -50,13 +50,13 @@ Table Students = {
 };
 Table getData(string tableName) {
 	// 从 q.arg1 找表数据
-	cout << "访问数据库表(文件系统): " << tableName << endl;
+	cout << endl << "访问数据库表(文件系统): " << tableName << endl;
 	return Students;
 }
 
 void split(const string& str, const string& splits, vector<string>& result) {
 	if (str == "") return;
-	// 末尾加上分隔符，发表截取
+	// 末尾加上分隔符，方便截取
 	string strs = str + splits;
 	size_t pos = strs.find(splits);
 	size_t step = splits.size();

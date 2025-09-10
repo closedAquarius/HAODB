@@ -1,7 +1,4 @@
 #include "semantic.h"
-#include <cctype>
-#include <algorithm>
-#include <sstream>
 
 // 工具函数：字符串转大写
 string SemanticAnalyzer::upper(string s) const {

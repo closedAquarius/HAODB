@@ -1,8 +1,6 @@
 ﻿// HAOSQL.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
-#include <iostream>
-#include <vector>
 #include "dataType.h"
 #include "parser.h"
 #include "lexer.h"
@@ -28,6 +26,7 @@ int main()
     vector<Row> result = root->execute();
 
     // 输出结果
+    cout << endl;
     for (auto& row : result) {
         for (auto& col : columns) {
             cout << row.at(col) << "\t|";
