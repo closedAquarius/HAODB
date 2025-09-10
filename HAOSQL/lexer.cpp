@@ -56,7 +56,26 @@ vector<Token> Lexer::analyze() {
         }
         else if (operators.count(c)) { // 运算符
             int startCol = column;
-            tokens.push_back({ 4, string(1, c), line, startCol });
+
+            string op(1, c);
+            // 检查下一个字符
+            if (pos + 1 < input.size()) {
+                char next = input[pos + 1];
+                string twoCharOp = op + next;
+
+                // 支持常见的双字符运算符
+                if (twoCharOp == ">=" || twoCharOp == "<=" ||
+                    twoCharOp == "<>" || twoCharOp == "!=" ||
+                    twoCharOp == "==") {
+                    tokens.push_back({ 4, twoCharOp, line, startCol });
+                    pos += 2;
+                    column += 2;
+                    continue;
+                }
+            }
+
+            // 否则就是单字符运算符
+            tokens.push_back({ 4, op, line, startCol });
             pos++;
             column++;
         }
