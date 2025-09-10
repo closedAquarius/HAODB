@@ -12,13 +12,15 @@ using namespace std;
 
 //vector<Quadruple> sql_compiler(string sql);
 
-/*int main()
+/*
+int main()
 {
     std::cout << "Hello World!\n";
     string sql;
     std::cin >> sql;
     vector<Quadruple> quadruple = sql_compiler(sql);
-}*/
+}
+*/
 
 /*vector<Quadruple> sql_compiler(string sql)
 {
