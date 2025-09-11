@@ -822,7 +822,7 @@ void BPlusTree::setRootPid(int rootid) {
     return 0;
 }*/
 
-int main() {
+/*int main() {
     std::string indexFileName = "students";
 
     // ---------------- 创建文件管理器 ----------------
@@ -882,5 +882,5 @@ int main() {
     std::cout << "Index destroyed.\n";
 
     return 0;
-}
+}*/
 

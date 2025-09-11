@@ -11,34 +11,42 @@ using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
 
-/*int main()
+int main()
 {
     std::cout << "Hello World!\n";
     string sql;
-    cout << "请输入 SQL 语句: ";
-    getline(cin, sql);
-    cout << sql << endl;
-    vector<Quadruple> quadruple = sql_compiler(sql);
+    while (true)
+    {
+        cout << "请输入 SQL 语句: ";
+        getline(cin, sql);
+        cout << sql << endl;
+        vector<Quadruple> quadruple = sql_compiler(sql);
 
-    // 构建并执行计划
-    vector<string> columns;
-    Operator* root = buildPlan(quadruple, columns);
-    vector<Row> result = root->execute();
+        // 构建并执行计划
+        vector<string> columns;
+        Operator* root = buildPlan(quadruple, columns);
+        vector<Row> result = root->execute();
 
-    // 输出结果
-    cout << endl;
-    for (auto& row : result) {
-        for (auto& col : columns) {
-            cout << row.at(col) << "\t|";
+        if (!result.empty()) {
+            cout << "主函数打印" << endl;
+            // 输出结果
+            cout << endl;
+            for (auto& row : result) {
+                for (auto& col : columns) {
+                    cout << row.at(col) << "\t|";
+                }
+                cout << endl;
+            }
         }
-        cout << endl;
     }
-}*/
+   
+}
 
 vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
     SQLParser sqlParser;
+    cout << "开始词法分析" << endl;
     vector<Token> tokens = lexer.analyze();
     for (auto& t : tokens) {
         cout << left << setw(10) << t.type
@@ -50,7 +58,7 @@ vector<Quadruple> sql_compiler(string sql)
     for (int i = 0; i < tokens.size(); ++i) {
         std::cout << tokens[i].type << " " << tokens[i].value << " ";
     }
-
+    cout << "开始语法分析" << endl;
     sqlParser.start_parser(tokens);
     SemanticAnalyzer analyzer;
     try {

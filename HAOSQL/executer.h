@@ -3,8 +3,10 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <algorithm>
 #include <functional>
 #include "dataType.h"
+#include "B+tree.h"
 
 using namespace std;
 
@@ -67,7 +69,7 @@ public:
 };
 
 class Filter : public Operator {			// 过滤
-private:
+public:
 	Operator* child;
 	function<bool(const Row&)> predicate;
 public:
@@ -93,3 +95,131 @@ void getColumns(vector<string>& cols, string s);
 
 // ========== 构建算子树 ==========
 Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
+
+class IndexScan : public Operator {
+private:
+	BPlusTree* index;   // B+ 树指针
+	Table* table;       // 数据表
+	string column;      // 查询列
+	int value;       // 查询值
+	vector<RID> rids;   // 查询到的 RID 列表
+public:
+	IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val);
+	vector<Row> execute() override;
+};
+
+class Insert : public Operator {
+private:
+	Table* table;
+	Row newRow;
+public:
+	Insert(Table* t, const Row& r) : table(t), newRow(r) {}
+	vector<Row> execute() override {
+		table->push_back(newRow);
+		return {};  // 插入操作不需要返回行
+	}
+};
+
+class Update : public Operator {
+private:
+	Table* table;
+	function<void(Row&)> updater;
+	function<bool(const Row&)> predicate;
+public:
+	Update(Table* t, function<void(Row&)> u, function<bool(const Row&)> p = nullptr)
+		: table(t), updater(u), predicate(p) {}
+
+	vector<Row> execute() override {
+		for (auto& row : *table) {
+			if (!predicate || predicate(row)) {
+				updater(row);
+			}
+		}
+		return {};
+	}
+};
+
+class Delete : public Operator {
+private:
+	Operator* child;
+	Table* table;
+public:
+	Delete(Operator* c, Table* t) : child(c), table(t) {}
+	vector<Row> execute() override {
+		vector<Row> input = child->execute();
+		for (auto& row : input) {
+			table->erase(std::remove(table->begin(), table->end(), row), table->end());
+		}
+		return {};  // 删除操作不返回行
+	}
+};
+
+class Sort : public Operator {
+private:
+	Operator* child;
+	vector<string> sortColumns;
+public:
+	Sort(Operator* c, const vector<string>& cols) : child(c), sortColumns(cols) {}
+	vector<Row> execute() override {
+		vector<Row> input = child->execute();
+		std::sort(input.begin(), input.end(), [&](const Row& a, const Row& b) {
+			for (auto& col : sortColumns) {
+				if (a.at(col) != b.at(col))
+					return a.at(col) < b.at(col);
+			}
+			return false;
+			});
+		return input;
+	}
+};
+
+class Aggregate : public Operator {
+private:
+	Operator* child;
+	std::string groupColumn;
+	std::string aggColumn;
+	std::string aggFunc;  // SUM, COUNT, AVG
+public:
+	Aggregate(Operator* c, const std::string& gCol, const std::string& aCol, const std::string& func)
+		: child(c), groupColumn(gCol), aggColumn(aCol), aggFunc(func) {}
+
+	std::vector<Row> execute() override {
+		std::vector<Row> input = child->execute();
+		std::map<std::string, std::vector<Row>> groups;
+
+		// 按 groupColumn 分组
+		for (auto& row : input) {
+			std::string key = row.at(groupColumn);
+			groups[key].push_back(row);
+		}
+
+		std::vector<Row> output;
+
+		// 遍历每组
+		for (auto& p : groups) {
+			const std::string& key = p.first;
+			std::vector<Row>& rows = p.second;
+
+			Row newRow;
+			newRow[groupColumn] = key;
+
+			if (aggFunc == "SUM") {
+				int sum = 0;
+				for (auto& r : rows) sum += std::stoi(r.at(aggColumn));
+				newRow[aggColumn] = std::to_string(sum);
+			}
+			else if (aggFunc == "COUNT") {
+				newRow[aggColumn] = std::to_string(rows.size());
+			}
+			else if (aggFunc == "AVG") {
+				int sum = 0;
+				for (auto& r : rows) sum += std::stoi(r.at(aggColumn));
+				newRow[aggColumn] = std::to_string(sum / rows.size());
+			}
+
+			output.push_back(newRow);
+		}
+
+		return output;
+	}
+};

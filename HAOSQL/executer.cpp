@@ -75,55 +75,140 @@ void getColumns(vector<string>& cols, string s) {
 	split(s, ",", cols);
 }
 
+Row parseRow(const string& arg) {
+    Row row;
+    vector<string> kvs;
+    split(arg, ",", kvs); // 用你现有 split 函数
+
+    for (auto& kv : kvs) {
+        size_t pos = kv.find("=");
+        if (pos != string::npos) {
+            string key = kv.substr(0, pos);
+            string value = kv.substr(pos + 1);
+            row[key] = value;
+        }
+    }
+    return row;
+}
+
+function<void(Row&)> parseUpdater(const string& arg) {
+    vector<string> kvs;
+    split(arg, ",", kvs); // 用你现有 split
+    return [kvs](Row& row) {
+        for (auto& kv : kvs) {
+            size_t pos = kv.find("=");
+            if (pos != string::npos) {
+                string key = kv.substr(0, pos);
+                string value = kv.substr(pos + 1);
+                row[key] = value;
+            }
+        }
+    };
+}
+
+
 Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns) {
-	Operator* root = nullptr;
-	map<string, Operator*> symbolTables;
-	map<string, Condition> condTable;
-	Table t;
+    Operator* root = nullptr;
+    map<string, Operator*> symbolTables;
+    map<string, Condition> condTable;
+    Table t;
+    string setArg;
 
-	for (auto& q : quads) {
-		// ========== 基本表扫描 ==========
-		if (q.op == "FROM") {
-			t = getData(q.arg1);
-			symbolTables[q.result] = new Scan(t);
-		}
+    for (auto& q : quads) {
 
-		// ========== 连接 ==========
+        // ====== 表扫描 ======
+        if (q.op == "FROM") {
+            t = getData(q.arg1);
+            symbolTables[q.result] = new Scan(t);
+        }
 
-		// ========== 选择（行选择） ==========
-		else if (q.op == ">" || q.op == "=") {
-			condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
-		}
-		else if (q.op == "AND") {
-			condTable[q.result] = Condition::And(condTable[q.arg1], condTable[q.arg2]);
-		}
-		else if (q.op == "OR") {
-			condTable[q.result] = Condition::Or(condTable[q.arg1], condTable[q.arg2]);
-		}
-		else if (q.op == "NOT") {
-			condTable[q.result] = Condition::Not(condTable[q.arg1]);
-		}
-		else if (q.op == "WHERE") {
-			Operator* child = symbolTables[q.arg1];
-			Condition cond = condTable[q.arg2];
-			symbolTables[q.result] = new Filter(child, cond.get());
-		}
+        // ====== 条件选择 ======
+        else if (q.op == ">" || q.op == "=") {
+            condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
+        }
+        else if (q.op == "AND") {
+            condTable[q.result] = Condition::And(condTable[q.arg1], condTable[q.arg2]);
+        }
+        else if (q.op == "OR") {
+            condTable[q.result] = Condition::Or(condTable[q.arg1], condTable[q.arg2]);
+        }
+        else if (q.op == "NOT") {
+            condTable[q.result] = Condition::Not(condTable[q.arg1]);
+        }
+        // ====== 条件选择 ======
+        else if (q.op == "WHERE") {
+            // 动态获取 FROM 节点，而不是写死 "T1"
+            Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
+            Condition cond = condTable[q.arg2];      // arg2 是条件符号
+            symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
+        }
 
-		// ========== 投影（列选择） ==========
-		else if (q.op == "SELECT") {
-			getColumns(columns, q.arg1);
-			Operator* child = symbolTables[q.arg2];				// 条件筛选过后的表
-			root = new Project(child, columns);
-		}
+        // ====== 投影 ======
+        else if (q.op == "SELECT") {
+            getColumns(columns, q.arg1);
+            Operator* child = symbolTables[q.arg2];
+            root = new Project(child, columns);
+        }
 
-		// ========== 排序 ==========
+        // ====== 排序 ======
+        else if (q.op == "ORDERBY") {
+            Operator* child = symbolTables[q.arg1];
+            vector<string> sortCols;
+            getColumns(sortCols, q.arg1);  // q.arg1 为列名列表
+            symbolTables[q.result] = new Sort(child, sortCols);
+        }
 
-		// ========== 分组聚合 ==========
+        // ====== 分组聚合 ======
+        else if (q.op == "GROUPBY") {
+            Operator* child = symbolTables[q.arg1];
+            string groupCol = q.arg1;
+            string aggCol = q.arg2;
+            string aggFunc = q.result; // SUM, COUNT, AVG
+            symbolTables[q.result] = new Aggregate(child, groupCol, aggCol, aggFunc);
+        }
 
-		// ========== 输出结果 ==========
-		else if (q.op == "RESULT") {
-			return root;
-		}
+        // ====== 插入 ======
+        else if (q.op == "INSERT") {
+            Table* table = &t;   // 假设 t 对应目标表
+            Row row = parseRow(q.arg1); // 自己实现 parseRow 把 arg1 转成 Row
+            symbolTables[q.result] = new Insert(table, row);
+        }
+        // ====== SET ======
+        else if (q.op == "SET") {
+            Operator* setOp = new SetOp(symbolTables[q.arg2]); // q.arg2 = FROM temp
+            symbolTables[q.result] = setOp;
+        }
+        else if (q.op == "UPDATE") {
+        }
+
+        // ====== 删除 ======
+        else if (q.op == "DELETE") {
+            Operator* child = symbolTables[q.arg1]; // 被删除的行
+            Table* table = &t;
+            symbolTables[q.result] = new Delete(child, table);
+        }
+
+        // ====== 输出结果 ======
+        else if (q.op == "RESULT") {
+            return root;
+        }
+    }
+
+    return root;
+}
+
+
+
+
+
+IndexScan::IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val)
+	: index(idx), table(tbl), column(col), value(val) {}
+
+vector<Row> IndexScan::execute() {
+	rids = index->search(value);  // 从 B+ 树查找符合的 RID
+	vector<Row> output;
+	for (auto& rid : rids) {
+		//output.push_back(table->getRow(rid));  // 根据 RID 获取行
 	}
-	return root;
+	return output;
 }
