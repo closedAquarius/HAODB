@@ -14,7 +14,7 @@ struct BPlusTreeNode {
     std::vector<int> children;   // 如果是内部节点：child page_id 列表
 
     // 叶子节点
-    std::vector<RID> rids;       // 如果是叶子节点：对应的 RID 列表
+    std::vector<std::vector<RID>> ridLists;
     int nextLeaf;                // 叶子节点指向下一个叶子节点的 page_id (-1 表示末尾)
 
     BPlusTreeNode() : isLeaf(true), keyCount(0), page_id(-1), nextLeaf(-1) {}
@@ -27,8 +27,8 @@ public:
 
     // 基本操作
     void insert(int key, const RID& rid);
-    void remove(int key);
-    bool search(int key, RID& rid);
+    void remove(int key, const RID& rid);
+    vector<RID> search(int key);
     // 范围查找 [keyLow, keyHigh]
     std::vector<RID> searchRange(int keyLow, int keyHigh);
 
@@ -65,7 +65,7 @@ private:
 
 
     // === 删除相关（不使用 parentMap，通过递归传 parent 信息）===
-    void deleteEntry(int node_pid, int parent_pid, int childIndex, int key);
+    void deleteEntry(int node_pid, int parent_pid, int childIndex, int key, const RID& rid);
 
     // underflow 处理（父节点已 load）
     void handleLeafUnderflow(BPlusTreeNode& child, BPlusTreeNode& parent, int parentIndex);
