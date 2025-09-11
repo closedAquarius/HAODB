@@ -127,10 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="B+tree.cpp" />
     <ClCompile Include="executer.cpp" />
     <ClCompile Include="executer.h" />
     <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
+    <ClCompile Include="init.cpp" />
     <ClCompile Include="lexer.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="parser.cpp" />
@@ -141,6 +143,7 @@
     <Text Include="test.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="B+tree.h" />
     <ClInclude Include="dataType.h" />
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="lexer.h" />

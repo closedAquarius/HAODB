@@ -18,3 +18,10 @@ struct Quadruple {
     string arg2;   // 参数2
     string result; // 结果
 };
+
+
+// RID：行标识符
+struct RID {
+    uint32_t page_id;   // 数据页编号
+    uint16_t slot_id;   // 数据行在页内的槽位
+};

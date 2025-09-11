@@ -23,6 +23,12 @@ public:
     // 获取文件大小（页数）
     uint32_t getPageCount(int file_id);
 
+    int allocatePage(int file_id, PageType type);     // 分配一个新页（INDEX_PAGE / DATA_PAGE）
+    void freePage(int file_id, uint32_t pageId);      // 释放某个页
+
+    void readPageHeader(int file_id, uint32_t pageId, PageHeader& ph);
+    void writePageHeader(int file_id, uint32_t pageId, const PageHeader& ph);
+
 private:
     std::string db_dir;
     std::unordered_map<int, std::fstream*> open_files;
