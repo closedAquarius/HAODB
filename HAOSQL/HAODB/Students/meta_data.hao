@@ -1,0 +1,289 @@
+//---------- 数据库头部信息 ----------
+DatabaseHeader db_header = {
+    magic: "HAODB001",
+    version: 10001,
+    db_name: "Students",
+    db_id: 0001,                          // 对应注册表中的ID
+    create_time: 2025-09-10 15:00:00,
+    last_modify: 2025-09-10 15:00:00,
+    page_size: 4096,                      // 4KB页面大小
+    charset: 1,                           // UTF-8编码
+    table_count: 3,                       // 3个表
+    index_count: 5                        // 5个索引
+};
+
+//---------- 存储配置信息 ----------
+StorageConfig storage_config = {
+    data_file_path: "HAODB\Students\data\students.dat",
+    log_file_path: "HAODB\Students\logs\students.log",
+    index_file_path: "HAODB\Students\index\students.idx",
+    buffer_pool_size: 33554432,           // 32MB缓冲池
+    max_connections: 50,                  // 最大50个连接
+    lock_timeout: 30,                     // 30秒锁超时
+    auto_checkpoint: 1                    // 启用自动检查点
+};
+
+//---------- 日志配置信息 ----------
+LogConfig log_config = {
+    log_level: 2,                         // INFO级别
+    log_file_size: 50,                    // 50MB单文件
+    log_file_count: 5                     // 保留5个日志文件
+};
+
+//---------- 数据库统计信息 ----------
+DatabaseStats db_stats = {
+    total_pages: 1024,                    // 总共1024页
+    free_pages: 768,                      // 768个空闲页
+    total_size: 4194304,                  // 4MB总大小
+    last_backup_time: 2025-09-10 15:00:00
+};
+
+//==================== 表元数据定义 ====================
+
+//---------- 表1: 学生表 (Student) ----------
+TableMeta table_student = {
+    table_name: "Student",
+    table_id: 1,
+    row_count: 0,
+    column_count: 5,                      // 5个字段
+    data_file_offset: 8192,               // 数据文件偏移量 8KB
+    create_time: 2025-09-10 15:00:00,     // 创建时间
+    table_type: 0,                        // 普通表
+    
+    columns: {
+        // 学号 (Sno) - 主键
+        {
+            column_name: "Sno",
+            column_id: 1,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 12,               // 学号最长12位
+            is_nullable: 0,               // 不可空
+            is_primary_key: 1,            // 主键
+            is_unique: 1,                 // 唯一
+            default_value: "",
+            column_offset: 0
+        },
+        // 姓名 (Sname)
+        {
+            column_name: "Sname",
+            column_id: 2,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 20,               // 姓名最长20个字符
+            is_nullable: 0,               // 不可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 12
+        },
+        // 性别 (Ssex)
+        {
+            column_name: "Ssex",
+            column_id: 3,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 2,                // "男"或"女"
+            is_nullable: 1,               // 可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 32
+        },
+        // 年龄 (Sage)
+        {
+            column_name: "Sage",
+            column_id: 4,
+            data_type: 1,                 // INT类型
+            max_length: 4,                // 4字节整数
+            is_nullable: 1,               // 可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 34
+        },
+        // 所在系 (Sdept)
+        {
+            column_name: "Sdept",
+            column_id: 5,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 20,               // 系名最长20个字符
+            is_nullable: 1,               // 可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 38
+        }
+    }
+};
+
+//---------- 表2: 课程表 (Course) ----------
+TableMeta table_course = {
+    table_name: "Course",
+    table_id: 2,
+    row_count: 0,                         // 0门课程
+    column_count: 4,                      // 4个字段
+    data_file_offset: 1048576,            // 数据文件偏移量 1MB
+    create_time: 2025-09-10 15:00:00,     // 创建时间
+    table_type: 0,                        // 普通表
+    
+    columns: {
+        // 课程号 (Cno) - 主键
+        {
+            column_name: "Cno",
+            column_id: 1,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 10,               // 课程号如"CS101"
+            is_nullable: 0,               // 不可空
+            is_primary_key: 1,            // 主键
+            is_unique: 1,                 // 唯一
+            default_value: "",
+            column_offset: 0
+        },
+        // 课程名 (Cname)
+        {
+            column_name: "Cname",
+            column_id: 2,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 50,               // 课程名最长50个字符
+            is_nullable: 0,               // 不可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 10
+        },
+        // 先行课 (Cpno)
+        {
+            column_name: "Cpno",
+            column_id: 3,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 10,               // 先行课程号
+            is_nullable: 1,               // 可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 60
+        },
+        // 学分 (Ccredit)
+        {
+            column_name: "Ccredit",
+            column_id: 4,
+            data_type: 1,                 // INT类型
+            max_length: 4,                // 4字节整数
+            is_nullable: 0,               // 不可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "0",
+            column_offset: 70
+        }
+    }
+};
+
+//---------- 表3: 选课关系表 (SC) ----------
+TableMeta table_sc = {
+    table_name: "SC",
+    table_id: 3,
+    row_count: 5000,                      // 5000条选课记录
+    column_count: 3,                      // 3个字段
+    data_file_offset: 1572864,            // 数据文件偏移量 1.5MB
+    create_time: 2025-09-10 15:00:00,     // 创建时间
+    table_type: 0,                        // 普通表
+    
+    columns: {
+        // 学号 (Sno) - 复合主键的一部分
+        {
+            column_name: "Sno",
+            column_id: 1,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 12,               // 学号
+            is_nullable: 0,               // 不可空
+            is_primary_key: 1,            // 复合主键
+            is_unique: 0,                 // 单独不唯一
+            default_value: "",
+            column_offset: 0
+        },
+        // 课程号 (Cno) - 复合主键的一部分
+        {
+            column_name: "Cno",
+            column_id: 2,
+            data_type: 2,                 // VARCHAR类型
+            max_length: 10,               // 课程号
+            is_nullable: 0,               // 不可空
+            is_primary_key: 1,            // 复合主键
+            is_unique: 0,                 // 单独不唯一
+            default_value: "",
+            column_offset: 12
+        },
+        // 成绩 (Grade)
+        {
+            column_name: "Grade",
+            column_id: 3,
+            data_type: 1,                 // INT类型
+            max_length: 4,                // 4字节整数，0-100分
+            is_nullable: 1,               // 可空
+            is_primary_key: 0,
+            is_unique: 0,
+            default_value: "",
+            column_offset: 22
+        }
+    }
+};
+
+//==================== 索引元数据定义 ====================
+
+//---------- 索引1: Student表主键索引 ----------
+IndexMeta index_student_pk = {
+    index_name: "pk_student_sno",
+    index_id: 1,
+    table_id: 1,                          // Student表
+    index_type: 0,                        // B+树索引
+    is_unique: 1,                         // 唯一索引
+    column_count: 1,
+    columns: {1},                         // Sno列
+    root_page_id: 100                     // 根页面ID
+};
+
+//---------- 索引2: Student表姓名索引 ----------
+IndexMeta index_student_name = {
+    index_name: "idx_student_sname",
+    index_id: 2,
+    table_id: 1,                          // Student表
+    index_type: 0,                        // B+树索引
+    is_unique: 0,                         // 非唯一索引
+    column_count: 1,
+    columns: {2},                         // Sname列
+    root_page_id: 200
+};
+
+//---------- 索引3: Course表主键索引 ----------
+IndexMeta index_course_pk = {
+    index_name: "pk_course_cno",
+    index_id: 3,
+    table_id: 2,                          // Course表
+    index_type: 0,                        // B+树索引
+    is_unique: 1,                         // 唯一索引
+    column_count: 1,
+    columns: {1},                         // Cno列
+    root_page_id: 300
+};
+
+//---------- 索引4: SC表复合主键索引 ----------
+IndexMeta index_sc_pk = {
+    index_name: "pk_sc_sno_cno",
+    index_id: 4,
+    table_id: 3,                          // SC表
+    index_type: 0,                        // B+树索引
+    is_unique: 1,                         // 唯一索引（复合主键）
+    column_count: 2,                      // 两列组成
+    columns: {1, 2},                      // Sno和Cno列
+    root_page_id: 400
+};
+
+//---------- 索引5: SC表学号外键索引 ----------
+IndexMeta index_sc_sno = {
+    index_name: "idx_sc_sno",
+    index_id: 5,
+    table_id: 3,                          // SC表
+    index_type: 0,                        // B+树索引
+    is_unique: 0,                         // 非唯一索引
+    column_count: 1,
+    columns: {1},                         // Sno列
+    root_page_id: 500
+};

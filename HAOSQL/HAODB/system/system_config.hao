@@ -1,0 +1,25 @@
+SystemConfig system_config = {
+    magic: "HAOSYSCF",                    // 系统配置标识符
+    version: 10001,
+    
+    // 全局设置
+    max_databases: 100,                   // 最大支持100个数据库
+    max_connections_total: 500,           // 系统总连接数限制
+    default_page_size: 4096,              // 默认4KB页面
+    default_charset: "UTF-8",             // 默认UTF-8编码
+    
+    // 系统路径配置
+    system_log_path: "C:\\HAODB\\system\\logs\\",
+    temp_path: "C:\\HAODB\\temp\\",
+    backup_path: "C:\\HAODB\\backup\\",
+    
+    // 性能设置
+    global_buffer_size: 134217728,        // 128MB全局缓冲区
+    checkpoint_interval: 300,             // 5分钟检查点间隔
+    enable_query_cache: 1,                // 启用查询缓存
+    
+    // 安全设置
+    enable_authentication: 1,             // 启用身份验证
+    session_timeout: 3600,                // 1小时会话超时
+    enable_audit_log: 1                   // 启用审计日志
+};

@@ -28,3 +28,4 @@ Release/
 HAOSQL/x64/
 
 .vs/HAOSQL/v17/Browse.VC.db
+.vs/*
