@@ -86,3 +86,7 @@ void Page::printInfo() const {
             << ", data=" << getRecord(i) << std::endl;
     }
 }
+
+char* Page::getData() {
+    return data;
+}

@@ -10,7 +10,8 @@ const size_t PAGE_SIZE = 4096;
 enum PageType {
     DATA_PAGE,
     INDEX_PAGE,
-    META_PAGE
+    META_PAGE,
+    FREE_PAGE
 };
 
 // 页头信息
@@ -42,4 +43,16 @@ public:
     static Page readFromDisk(const std::string& filename, uint32_t page_id);
 
     void printInfo() const;
+
+    char* getData();
+
+    const char* getDataConst() const { return data; }
+
+    // 把任意二进制数据写入 page 的 data 区（不会改变 slots 语义）
+    void setData(const void* src, size_t len) {
+        if (len > sizeof(data)) len = sizeof(data);
+        std::memcpy(data, src, len);
+        header.free_offset = static_cast<uint16_t>(len);
+        // record_count 不必修改（我们不使用 slot 语义）
+    }
 };
