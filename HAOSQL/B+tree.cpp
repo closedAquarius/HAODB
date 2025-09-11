@@ -822,6 +822,7 @@ void BPlusTree::setRootPid(int rootid) {
     return 0;
 }*/
 
+/*
 int main() {
     std::string indexFileName = "students";
 
@@ -883,4 +884,5 @@ int main() {
 
     return 0;
 }
+*/
 
