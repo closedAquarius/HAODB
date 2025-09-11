@@ -3,14 +3,18 @@
 #include <fstream>
 #include <algorithm>
 #include <ctime>
+#include <iomanip>
 
 DatabaseMetadataManager::DatabaseMetadataManager(const std::string& file_path)
     : metadata_file_path(file_path) {
 }
 
-bool DatabaseMetadataManager::LoadMetadata() {
+//==================== 文件操作 ====================
+bool DatabaseMetadataManager::LoadMetadata() 
+{
     std::ifstream file(metadata_file_path, std::ios::binary);
-    if (!file.is_open()) {
+    if (!file.is_open()) 
+    {
         std::cerr << "元数据文件不存在: " << metadata_file_path << std::endl;
         return false;
     }
@@ -19,22 +23,34 @@ bool DatabaseMetadataManager::LoadMetadata() {
     file.read(reinterpret_cast<char*>(&db_header), sizeof(DatabaseHeader));
 
     // 验证文件格式
-    if (strncmp(db_header.magic, "HAODB001", 8) != 0) {
+    if (strncmp(db_header.magic, "HAODB001", 8) != 0) 
+    {
         std::cerr << "无效的元数据文件格式" << std::endl;
         return false;
     }
 
+    // 读取存储配置
+    file.read(reinterpret_cast<char*>(&storage_config), sizeof(StorageConfig));
+
+    // 读取日志配置
+    file.read(reinterpret_cast<char*>(&log_config), sizeof(LogConfig));
+
+    // 读取统计信息
+    file.read(reinterpret_cast<char*>(&db_stats), sizeof(DatabaseStats));
+
     // 读取表元数据
     tables.clear();
     tables.resize(db_header.table_count);
-    for (uint64_t i = 0; i < db_header.table_count; i++) {
+    for (uint64_t i = 0; i < db_header.table_count; i++) 
+    {
         file.read(reinterpret_cast<char*>(&tables[i]), sizeof(TableMeta));
     }
 
     // 读取索引元数据
     indexes.clear();
     indexes.resize(db_header.index_count);
-    for (uint64_t i = 0; i < db_header.index_count; i++) {
+    for (uint64_t i = 0; i < db_header.index_count; i++) 
+    {
         file.read(reinterpret_cast<char*>(&indexes[i]), sizeof(IndexMeta));
     }
 
@@ -45,9 +61,11 @@ bool DatabaseMetadataManager::LoadMetadata() {
     return true;
 }
 
-bool DatabaseMetadataManager::SaveMetadata() {
+bool DatabaseMetadataManager::SaveMetadata() 
+{
     std::ofstream file(metadata_file_path, std::ios::binary);
-    if (!file.is_open()) {
+    if (!file.is_open()) 
+    {
         std::cerr << "无法写入元数据文件: " << metadata_file_path << std::endl;
         return false;
     }
@@ -60,13 +78,24 @@ bool DatabaseMetadataManager::SaveMetadata() {
     // 写入数据库头部
     file.write(reinterpret_cast<const char*>(&db_header), sizeof(DatabaseHeader));
 
+    // 写入存储配置
+    file.write(reinterpret_cast<const char*>(&storage_config), sizeof(StorageConfig));
+
+    // 写入日志配置
+    file.write(reinterpret_cast<const char*>(&log_config), sizeof(LogConfig));
+
+    // 写入统计信息
+    file.write(reinterpret_cast<const char*>(&db_stats), sizeof(DatabaseStats));
+
     // 写入表元数据
-    for (const auto& table : tables) {
+    for (const auto& table : tables) 
+    {
         file.write(reinterpret_cast<const char*>(&table), sizeof(TableMeta));
     }
 
     // 写入索引元数据
-    for (const auto& index : indexes) {
+    for (const auto& index : indexes)
+    {
         file.write(reinterpret_cast<const char*>(&index), sizeof(IndexMeta));
     }
 
@@ -76,11 +105,21 @@ bool DatabaseMetadataManager::SaveMetadata() {
 }
 
 bool DatabaseMetadataManager::CreateNewDatabase(const std::string& db_name, uint32_t db_id) {
-    db_header = DatabaseHeader();  // 使用默认构造函数
+    db_header = DatabaseHeader();
+    storage_config = StorageConfig();
+    log_config = LogConfig();
+    db_stats = DatabaseStats();
+
     strcpy(db_header.db_name, db_name.c_str());
     db_header.db_id = db_id;
     db_header.create_time = static_cast<uint64_t>(time(nullptr));
     db_header.last_modify = db_header.create_time;
+
+    // 设置默认路径
+    std::string base_path = "HAODB\\" + db_name + "\\";
+    strcpy(storage_config.data_file_path, (base_path + "data\\" + db_name + ".dat").c_str());
+    strcpy(storage_config.log_file_path, (base_path + "logs\\" + db_name + ".log").c_str());
+    strcpy(storage_config.index_file_path, (base_path + "index\\" + db_name + ".idx").c_str());
 
     tables.clear();
     indexes.clear();
@@ -89,6 +128,7 @@ bool DatabaseMetadataManager::CreateNewDatabase(const std::string& db_name, uint
     return SaveMetadata();
 }
 
+//==================== 表管理 ====================
 bool DatabaseMetadataManager::CreateTable(const std::string& table_name,
     uint32_t table_id,
     const std::vector<ColumnMeta>& columns,
@@ -188,6 +228,7 @@ TableMeta* DatabaseMetadataManager::GetTableInfo(uint32_t table_id)
     return nullptr;
 }
 
+//==================== 索引管理 ====================
 bool DatabaseMetadataManager::CreateIndex(const std::string& index_name,
     uint32_t index_id,
     uint32_t table_id,
@@ -270,6 +311,7 @@ std::vector<IndexMeta*> DatabaseMetadataManager::GetTableIndexes(uint32_t table_
     return table_indexes;
 }
 
+//==================== 列管理 ====================
 bool DatabaseMetadataManager::AddColumn(const std::string& table_name, const ColumnMeta& column)
 {
     TableMeta* table = GetTableInfo(table_name);
@@ -339,6 +381,7 @@ ColumnMeta* DatabaseMetadataManager::GetColumnInfo(const std::string& table_name
     return nullptr;
 }
 
+//==================== 显示信息 ====================
 void DatabaseMetadataManager::ShowDatabaseStructure()
 {
     std::cout << "\n=== 数据库结构: " << db_header.db_name << " ===" << std::endl;
@@ -435,6 +478,21 @@ void DatabaseMetadataManager::ShowIndexInfo()
     }
 }
 
+void DatabaseMetadataManager::ShowCompleteInfo() 
+{
+    std::cout << "\n" << std::string(60, '=') << std::endl;
+    std::cout << "          " << db_header.db_name << " 数据库完整信息" << std::endl;
+    std::cout << std::string(60, '=') << std::endl;
+
+    ShowDatabaseStructure();
+    ShowStorageConfig();
+    ShowLogConfig();
+    ShowDatabaseStats();
+
+    std::cout << std::string(60, '=') << std::endl;
+}
+
+//==================== 数据库属性修改 ====================
 bool DatabaseMetadataManager::SetDatabaseName(const std::string& new_name)
 {
     strcpy(db_header.db_name, new_name.c_str());
@@ -449,6 +507,90 @@ bool DatabaseMetadataManager::SetPageSize(uint32_t page_size)
     return true;
 }
 
+//==================== 统计信息管理 ====================
+bool DatabaseMetadataManager::UpdateTotalPages(uint64_t total, uint64_t free) 
+{
+    db_stats.total_pages = total;
+    db_stats.free_pages = free;
+    std::cout << "页面统计更新: 总页面=" << total << ", 空闲页面=" << free << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::UpdateDatabaseSize(uint64_t size) 
+{
+    db_stats.total_size = size;
+    std::cout << "数据库大小更新为: " << size << " bytes" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetLastBackupTime(uint64_t timestamp) 
+{
+    db_stats.last_backup_time = timestamp;
+    std::cout << "备份时间更新" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::IncrementTransactionCount() 
+{
+    db_stats.transaction_count++;
+    return true;
+}
+
+bool DatabaseMetadataManager::UpdateIOStats(uint64_t reads, uint64_t writes) 
+{
+    db_stats.total_reads += reads;
+    db_stats.total_writes += writes;
+    return true;
+}
+
+bool DatabaseMetadataManager::UpdateCacheStats(uint64_t hits, uint64_t misses) 
+{
+    db_stats.cache_hits += hits;
+    db_stats.cache_misses += misses;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetActiveConnections(uint32_t count)
+{
+    db_stats.active_connections = count;
+    return true;
+}
+
+void DatabaseMetadataManager::ShowDatabaseStats() 
+{
+    std::cout << "\n=== 数据库统计信息 ===" << std::endl;
+    std::cout << "总页面数: " << db_stats.total_pages << std::endl;
+    std::cout << "空闲页面数: " << db_stats.free_pages << std::endl;
+    std::cout << "数据库大小: " << db_stats.total_size << " bytes" << std::endl;
+    std::cout << "事务总数: " << db_stats.transaction_count << std::endl;
+    std::cout << "总读取次数: " << db_stats.total_reads << std::endl;
+    std::cout << "总写入次数: " << db_stats.total_writes << std::endl;
+    std::cout << "缓存命中: " << db_stats.cache_hits << std::endl;
+    std::cout << "缓存未命中: " << db_stats.cache_misses << std::endl;
+    std::cout << "当前连接数: " << db_stats.active_connections << std::endl;
+
+    // 计算统计比率
+    if (db_stats.cache_hits + db_stats.cache_misses > 0) {
+        double hit_ratio = (double)db_stats.cache_hits / (db_stats.cache_hits + db_stats.cache_misses) * 100;
+        std::cout << "缓存命中率: " << std::fixed << std::setprecision(2) << hit_ratio << "%" << std::endl;
+    }
+
+    if (db_stats.total_pages > 0) {
+        double utilization = (double)(db_stats.total_pages - db_stats.free_pages) / db_stats.total_pages * 100;
+        std::cout << "存储利用率: " << std::fixed << std::setprecision(2) << utilization << "%" << std::endl;
+    }
+}
+
+void DatabaseMetadataManager::ResetStatistics() 
+{
+    db_stats.total_reads = 0;
+    db_stats.total_writes = 0;
+    db_stats.cache_hits = 0;
+    db_stats.cache_misses = 0;
+    db_stats.transaction_count = 0;
+    std::cout << "统计信息已重置" << std::endl;
+}
+
 uint64_t DatabaseMetadataManager::GetTotalRowCount() const 
 {
     uint64_t total_rows = 0;
@@ -457,4 +599,383 @@ uint64_t DatabaseMetadataManager::GetTotalRowCount() const
         total_rows += table.row_count;
     }
     return total_rows;
+}
+
+//==================== 存储配置管理 ====================
+bool DatabaseMetadataManager::SetDataFilePath(const std::string& path) 
+{
+    strcpy(storage_config.data_file_path, path.c_str());
+    std::cout << "数据文件路径设置为: " << path << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetLogFilePath(const std::string& path) 
+{
+    strcpy(storage_config.log_file_path, path.c_str());
+    std::cout << "日志文件路径设置为: " << path << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetIndexFilePath(const std::string& path) 
+{
+    strcpy(storage_config.index_file_path, path.c_str());
+    std::cout << "索引文件路径设置为: " << path << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetBufferPoolSize(uint32_t size) 
+{
+    storage_config.buffer_pool_size = size;
+    std::cout << "缓冲池大小设置为: " << size << " bytes" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetMaxConnections(uint32_t max_conn) 
+{
+    storage_config.max_connections = max_conn;
+    std::cout << "最大连接数设置为: " << max_conn << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetLockTimeout(uint32_t timeout) 
+{
+    storage_config.lock_timeout = timeout;
+    std::cout << "锁超时时间设置为: " << timeout << " 秒" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::EnableAutoCheckpoint(bool enable) 
+{
+    storage_config.auto_checkpoint = enable ? 1 : 0;
+    std::cout << "自动检查点" << (enable ? "启用" : "禁用") << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetPageCacheSize(uint32_t size) 
+{
+    storage_config.page_cache_size = size;
+    std::cout << "页面缓存大小设置为: " << size << " bytes" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::EnableCompression(bool enable) 
+{
+    storage_config.enable_compression = enable ? 1 : 0;
+    std::cout << "数据压缩" << (enable ? "启用" : "禁用") << std::endl;
+    return true;
+}
+
+void DatabaseMetadataManager::ShowStorageConfig() 
+{
+    std::cout << "\n=== 存储配置 ===" << std::endl;
+    std::cout << "数据文件路径: " << storage_config.data_file_path << std::endl;
+    std::cout << "日志文件路径: " << storage_config.log_file_path << std::endl;
+    std::cout << "索引文件路径: " << storage_config.index_file_path << std::endl;
+    std::cout << "缓冲池大小: " << storage_config.buffer_pool_size << " bytes" << std::endl;
+    std::cout << "最大连接数: " << storage_config.max_connections << std::endl;
+    std::cout << "锁超时时间: " << storage_config.lock_timeout << " 秒" << std::endl;
+    std::cout << "自动检查点: " << (storage_config.auto_checkpoint ? "启用" : "禁用") << std::endl;
+    std::cout << "页面缓存大小: " << storage_config.page_cache_size << " bytes" << std::endl;
+    std::cout << "数据压缩: " << (storage_config.enable_compression ? "启用" : "禁用") << std::endl;
+}
+
+//==================== 日志配置管理 ====================
+bool DatabaseMetadataManager::SetLogLevel(uint8_t level) 
+{
+    if (level > 3)
+    {
+        std::cerr << "无效的日志级别: " << (int)level << std::endl;
+        return false;
+    }
+    log_config.log_level = level;
+    const char* level_names[] = { "ERROR", "WARN", "INFO", "DEBUG" };
+    std::cout << "日志级别设置为: " << level_names[level] << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetLogFileSize(uint32_t size_mb) 
+{
+    log_config.log_file_size = size_mb;
+    std::cout << "日志文件大小设置为: " << size_mb << " MB" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetLogFileCount(uint32_t count)
+{
+    log_config.log_file_count = count;
+    std::cout << "保留日志文件数量设置为: " << count << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::EnableWAL(bool enable) 
+{
+    log_config.enable_wal = enable ? 1 : 0;
+    std::cout << "WAL日志" << (enable ? "启用" : "禁用") << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetWALBufferSize(uint32_t size)
+{
+    log_config.wal_buffer_size = size;
+    std::cout << "WAL缓冲区大小设置为: " << size << " bytes" << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::SetSyncMode(uint8_t mode)
+{
+    if (mode > 2) 
+    {
+        std::cerr << "无效的同步模式: " << (int)mode << std::endl;
+        return false;
+    }
+    log_config.sync_mode = mode;
+    const char* mode_names[] = { "异步", "同步", "全同步" };
+    std::cout << "同步模式设置为: " << mode_names[mode] << std::endl;
+    return true;
+}
+
+bool DatabaseMetadataManager::EnableLogRotation(bool enable)
+{
+    log_config.enable_log_rotation = enable ? 1 : 0;
+    std::cout << "日志轮转" << (enable ? "启用" : "禁用") << std::endl;
+    return true;
+}
+
+void DatabaseMetadataManager::ShowLogConfig() 
+{
+    std::cout << "\n=== 日志配置 ===" << std::endl;
+    const char* level_names[] = { "ERROR", "WARN", "INFO", "DEBUG" };
+    std::cout << "日志级别: " << level_names[log_config.log_level] << std::endl;
+    std::cout << "日志文件大小: " << log_config.log_file_size << " MB" << std::endl;
+    std::cout << "保留文件数量: " << log_config.log_file_count << std::endl;
+    std::cout << "WAL日志: " << (log_config.enable_wal ? "启用" : "禁用") << std::endl;
+    std::cout << "WAL缓冲区: " << log_config.wal_buffer_size << " bytes" << std::endl;
+    const char* sync_names[] = { "异步", "同步", "全同步" };
+    std::cout << "同步模式: " << sync_names[log_config.sync_mode] << std::endl;
+    std::cout << "日志轮转: " << (log_config.enable_log_rotation ? "启用" : "禁用") << std::endl;
+}
+
+//==================== 性能分析 ====================
+double DatabaseMetadataManager::GetCacheHitRatio() const 
+{
+    uint64_t total_access = db_stats.cache_hits + db_stats.cache_misses;
+    if (total_access == 0) return 0.0;
+    return (double)db_stats.cache_hits / total_access * 100.0;
+}
+
+uint64_t DatabaseMetadataManager::GetAverageTransactionSize() const 
+{
+    if (db_stats.transaction_count == 0) return 0;
+    return (db_stats.total_reads + db_stats.total_writes) / db_stats.transaction_count;
+}
+
+void DatabaseMetadataManager::GeneratePerformanceReport() 
+{
+    std::cout << "\n=== 性能分析报告 ===" << std::endl;
+    std::cout << "数据库: " << db_header.db_name << std::endl;
+    std::cout << "分析时间: " << time(nullptr) << std::endl;
+    std::cout << std::string(40, '-') << std::endl;
+
+    // 缓存性能
+    std::cout << "缓存性能:" << std::endl;
+    std::cout << "  命中率: " << std::fixed << std::setprecision(2)
+        << GetCacheHitRatio() << "%" << std::endl;
+    std::cout << "  总访问: " << (db_stats.cache_hits + db_stats.cache_misses) << std::endl;
+
+    // I/O性能
+    std::cout << "I/O性能:" << std::endl;
+    std::cout << "  读取次数: " << db_stats.total_reads << std::endl;
+    std::cout << "  写入次数: " << db_stats.total_writes << std::endl;
+    std::cout << "  读写比例: " << std::fixed << std::setprecision(2);
+    if (db_stats.total_writes > 0) 
+    {
+        std::cout << (double)db_stats.total_reads / db_stats.total_writes << ":1" << std::endl;
+    }
+    else {
+        std::cout << "N/A" << std::endl;
+    }
+
+    // 存储性能
+    std::cout << "存储性能:" << std::endl;
+    if (db_stats.total_pages > 0)
+    {
+        double utilization = (double)(db_stats.total_pages - db_stats.free_pages) / db_stats.total_pages * 100;
+        std::cout << "  利用率: " << std::fixed << std::setprecision(2) << utilization << "%" << std::endl;
+    }
+    std::cout << "  平均事务大小: " << GetAverageTransactionSize() << " I/O" << std::endl;
+
+    // 连接性能
+    std::cout << "连接性能:" << std::endl;
+    std::cout << "  当前连接数: " << db_stats.active_connections << std::endl;
+    std::cout << "  最大连接数: " << storage_config.max_connections << std::endl;
+    if (storage_config.max_connections > 0) 
+    {
+        double conn_utilization = (double)db_stats.active_connections / storage_config.max_connections * 100;
+        std::cout << "  连接利用率: " << std::fixed << std::setprecision(2) << conn_utilization << "%" << std::endl;
+    }
+}
+
+//==================== 配置管理辅助类 ====================
+// 存储配置管理器实现
+bool StorageConfigManager::SetDataPath(const std::string& path) 
+{
+    strcpy(config.data_file_path, path.c_str());
+    return true;
+}
+
+bool StorageConfigManager::SetLogPath(const std::string& path)
+{
+    strcpy(config.log_file_path, path.c_str());
+    return true;
+}
+
+bool StorageConfigManager::SetIndexPath(const std::string& path)
+{
+    strcpy(config.index_file_path, path.c_str());
+    return true;
+}
+
+bool StorageConfigManager::SetBufferPoolSize(uint32_t size_mb) 
+{
+    config.buffer_pool_size = size_mb * 1024 * 1024;  // 转换为字节
+    return true;
+}
+
+bool StorageConfigManager::SetPageCacheSize(uint32_t size_mb)
+{
+    config.page_cache_size = size_mb * 1024 * 1024;  // 转换为字节
+    return true;
+}
+
+bool StorageConfigManager::SetMaxConnections(uint32_t max_conn) 
+{
+    if (max_conn > 1000) {  // 限制最大连接数
+        std::cerr << "警告: 最大连接数过大，建议不超过1000" << std::endl;
+    }
+    config.max_connections = max_conn;
+    return true;
+}
+
+bool StorageConfigManager::SetLockTimeout(uint32_t timeout_sec) 
+{
+    config.lock_timeout = timeout_sec;
+    return true;
+}
+
+bool StorageConfigManager::EnableAutoCheckpoint(bool enable)
+{
+    config.auto_checkpoint = enable ? 1 : 0;
+    return true;
+}
+
+bool StorageConfigManager::EnableCompression(bool enable)
+{
+    config.enable_compression = enable ? 1 : 0;
+    return true;
+}
+
+bool StorageConfigManager::ValidateConfig() 
+{
+    // 检查路径是否为空
+    if (strlen(config.data_file_path) == 0) 
+    {
+        std::cerr << "错误: 数据文件路径不能为空" << std::endl;
+        return false;
+    }
+
+    // 检查缓冲池大小是否合理
+    if (config.buffer_pool_size < 1024 * 1024)
+    {  // 小于1MB
+        std::cerr << "警告: 缓冲池大小过小，建议至少1MB" << std::endl;
+    }
+
+    // 检查连接数是否合理
+    if (config.max_connections == 0) 
+    {
+        std::cerr << "错误: 最大连接数不能为0" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+void StorageConfigManager::PrintConfig() 
+{
+    std::cout << "=== 存储配置 ===" << std::endl;
+    std::cout << "数据文件: " << config.data_file_path << std::endl;
+    std::cout << "日志文件: " << config.log_file_path << std::endl;
+    std::cout << "索引文件: " << config.index_file_path << std::endl;
+    std::cout << "缓冲池: " << (config.buffer_pool_size / 1024 / 1024) << " MB" << std::endl;
+    std::cout << "页面缓存: " << (config.page_cache_size / 1024 / 1024) << " MB" << std::endl;
+    std::cout << "最大连接: " << config.max_connections << std::endl;
+    std::cout << "锁超时: " << config.lock_timeout << " 秒" << std::endl;
+    std::cout << "自动检查点: " << (config.auto_checkpoint ? "启用" : "禁用") << std::endl;
+    std::cout << "数据压缩: " << (config.enable_compression ? "启用" : "禁用") << std::endl;
+}
+
+// 日志配置管理器实现
+bool LogConfigManager::SetLogLevel(const std::string& level) 
+{
+    if (level == "ERROR") { config.log_level = 0; }
+    else if (level == "WARN") { config.log_level = 1; }
+    else if (level == "INFO") { config.log_level = 2; }
+    else if (level == "DEBUG") { config.log_level = 3; }
+    else 
+    {
+        std::cerr << "无效的日志级别: " << level << std::endl;
+        return false;
+    }
+    return true;
+}
+
+bool LogConfigManager::SetSyncMode(const std::string& mode)
+{
+    if (mode == "async") { config.sync_mode = 0; }
+    else if (mode == "sync") { config.sync_mode = 1; }
+    else if (mode == "full_sync") { config.sync_mode = 2; }
+    else 
+    {
+        std::cerr << "无效的同步模式: " << mode << std::endl;
+        return false;
+    }
+    return true;
+}
+
+std::string LogConfigManager::GetLogLevelString() const 
+{
+    const char* levels[] = { "ERROR", "WARN", "INFO", "DEBUG" };
+    return levels[config.log_level];
+}
+
+std::string LogConfigManager::GetSyncModeString() const
+{
+    const char* modes[] = { "async", "sync", "full_sync" };
+    return modes[config.sync_mode];
+}
+
+// 统计信息管理器实现
+bool DatabaseStatsManager::UpdateStorageStats(uint64_t total_pages, uint64_t free_pages, uint64_t total_size)
+{
+    stats.total_pages = total_pages;
+    stats.free_pages = free_pages;
+    stats.total_size = total_size;
+    return true;
+}
+
+double DatabaseStatsManager::GetCacheHitRatio() const
+{
+    uint64_t total = stats.cache_hits + stats.cache_misses;
+    return total > 0 ? (double)stats.cache_hits / total * 100.0 : 0.0;
+}
+
+double DatabaseStatsManager::GetStorageUtilization() const 
+{
+    return stats.total_pages > 0 ?
+        (double)(stats.total_pages - stats.free_pages) / stats.total_pages * 100.0 : 0.0;
+}
+
+void DatabaseStatsManager::ResetAllStats() 
+{
+    memset(&stats, 0, sizeof(DatabaseStats));
+    std::cout << "所有统计信息已重置" << std::endl;
 }

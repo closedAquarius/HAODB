@@ -51,6 +51,49 @@ DatabaseHeader::DatabaseHeader()
     index_count = 0;
 }
 
+// 存储配置构造函数
+StorageConfig::StorageConfig()
+{
+    memset(data_file_path, 0, sizeof(data_file_path));
+    memset(log_file_path, 0, sizeof(log_file_path));
+    memset(index_file_path, 0, sizeof(index_file_path));
+    buffer_pool_size = 33554432;     // 32MB默认
+    max_connections = 50;
+    lock_timeout = 30;
+    auto_checkpoint = 1;
+    page_cache_size = 16777216;      // 16MB默认
+    enable_compression = 0;
+    checkpoint_pages = 1000;
+}
+
+// 日志配置构造函数
+LogConfig::LogConfig() 
+{
+    log_level = 2;                   // INFO级别
+    log_file_size = 50;              // 50MB
+    log_file_count = 5;
+    enable_wal = 1;
+    wal_buffer_size = 8388608;       // 8MB
+    sync_mode = 1;                   // 同步模式
+    wal_checkpoint_size = 67108864;  // 64MB
+    enable_log_rotation = 1;
+}
+
+// 数据库统计信息构造函数
+DatabaseStats::DatabaseStats()
+{
+    total_pages = 0;
+    free_pages = 0;
+    total_size = 0;
+    last_backup_time = 0;
+    transaction_count = 0;
+    total_reads = 0;
+    total_writes = 0;
+    cache_hits = 0;
+    cache_misses = 0;
+    active_connections = 0;
+}
+
 // ColumnMeta构造函数
 ColumnMeta::ColumnMeta() 
 {

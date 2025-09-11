@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="catalog_manager.cpp" />
     <ClCompile Include="database_metadata_manager.cpp" />
     <ClCompile Include="database_registry_Manager.cpp" />
     <ClCompile Include="executer.cpp" />
