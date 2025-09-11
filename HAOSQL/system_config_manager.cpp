@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "system_config_manager.h"
 #include <iostream>
 #include <fstream>
@@ -33,6 +34,7 @@ bool SystemConfigManager::LoadConfig()
 bool SystemConfigManager::SaveConfig() 
 {
     std::ofstream file(config_file_path, std::ios::binary);
+    
     if (!file.is_open())
     {
         std::cerr << "无法写入配置文件: " << config_file_path << std::endl;
@@ -122,8 +124,8 @@ bool SystemConfigManager::CreateDefaultConfig()
 {
     config = SystemConfig();  // 使用默认构造函数
     // 设置默认路径
-    strcpy(config.system_log_path, "C:\\HAODB\\system\\logs\\");
-    strcpy(config.temp_path, "C:\\HAODB\\temp\\");
-    strcpy(config.backup_path, "C:\\HAODB\\backup\\");
+    strcpy(config.system_log_path, "HAODB\\system\\logs\\");
+    strcpy(config.temp_path, "HAODB\\temp\\");
+    strcpy(config.backup_path, "HAODB\\backup\\");
     return SaveConfig();
 }

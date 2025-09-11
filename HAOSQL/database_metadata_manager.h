@@ -158,14 +158,14 @@ public:
     // WAL配置
     bool EnableWAL(bool enable);
     bool SetWALBufferSize(uint32_t size_mb);
-    bool SetWALCheckpointSize(uint32_t size_mb);
+    //bool SetWALCheckpointSize(uint32_t size_mb);
 
     // 同步模式
     bool SetSyncMode(const std::string& mode);  // "async", "sync", "full_sync"
     bool SetSyncMode(uint8_t mode);
 
     // 验证配置
-    bool ValidateConfig();
+    // bool ValidateConfig();
     void PrintConfig();
     std::string GetLogLevelString() const;
     std::string GetSyncModeString() const;
@@ -182,35 +182,35 @@ public:
 
     // 存储统计
     bool UpdateStorageStats(uint64_t total_pages, uint64_t free_pages, uint64_t total_size);
-    bool IncrementTransactionCount(uint32_t count = 1);
+    //bool IncrementTransactionCount(uint32_t count = 1);
 
     // I/O统计
-    bool RecordRead(uint64_t count = 1);
+    /*bool RecordRead(uint64_t count = 1);
     bool RecordWrite(uint64_t count = 1);
     bool RecordCacheHit(uint64_t count = 1);
-    bool RecordCacheMiss(uint64_t count = 1);
+    bool RecordCacheMiss(uint64_t count = 1);*/
 
     // 连接统计
     bool SetActiveConnections(uint32_t count);
-    bool IncrementActiveConnections();
-    bool DecrementActiveConnections();
+    //bool IncrementActiveConnections();
+    //bool DecrementActiveConnections();
 
     // 备份信息
-    bool UpdateBackupTime();
-    bool SetBackupTime(uint64_t timestamp);
+    //bool UpdateBackupTime();
+    //bool SetBackupTime(uint64_t timestamp);
 
     // 统计计算
     double GetCacheHitRatio() const;
     double GetStorageUtilization() const;
-    uint64_t GetTotalIO() const;
+    //uint64_t GetTotalIO() const;
 
     // 重置和清理
-    void ResetIOStats();
-    void ResetCacheStats();
+    //void ResetIOStats();
+    //void ResetCacheStats();
     void ResetAllStats();
 
     // 报告生成
-    void PrintStats();
-    void PrintPerformanceReport();
-    void ExportStatsToFile(const std::string& filename);
+    //void PrintStats();
+    //void PrintPerformanceReport();
+    //void ExportStatsToFile(const std::string& filename);
 };

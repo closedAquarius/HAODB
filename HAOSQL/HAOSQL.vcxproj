@@ -104,6 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -142,12 +143,15 @@
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="semantic.cpp" />
     <ClCompile Include="system_config_manager.cpp" />
+    <ClCompile Include="test_catalog.cpp" />
+    <ClCompile Include="test_storage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="sql_grammar.txt" />
     <Text Include="test.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="catalog_manager.h" />
     <ClInclude Include="database_metadata_manager.h" />
     <ClInclude Include="database_registry_manager.h" />
     <ClInclude Include="B+tree.h" />
