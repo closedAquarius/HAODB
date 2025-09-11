@@ -4,7 +4,7 @@
 #include "database_registry_manager.h"
 using namespace std;
 
-int test()
+void test()
 {
     // ≥ı ºªØ
     CatalogManager catalog("HAODB2");

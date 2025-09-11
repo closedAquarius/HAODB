@@ -7,6 +7,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <unordered_set>
 
 namespace fs = std::filesystem;
 
@@ -309,6 +310,9 @@ bool CatalogManager::CreateTable(const std::string& db_name, const std::string& 
             columns.push_back(column);
         }
 
+        // 更新偏移量
+        UpdateColumnOffset(columns);
+
         // 生成新的表ID
         uint32_t table_id = GenerateNewTableId(db_name);
 
@@ -428,7 +432,8 @@ bool CatalogManager::AddColumns(const std::string& db_name, const std::string& t
             column.is_nullable = 1;
             column.is_primary_key = 0;
             column.is_unique = 0;
-            column.column_offset = 0;
+            column.column_offset = table->columns[table->column_count - 1].column_offset
+                + table->columns[table->column_count - 1].max_length;
             memset(column.default_value, 0, sizeof(column.default_value));
 
             if (!db_manager->AddColumn(table_name, column)) {
@@ -498,6 +503,7 @@ std::vector<TableInfo> CatalogManager::ListTables(const std::string& db_name) {
         info.row_count = table.row_count;
         info.column_count = table.column_count;
         info.create_time = table.create_time;
+        info.data_file_offset = table.data_file_offset;
 
         // 转换列信息
         for (uint32_t i = 0; i < table.column_count; i++) {
@@ -507,6 +513,7 @@ std::vector<TableInfo> CatalogManager::ListTables(const std::string& db_name) {
             col_def.is_nullable = col.is_nullable != 0;
             col_def.is_unique = col.is_unique != 0;
             col_def.default_value = col.default_value;
+            col_def.column_offset = col.column_offset;
             info.columns.push_back(col_def);
         }
 
@@ -532,6 +539,7 @@ TableInfo CatalogManager::GetTableInfo(const std::string& db_name, const std::st
         info.row_count = table->row_count;
         info.column_count = table->column_count;
         info.create_time = table->create_time;
+        info.data_file_offset = table->data_file_offset;
 
         for (uint32_t i = 0; i < table->column_count; i++) {
             const auto& col = table->columns[i];
@@ -540,6 +548,7 @@ TableInfo CatalogManager::GetTableInfo(const std::string& db_name, const std::st
             col_def.is_nullable = col.is_nullable != 0;
             col_def.is_unique = col.is_unique != 0;
             col_def.default_value = col.default_value;
+            col_def.column_offset = col.column_offset;
             info.columns.push_back(col_def);
         }
     }
@@ -685,6 +694,33 @@ bool CatalogManager::IndexExists(const std::string& db_name, const std::string& 
     return db_manager->GetIndexInfo(index_name) != nullptr;
 }
 
+std::vector<IndexInfo> CatalogManager::FindIndexesWithColumns(
+    const std::string& db_name,
+    const std::string& table_name,
+    const std::vector<std::string>& column_names)
+{
+    std::vector<IndexInfo> result;
+
+    // 使用 ListIndexes 获取所有索引
+    std::vector<IndexInfo> indexes = ListIndexes(db_name, table_name);
+
+    // 将输入的列名数组转成一个无序集合用于比较
+    std::unordered_set<std::string> target_columns(column_names.begin(), column_names.end());
+
+    // 遍历所有索引
+    for (const auto& index_info : indexes) {
+        // 将索引的列名集合化，用于比较
+        std::unordered_set<std::string> index_columns(index_info.column_names.begin(), index_info.column_names.end());
+
+        // 如果两者列名集合相等，则表示这个索引符合条件
+        if (index_columns == target_columns) {
+            result.push_back(index_info);
+        }
+    }
+
+    return result;
+}
+
 // ==================== 统计信息管理 ====================
 
 bool CatalogManager::UpdateTotalPages(const std::string& db_name, uint64_t increment) {
@@ -819,7 +855,7 @@ void CatalogManager::ShowSystemInfo() {
     std::cout << "\n=== HAODB 系统信息 ===" << std::endl;
     system_config->ShowConfig();
 
-    std::cout << "\n=== 数据库列表 ===" << std::endl;
+    //std::cout << "\n=== 数据库列表 ===" << std::endl;
     registry_manager->ListDatabases();
 }
 
@@ -1188,6 +1224,17 @@ bool CatalogManager::ValidateColumnName(const std::string& column_name) {
         if (!std::isalnum(c) && c != '_') {
             return false;
         }
+    }
+
+    return true;
+}
+
+bool CatalogManager::UpdateColumnOffset(std::vector<ColumnMeta>& columns) {
+    for (int i = 0; i < columns.size();i++) {
+        if (i == 0)
+            columns[i].column_offset = 0;
+        else
+            columns[i].column_offset = columns[i - 1].column_offset + columns[i - 1].max_length;
     }
 
     return true;
