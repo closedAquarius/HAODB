@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "database_metadata_manager.h"
 #include <iostream>
 #include <fstream>

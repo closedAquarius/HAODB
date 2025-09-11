@@ -10,7 +10,7 @@
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
-
+/*
 int main()
 {
     std::cout << "Hello World!\n";
@@ -34,6 +34,7 @@ int main()
         cout << endl;
     }
 }
+*/
 
 vector<Quadruple> sql_compiler(string sql)
 {
