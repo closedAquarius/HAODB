@@ -2,8 +2,6 @@
 
 using namespace std;
 
-Page::Page(size_t page_size) : id(-1), dirty(false), pin_count(0), data(page_size) {}
-
 LRUReplacer::LRUReplacer(size_t c) :capacity(c) {}
 // 将最近使用的页移动到链表头，表头为最近使用的，表尾为最久未使用的
 void LRUReplacer::access(PageId id) {
@@ -20,6 +18,14 @@ void LRUReplacer::access(PageId id) {
         lru_list.pop_back();
         pos.erase(old);
     }
+}
+// 将页释放，确保可再使用
+void LRUReplacer::push(PageId id) {
+    // 确保不重复
+    lru_list.erase(pos[id]);
+    
+    lru_list.push_back(id);
+    pos[id] = --lru_list.end();
 }
 // 选出最久没用的受害者
 PageId LRUReplacer::victim() {
@@ -38,8 +44,11 @@ void LRUReplacer::erase(PageId id) {
 }
 
 
-BufferPoolManager::BufferPoolManager(size_t pool_size)
-    : pool_size(pool_size), frames(pool_size, Page(PAGE_SIZE)), replacer(pool_size) {
+BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager* d)
+    : pool_size(pool_size), replacer(pool_size), disk(d) {
+    for (int i = 0; i < pool_size; i++) {
+        frames.push_back(Page(PageType::DATA_PAGE));
+    }
 }
 
 // 读取页
@@ -70,7 +79,8 @@ Page* BufferPoolManager::fetchPage(PageId id) {
     if (victim_id != -1) {
         frame_id = page_table[victim_id];
         if (frames[frame_id].dirty) {
-            // TODO: 写回磁盘
+            // 写回磁盘
+            disk->writePage(frame_id, frames[frame_id]);
             cout << "Flush dirty page " << victim_id << " to disk.\n";
         }
         page_table.erase(victim_id);
@@ -89,7 +99,7 @@ Page* BufferPoolManager::fetchPage(PageId id) {
     frames[frame_id].dirty = false;
     frames[frame_id].pin_count = 1;
     // TODO: 从磁盘写入
-    fill(frames[frame_id].data.begin(), frames[frame_id].data.end(), 0);
+    disk->readPage(id, frames[frame_id]);
 
     page_table[id] = frame_id;
     replacer.access(id);
@@ -111,12 +121,7 @@ void BufferPoolManager::unpinPage(PageId id, bool is_dirty) {
     cout << "Unpin page " << id << "(pin_count=" << page.pin_count << ")\n";
 
     if (page.pin_count == 0) {
-        replacer.access(id);        // 可被替换
-        // TODO: 放到队尾（不是 access）
-        // 确保不重复
-        //replacer.erase(id);
-        //replacer.lru_list.push_back(id);
-        //replacer.pos[id] = --replacer.lru_list.end();
+        replacer.push(id);
     }
 }
 
@@ -129,6 +134,7 @@ void BufferPoolManager::flushPage(PageId id) {
 
     if (page.dirty) {
         // TODO: 写回磁盘
+        disk->writePage(id, page);
         cout << "Flush page " << id << " to disk.\n";
         page.dirty = false;
     }
@@ -139,9 +145,10 @@ Page* BufferPoolManager::newPage(PageId id) {
     return fetchPage(id); // 简化实现，直接调用 fetchPage
 }
 
+// 测试BufferPoolManager的基本功能
 void BufferPoolManager::test() {
-    DiskManager dm("2.test.db");
-    DataPage p(PageType::DATA_PAGE);
+    DiskManager dm("1.test.db");
+    Page p(PageType::DATA_PAGE);
     
     dm.readPage(0,p);
 

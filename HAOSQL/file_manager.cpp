@@ -20,7 +20,7 @@ int FileManager::openFile(const std::string& tablespace_name) {
     return file_id;
 }
 
-bool FileManager::readPage(int file_id, uint32_t page_id, DataPage& page) {
+bool FileManager::readPage(int file_id, uint32_t page_id, Page& page) {
     auto it = open_files.find(file_id);
     if (it == open_files.end()) return false;
     std::fstream* fs = it->second;
@@ -30,7 +30,7 @@ bool FileManager::readPage(int file_id, uint32_t page_id, DataPage& page) {
     return fs->good();
 }
 
-bool FileManager::writePage(int file_id, const DataPage& page) {
+bool FileManager::writePage(int file_id, const Page& page) {
     auto it = open_files.find(file_id);
     if (it == open_files.end()) return false;
     std::fstream* fs = it->second;
@@ -50,37 +50,4 @@ uint32_t FileManager::getPageCount(int file_id) {
     fs->seekg(0, std::ios::end);
     std::streampos size = fs->tellg();
     return size / PAGE_SIZE;
-}
-
-
-DiskManager::DiskManager(std::string d) : diskName(d) {}
-DiskManager* DiskManager::readPage(int pageId, DataPage& pageData) {
-    std::ifstream f(diskName, std::ios::in | std::ios::binary);
-    char* data = new(char[PAGE_SIZE]);
-
-    if (!f.is_open()) {
-        std::cerr << "[ERROR] Disk " << diskName << " open failed for read.\n";
-        return this;
-    }
-
-    // 定位到文件中的offset
-    f.seekg(pageId * PAGE_SIZE, std::ios::beg);
-
-    // 从磁盘读取 PAGE_SIZE 字节到内存
-    f.read(data, PAGE_SIZE);
-    // 剩余不足 PAGE_SIZE ,用0补足
-    if (f.gcount() < (int)PAGE_SIZE) {
-        memset(data + f.gcount(), 0, PAGE_SIZE - f.gcount());
-    }
-
-    f.close();
-
-    memcpy(pageData.rawData(), data, PAGE_SIZE);
-
-    return this;
-}
-
-DiskManager* DiskManager::writePage(int pageId, DataPage& pageData) {
-
-    return this;
 }

@@ -88,7 +88,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="1.test.db">
+    <None Include="database.db">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

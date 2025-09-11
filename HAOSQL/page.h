@@ -3,6 +3,10 @@
 #include <cstring>
 #include <vector>
 #include <stdexcept>
+#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <sys/stat.h>
 
 // 页大小固定为4KB
 const size_t PAGE_SIZE = 4096;
@@ -28,11 +32,16 @@ struct Slot {
     uint16_t length;  // 记录长度
 };
 
-class DataPage {
+using PageId = int;
+class Page {
 public:
     char data[PAGE_SIZE];   //整个页空间
 public:
-    DataPage(PageType type);
+    PageId id;
+    bool dirty;
+    int pin_count;
+
+    Page(PageType type);
 
     // 页空间固定，手动控制页头
     PageHeader* header();
@@ -49,4 +58,13 @@ public:
 
     char* rawData();
     const char* rawData() const;
+};
+
+class DiskManager {
+private:
+    std::string diskName;
+public:
+    DiskManager(std::string d);
+    DiskManager* readPage(int pageId, Page& pageData);
+    DiskManager* writePage(int pageId, Page& pageData);
 };

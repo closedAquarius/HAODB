@@ -1,19 +1,8 @@
 #pragma once
 #include <list>
-#include "file_manager.h"
+#include "page.h"
 
 using namespace std;
-
-// ========== 页对象 ==========
-using PageId = int;
-struct Page {
-    PageId id;
-    bool dirty;
-    int pin_count;
-    vector<char> data;      // 实际的存储页
-
-    Page(size_t page_size);
-};
 
 // ========== LRU淘汰策略 ==========
 class LRUReplacer {
@@ -23,6 +12,7 @@ class LRUReplacer {
 public:
     LRUReplacer(size_t c);
     void access(PageId id);
+    void push(PageId id);
     PageId victim();
     void erase(PageId id);
 };
@@ -33,8 +23,9 @@ class BufferPoolManager {
     vector<Page> frames;
     unordered_map<PageId, int> page_table; // page_id -> frame_id
     LRUReplacer replacer;
+    DiskManager* disk;
 public:
-    BufferPoolManager(size_t pool_size);
+    BufferPoolManager(size_t pool_size, DiskManager* d);
 
     Page* fetchPage(PageId id);
     void unpinPage(PageId id, bool is_dirty);

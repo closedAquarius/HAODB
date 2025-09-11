@@ -151,7 +151,7 @@
     <ClInclude Include="semantic.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="1.test.db" />
+    <None Include="database.db" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

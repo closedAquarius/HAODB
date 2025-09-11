@@ -2,9 +2,43 @@
 
 using namespace std;
 
-Scan::Scan(const Table& t) :table(t) {}
+Scan::Scan(BufferPoolManager* bpm, const string& tName) : bpm(bpm), tableName(tName) {}
 vector<Row> Scan::execute() {
-	return this->table;
+	// 假设Students表位于 PageId 0
+	PageId pageId = 0;
+	vector<Row> output;
+
+	// 通过缓冲池获取页
+	Page* page = bpm->fetchPage(pageId);
+	if (!page) {
+		throw runtime_error("Failed ro fetch page from buffer pool.");
+	}
+
+	// 遍历页中的所有槽，解析记录
+	for (int i = 0; i < page->header()->slot_count; i++) {
+		string record_str = page->readRecord(i);
+		Row row;
+
+		// TODO
+		// 假设记录是键值对的字符串形式，例如 "id:1,name:Alice,..."
+		vector<string> parts;
+		split(record_str, ",", parts);
+		for (const auto& p : parts) {
+			size_t colon_pos = p.find(":");
+			if (colon_pos != string::npos) {
+				string key = p.substr(0, colon_pos);
+				string value = p.substr(colon_pos + 1);
+				row[key] = value;
+			}
+		}
+
+		output.push_back(row);
+	}
+	
+	// 使用完毕后解除 pin
+	bpm->unpinPage(pageId, false);
+
+	return output;
 }
 
 Condition::Condition() {}
@@ -42,18 +76,6 @@ vector<Row> Project::execute() {
 }
 
 
-Table Students = {
-	{{"id", "1"}, {"name", "Alice"  }, {"age", "23"}, {"grade", "A"}},
-	{{"id", "2"}, {"name", "Bob"    }, {"age", "19"}, {"grade", "B"}},
-	{{"id", "3"}, {"name", "Charlie"}, {"age", "25"}, {"grade", "A"}},
-	{{"id", "4"}, {"name", "John"   }, {"age", "18"}, {"grade", "A"}}
-};
-Table getData(string tableName) {
-	// 从 q.arg1 找表数据
-	cout << endl << "访问数据库表(文件系统): " << tableName << endl;
-	return Students;
-}
-
 void split(const string& str, const string& splits, vector<string>& result) {
 	if (str == "") return;
 	// 末尾加上分隔符，方便截取
@@ -75,17 +97,15 @@ void getColumns(vector<string>& cols, string s) {
 	split(s, ",", cols);
 }
 
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns) {
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm) {
 	Operator* root = nullptr;
 	map<string, Operator*> symbolTables;
 	map<string, Condition> condTable;
-	Table t;
 
 	for (auto& q : quads) {
 		// ========== 基本表扫描 ==========
 		if (q.op == "FROM") {
-			t = getData(q.arg1);
-			symbolTables[q.result] = new Scan(t);
+			symbolTables[q.result] = new Scan(bpm, q.arg1);
 		}
 
 		// ========== 连接 ==========

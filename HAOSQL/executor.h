@@ -5,6 +5,7 @@
 #include <map>
 #include <functional>
 #include "dataType.h"
+#include "buffer_pool.h"
 
 using namespace std;
 
@@ -61,8 +62,10 @@ public:
 class Scan : public Operator {				// 扫描
 private:
 	Table table;
+	BufferPoolManager* bpm;
+	string tableName;
 public:
-	Scan(const Table& t);
+	Scan(BufferPoolManager* bpm, const string& tName);
 	vector<Row> execute();
 };
 
@@ -85,11 +88,9 @@ public:
 };
 
 // ========== 访问数据 ==========
-Table getData(string tableName);
-
 void split(const string& str, const string& splits, vector<string>& result);
 
 void getColumns(vector<string>& cols, string s);
 
 // ========== 构建算子树 ==========
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm);
