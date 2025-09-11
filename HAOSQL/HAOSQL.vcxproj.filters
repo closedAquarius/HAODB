@@ -48,11 +48,14 @@
     <ClCompile Include="page.cpp">
       <Filter>源文件\storage</Filter>
     </ClCompile>
-    <ClCompile Include="executer.h">
+    <ClCompile Include="executor.h">
       <Filter>头文件</Filter>
     </ClCompile>
-    <ClCompile Include="executer.cpp">
+    <ClCompile Include="executor.cpp">
       <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="buffer_pool.cpp">
+      <Filter>源文件\storage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -80,5 +83,13 @@
     <ClInclude Include="page.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="buffer_pool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="1.test.db">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

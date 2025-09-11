@@ -5,7 +5,8 @@
 #include "parser.h"
 #include "lexer.h"
 #include "semantic.h"
-#include "executer.h"
+#include "executor.h"
+#include "buffer_pool.h"
 
 using namespace std;
 
@@ -13,26 +14,29 @@ vector<Quadruple> sql_compiler(string sql);
 
 int main()
 {
-    std::cout << "Hello World!\n";
-    string sql;
-    cout << "请输入 SQL 语句: ";
-    getline(cin, sql);
-    cout << sql << endl;
-    vector<Quadruple> quadruple = sql_compiler(sql);
+    //std::cout << "Hello World!\n";
+    //string sql;
+    //cout << "请输入 SQL 语句: ";
+    //getline(cin, sql);
+    //cout << sql << endl;
+    //vector<Quadruple> quadruple = sql_compiler(sql);
 
-    // 构建并执行计划
-    vector<string> columns;
-    Operator* root = buildPlan(quadruple, columns);
-    vector<Row> result = root->execute();
+    //// 构建并执行计划
+    //vector<string> columns;
+    //Operator* root = buildPlan(quadruple, columns);
+    //vector<Row> result = root->execute();
 
-    // 输出结果
-    cout << endl;
-    for (auto& row : result) {
-        for (auto& col : columns) {
-            cout << row.at(col) << "\t|";
-        }
-        cout << endl;
-    }
+    //// 输出结果
+    //cout << endl;
+    //for (auto& row : result) {
+    //    for (auto& col : columns) {
+    //        cout << row.at(col) << "\t|";
+    //    }
+    //    cout << endl;
+    //}
+
+    BufferPoolManager bpm(3);
+    bpm.test();
 }
 
 vector<Quadruple> sql_compiler(string sql)

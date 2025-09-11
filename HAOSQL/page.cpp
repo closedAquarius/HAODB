@@ -1,88 +1,112 @@
 #include "page.h"
+using namespace std;
 
-Page::Page(PageType t, uint32_t id) {
-    header.type = t;
-    header.page_id = id;
-    header.free_offset = 0;
-    header.record_count = 0;
-    std::memset(data, 0, sizeof(data));
-    std::memset(slots, 0, sizeof(slots));
+DataPage::DataPage(PageType type) {
+    memset(data, 0, PAGE_SIZE);
+    header()->type = type;
+    header()->page_id = 0;
+    header()->free_offset = sizeof(PageHeader);
+    header()->slot_count = 0;
+
 }
 
-// 插入一条记录，返回是否成功
-bool Page::insertRecord(const std::string& record) {
-    int len = record.size();
-    // 检查是否有足够空间存放记录 + slot
-    if (header.free_offset + len > sizeof(data) || header.record_count >= 100) {
-        return false; // 空间不足
+// 页空间固定，手动控制页头
+PageHeader* DataPage::header() {
+    return reinterpret_cast<PageHeader*>(data);
+}
+const PageHeader* DataPage::header() const {
+    return reinterpret_cast<const PageHeader*>(data);
+}
+
+// 页空间固定，手动获取 idx 位置的Slot数据
+Slot* DataPage::getSlot(int idx) {
+    if (idx < 0 || idx >= header()->slot_count) {
+        throw out_of_range("Invalid slot index");
+    }
+    return reinterpret_cast<Slot*>(
+        data + PAGE_SIZE - (idx + 1) * sizeof(Slot)
+        );
+}
+const Slot* DataPage::getSlot(int idx) const {
+    if (idx < 0 || idx >= header()->slot_count) {
+        throw std::out_of_range("Invalid slot index");
+    }
+    return reinterpret_cast<const Slot*>(
+        data + PAGE_SIZE - (idx + 1) * sizeof(Slot)
+        );
+}
+
+// 插入一条记录，返回 slot 下标
+int DataPage::insertRecord(const char* record, uint16_t len) {
+    int slotCount = header()->slot_count;
+    uint16_t freeOffset = header()->free_offset;
+
+    // 计算槽目录位置
+    uint16_t slotDirPos = PAGE_SIZE - (slotCount + 1) * sizeof(Slot);
+
+    // 检查空间是否足够
+    if (freeOffset + len > slotDirPos) {
+        throw runtime_error("Not enough space in page");
     }
 
-    // 记录写入 Data 区
-    std::memcpy(data + header.free_offset, record.c_str(), len);
+    // 拷贝数据到数据区
+    memcpy(data + freeOffset, record, len);
 
-    // 更新 slot 信息
-    slots[header.record_count].offset = header.free_offset;
-    slots[header.record_count].length = len;
+    // 更新 slot
+    Slot* slot = reinterpret_cast<Slot*>(data + slotDirPos);
+    slot->offset = freeOffset;
+    slot->length = len;
 
-    // 更新页头
-    header.free_offset += len;
-    header.record_count++;
+    // 更新 header
+    header()->free_offset += len;
+    header()->slot_count++;
 
-    return true;
+    return slotCount; // 返回 slot 下标
 }
 
-// 根据 slot_id 获取记录
-std::string Page::getRecord(int slot_id) const {
-    if (slot_id >= header.record_count) return "";
-    const Slot& s = slots[slot_id];
-    return std::string(data + s.offset, s.length);
+// 读取记录
+string DataPage::readRecord(int idx) const {
+    const Slot* slot = getSlot(idx);
+    return string(data + slot->offset, slot->length);
 }
 
-// 写页到磁盘（只写固定大小页，不写指针）
-void Page::writeToDisk(const std::string& filename) {
-    std::fstream fs(filename, std::ios::in | std::ios::out | std::ios::binary);
-    if (!fs.is_open()) {
-        // 文件不存在就创建
-        fs.open(filename, std::ios::out | std::ios::binary);
-        fs.close();
-        fs.open(filename, std::ios::in | std::ios::out | std::ios::binary);
-    }
-    fs.seekp(header.page_id * PAGE_SIZE);
-    // 先写页头
-    fs.write(reinterpret_cast<char*>(&header), sizeof(header));
-    // 写 slot 数组
-    fs.write(reinterpret_cast<char*>(slots), sizeof(slots));
-    // 写 data 区
-    fs.write(data, sizeof(data));
-    fs.close();
+// 删除记录（标记删除）
+void DataPage::deleteRecord(int idx) {
+    Slot* slot = getSlot(idx);
+    slot->length = 0; // 逻辑删除
 }
 
-// 从磁盘读取页
-Page Page::readFromDisk(const std::string& filename, uint32_t page_id) {
-    Page page(DATA_PAGE, page_id);
-    std::ifstream fs(filename, std::ios::in | std::ios::binary);
-    if (!fs.is_open()) {
-        std::cerr << "File not found: " << filename << std::endl;
-        return page;
+// 压缩数据区（移除空洞）
+void DataPage::compact() {
+    uint16_t newOffset = sizeof(PageHeader);
+    std::vector<std::pair<int, Slot>> validSlots;
+    int idx;
+    Slot slotCopy = {};
+
+    // 收集所有有效 slot
+    for (int i = 0; i < header()->slot_count; i++) {
+        Slot* slot = getSlot(i);
+        if (slot->length > 0) {
+            validSlots.push_back({ i, *slot });
+        }
     }
 
-    fs.seekg(page_id * PAGE_SIZE);
-    fs.read(reinterpret_cast<char*>(&page.header), sizeof(page.header));
-    fs.read(reinterpret_cast<char*>(page.slots), sizeof(page.slots));
-    fs.read(page.data, sizeof(page.data));
-    fs.close();
-    return page;
+    // 重新排列数据
+    for (auto& p : validSlots) {
+        idx = p.first;
+        slotCopy = p.second;
+        if (slotCopy.offset != newOffset) {
+            memmove(data + newOffset, data + slotCopy.offset, slotCopy.length);
+        }
+        Slot* slot = getSlot(idx);
+        slot->offset = newOffset;
+        slot->length = slotCopy.length;
+        newOffset += slotCopy.length;
+    }
+
+    // 更新 free_offset
+    header()->free_offset = newOffset;
 }
 
-// 打印页信息（调试用）
-void Page::printInfo() const {
-    std::cout << "Page ID: " << header.page_id
-        << ", Type: " << header.type
-        << ", Records: " << header.record_count
-        << ", Free Offset: " << header.free_offset << std::endl;
-    for (int i = 0; i < header.record_count; ++i) {
-        std::cout << "Slot " << i << ": offset=" << slots[i].offset
-            << ", length=" << slots[i].length
-            << ", data=" << getRecord(i) << std::endl;
-    }
-}
+char* DataPage::rawData() { return data; }
+const char* DataPage::rawData() const { return data; }

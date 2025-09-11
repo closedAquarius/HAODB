@@ -20,29 +20,26 @@ int FileManager::openFile(const std::string& tablespace_name) {
     return file_id;
 }
 
-bool FileManager::readPage(int file_id, uint32_t page_id, Page& page) {
+bool FileManager::readPage(int file_id, uint32_t page_id, DataPage& page) {
     auto it = open_files.find(file_id);
     if (it == open_files.end()) return false;
     std::fstream* fs = it->second;
 
-    fs->seekg(page_id * PAGE_SIZE);
-    fs->read(reinterpret_cast<char*>(&page.header), sizeof(page.header));
-    fs->read(reinterpret_cast<char*>(page.slots), sizeof(page.slots));
-    fs->read(page.data, sizeof(page.data));
-    return true;
+    fs->seekg(page_id * PAGE_SIZE, std::ios::beg);
+    fs->read(page.rawData(), PAGE_SIZE);
+    return fs->good();
 }
 
-bool FileManager::writePage(int file_id, const Page& page) {
+bool FileManager::writePage(int file_id, const DataPage& page) {
     auto it = open_files.find(file_id);
     if (it == open_files.end()) return false;
     std::fstream* fs = it->second;
 
-    fs->seekp(page.header.page_id * PAGE_SIZE);
-    fs->write(reinterpret_cast<const char*>(&page.header), sizeof(page.header));
-    fs->write(reinterpret_cast<const char*>(page.slots), sizeof(page.slots));
-    fs->write(page.data, sizeof(page.data));
+    fs->seekp(page.header()->page_id * PAGE_SIZE, std::ios::beg);
+    fs->write(page.rawData(), PAGE_SIZE);
     fs->flush();
-    return true;
+
+    return fs->good();
 }
 
 uint32_t FileManager::getPageCount(int file_id) {
@@ -53,4 +50,37 @@ uint32_t FileManager::getPageCount(int file_id) {
     fs->seekg(0, std::ios::end);
     std::streampos size = fs->tellg();
     return size / PAGE_SIZE;
+}
+
+
+DiskManager::DiskManager(std::string d) : diskName(d) {}
+DiskManager* DiskManager::readPage(int pageId, DataPage& pageData) {
+    std::ifstream f(diskName, std::ios::in | std::ios::binary);
+    char* data = new(char[PAGE_SIZE]);
+
+    if (!f.is_open()) {
+        std::cerr << "[ERROR] Disk " << diskName << " open failed for read.\n";
+        return this;
+    }
+
+    // 定位到文件中的offset
+    f.seekg(pageId * PAGE_SIZE, std::ios::beg);
+
+    // 从磁盘读取 PAGE_SIZE 字节到内存
+    f.read(data, PAGE_SIZE);
+    // 剩余不足 PAGE_SIZE ,用0补足
+    if (f.gcount() < (int)PAGE_SIZE) {
+        memset(data + f.gcount(), 0, PAGE_SIZE - f.gcount());
+    }
+
+    f.close();
+
+    memcpy(pageData.rawData(), data, PAGE_SIZE);
+
+    return this;
+}
+
+DiskManager* DiskManager::writePage(int pageId, DataPage& pageData) {
+
+    return this;
 }

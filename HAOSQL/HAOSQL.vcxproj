@@ -127,8 +127,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="executer.cpp" />
-    <ClCompile Include="executer.h" />
+    <ClCompile Include="buffer_pool.cpp" />
+    <ClCompile Include="executor.cpp" />
+    <ClCompile Include="executor.h" />
     <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
     <ClCompile Include="lexer.cpp" />
@@ -141,12 +142,16 @@
     <Text Include="test.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="buffer_pool.h" />
     <ClInclude Include="dataType.h" />
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="page.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="semantic.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="1.test.db" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
