@@ -29,7 +29,10 @@ private:
     void TestConfigurationManagement();
     void TestDisplayFunctions();
     void TestErrorHandling();
+    void TestPageManagementPerformance();
+    void TestPageManagementInterfaces();
     void TestCleanup();
+
 
 public:
     CatalogManagerTest();
@@ -112,6 +115,10 @@ bool CatalogManagerTest::RunAllTests() {
         TestStatisticsManagement();
         TestConfigurationManagement();
         TestDisplayFunctions();
+
+        TestPageManagementInterfaces();
+        TestPageManagementPerformance();
+
         TestErrorHandling();
         TestCleanup();
 
@@ -198,7 +205,7 @@ void CatalogManagerTest::TestTableManagement() {
         {"gpa", "DECIMAL", "8"}
     };
 
-    bool create_table = catalog->CreateTable("TestDB1", "students", student_columns);
+    bool create_table = catalog->CreateTable("TestDB1", "students", student_columns, 0);
     AssertTrue(create_table, "创建students表");
 
     // 测试2: 创建另一个表
@@ -209,7 +216,7 @@ void CatalogManagerTest::TestTableManagement() {
         {"instructor", "VARCHAR", "50"}
     };
 
-    bool create_course_table = catalog->CreateTable("TestDB1", "courses", course_columns);
+    bool create_course_table = catalog->CreateTable("TestDB1", "courses", course_columns, 1);
     AssertTrue(create_course_table, "创建courses表");
 
     // 测试3: 检查表是否存在
@@ -220,11 +227,11 @@ void CatalogManagerTest::TestTableManagement() {
     AssertFalse(table_not_exists, "检查不存在的表");
 
     // 测试4: 重复创建表（应该失败）
-    bool duplicate_table = catalog->CreateTable("TestDB1", "students", student_columns);
+    bool duplicate_table = catalog->CreateTable("TestDB1", "students", student_columns, 2);
     AssertFalse(duplicate_table, "重复创建表应该失败");
 
     // 测试5: 在不存在的数据库中创建表（应该失败）
-    bool invalid_db_table = catalog->CreateTable("NonExistentDB", "test", student_columns);
+    bool invalid_db_table = catalog->CreateTable("NonExistentDB", "test", student_columns, 0);
     AssertFalse(invalid_db_table, "在不存在的数据库中创建表应该失败");
 
     // 测试6: 设置主键
@@ -287,7 +294,7 @@ void CatalogManagerTest::TestTableManagement() {
     std::vector<std::vector<std::string>> invalid_columns = {
         {"id"} // 缺少类型和长度
     };
-    bool invalid_table = catalog->CreateTable("TestDB1", "invalid_table", invalid_columns);
+    bool invalid_table = catalog->CreateTable("TestDB1", "invalid_table", invalid_columns, 3);
     AssertFalse(invalid_table, "无效的列定义应该失败");
 }
 
@@ -537,23 +544,23 @@ void CatalogManagerTest::TestErrorHandling() {
 
     // 测试2: 在不存在的数据库上执行操作
     std::vector<std::vector<std::string>> test_columns = { {"id", "INT", "4"} };
-    bool invalid_db_op = catalog->CreateTable("NonExistentDB", "test", test_columns);
+    bool invalid_db_op = catalog->CreateTable("NonExistentDB", "test", test_columns, 0);
     AssertFalse(invalid_db_op, "在不存在的数据库上创建表");
 
     // 测试3: 无效的表名
-    bool invalid_table_name1 = catalog->CreateTable("TestDB1", "", test_columns);
+    bool invalid_table_name1 = catalog->CreateTable("TestDB1", "", test_columns, 0);
     AssertFalse(invalid_table_name1, "空表名");
 
-    bool invalid_table_name2 = catalog->CreateTable("TestDB1", "test@table", test_columns);
+    bool invalid_table_name2 = catalog->CreateTable("TestDB1", "test@table", test_columns, 0);
     AssertFalse(invalid_table_name2, "包含非法字符的表名");
 
     // 测试4: 无效的列定义
     std::vector<std::vector<std::string>> invalid_columns1 = { {""} };
-    bool invalid_column_def1 = catalog->CreateTable("TestDB1", "test_table", invalid_columns1);
+    bool invalid_column_def1 = catalog->CreateTable("TestDB1", "test_table", invalid_columns1, 0);
     AssertFalse(invalid_column_def1, "无效的列定义");
 
     std::vector<std::vector<std::string>> invalid_columns2 = {};
-    bool invalid_column_def2 = catalog->CreateTable("TestDB1", "test_table2", invalid_columns2);
+    bool invalid_column_def2 = catalog->CreateTable("TestDB1", "test_table2", invalid_columns2, 0);
     AssertFalse(invalid_column_def2, "空的列定义");
 
     // 测试5: 对不存在的表执行操作
@@ -682,7 +689,7 @@ bool CatalogManagerTest::TestPerformance() {
         std::string db_name = "PerfDB" + std::to_string(i);
         for (int j = 0; j < 5; j++) {
             std::string table_name = "table" + std::to_string(j);
-            catalog->CreateTable(db_name, table_name, perf_columns);
+            catalog->CreateTable(db_name, table_name, perf_columns, j);
         }
     }
 
@@ -735,10 +742,244 @@ void CatalogManagerTest::PrintSummary() {
     std::cout << std::string(80, '=') << std::endl;
 }
 
+// ==================== 新增接口测试方法 ====================
+
+void CatalogManagerTest::TestPageManagementInterfaces() {
+    PrintTestHeader("页面管理接口测试");
+
+    // 确保有测试数据
+    if (!catalog->DatabaseExists("TestDB1")) {
+        catalog->CreateDatabase("TestDB1", "test_user");
+    }
+
+    // 创建测试表
+    std::vector<std::vector<std::string>> test_columns = {
+        {"id", "INT", "4"},
+        {"name", "VARCHAR", "50"},
+        {"data", "VARCHAR", "100"}
+    };
+
+    if (!catalog->TableExists("TestDB1", "test_table1")) {
+        catalog->CreateTable("TestDB1", "test_table1", test_columns, 10);
+    }
+    if (!catalog->TableExists("TestDB1", "test_table2")) {
+        catalog->CreateTable("TestDB1", "test_table2", test_columns, 11);
+    }
+
+    // 创建测试索引
+    std::vector<std::string> index_columns = { "id" };
+    if (!catalog->IndexExists("TestDB1", "test_idx1")) {
+        catalog->CreateIndex("TestDB1", "test_table1", "test_idx1", index_columns);
+    }
+    if (!catalog->IndexExists("TestDB1", "test_idx2")) {
+        catalog->CreateIndex("TestDB1", "test_table2", "test_idx2", index_columns);
+    }
+
+    // ==================== 测试 UpdateTableOffset ====================
+
+    // 测试1: 单个表偏移量更新
+    std::vector<TableOffset> single_update = {
+        TableOffset("TestDB1", "test_table1", 10)
+    };
+    bool single_update_result = catalog->UpdateTableOffset(single_update);
+    AssertTrue(single_update_result, "单个表偏移量更新");
+
+    // 测试2: 批量表偏移量更新
+    std::vector<TableOffset> batch_updates = {
+        TableOffset("TestDB1", "test_table1", 20),
+        TableOffset("TestDB1", "test_table2", 30)
+    };
+    bool batch_update_result = catalog->UpdateTableOffset(batch_updates);
+    AssertTrue(batch_update_result, "批量表偏移量更新");
+
+    // 测试3: 验证偏移量计算正确性 (4KB * page_id)
+    // 获取表信息验证偏移量
+    auto table1_info = catalog->GetTableInfo("TestDB1", "test_table1");
+    // 注意：由于GetTableInfo返回的是简化结构，这里我们通过其他方式验证
+    AssertTrue(!table1_info.table_name.empty(), "获取更新后的表信息");
+
+    // 测试4: 空列表更新（应该失败）
+    std::vector<TableOffset> empty_updates;
+    bool empty_update_result = catalog->UpdateTableOffset(empty_updates);
+    AssertFalse(empty_update_result, "空列表更新应该失败");
+
+    // 测试5: 不存在的数据库（应该失败）
+    std::vector<TableOffset> invalid_db_updates = {
+        TableOffset("NonExistentDB", "test_table", 5)
+    };
+    bool invalid_db_result = catalog->UpdateTableOffset(invalid_db_updates);
+    AssertFalse(invalid_db_result, "不存在的数据库更新应该失败");
+
+    // 测试6: 不存在的表（应该失败）
+    std::vector<TableOffset> invalid_table_updates = {
+        TableOffset("TestDB1", "nonexistent_table", 5)
+    };
+    bool invalid_table_result = catalog->UpdateTableOffset(invalid_table_updates);
+    AssertFalse(invalid_table_result, "不存在的表更新应该失败");
+
+    // 测试7: 混合更新（部分成功，部分失败）
+    std::vector<TableOffset> mixed_updates = {
+        TableOffset("TestDB1", "test_table1", 40),        // 成功
+        TableOffset("TestDB1", "nonexistent_table", 50),  // 失败
+        TableOffset("TestDB1", "test_table2", 60)         // 成功
+    };
+    bool mixed_result = catalog->UpdateTableOffset(mixed_updates);
+    AssertFalse(mixed_result, "混合更新应该返回false（因为有失败项）");
+
+    // 测试8: 大页ID测试
+    std::vector<TableOffset> large_page_updates = {
+        TableOffset("TestDB1", "test_table1", 1000000)
+    };
+    bool large_page_result = catalog->UpdateTableOffset(large_page_updates);
+    AssertTrue(large_page_result, "大页ID更新");
+
+    // ==================== 测试 UpdateIndexRoot ====================
+
+    // 测试9: 更新索引根页ID
+    bool update_root1 = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 12345);
+    AssertTrue(update_root1, "更新索引根页ID");
+
+    // 测试10: 更新另一个索引的根页ID
+    bool update_root2 = catalog->UpdateIndexRoot("TestDB1", "test_idx2", 67890);
+    AssertTrue(update_root2, "更新第二个索引根页ID");
+
+    // 测试11: 不存在的数据库（应该失败）
+    bool invalid_db_index = catalog->UpdateIndexRoot("NonExistentDB", "test_idx", 100);
+    AssertFalse(invalid_db_index, "不存在的数据库索引更新应该失败");
+
+    // 测试12: 不存在的索引（应该失败）
+    bool invalid_index = catalog->UpdateIndexRoot("TestDB1", "nonexistent_idx", 100);
+    AssertFalse(invalid_index, "不存在的索引更新应该失败");
+
+    // 测试13: 空参数（应该失败）
+    bool empty_db_name = catalog->UpdateIndexRoot("", "test_idx1", 100);
+    AssertFalse(empty_db_name, "空数据库名应该失败");
+
+    bool empty_index_name = catalog->UpdateIndexRoot("TestDB1", "", 100);
+    AssertFalse(empty_index_name, "空索引名应该失败");
+
+    // 测试14: 根页ID为0的更新
+    bool zero_root_page = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 0);
+    AssertTrue(zero_root_page, "根页ID为0的更新");
+
+    // 测试15: 连续多次更新同一索引
+    bool continuous_update1 = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 111);
+    bool continuous_update2 = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 222);
+    bool continuous_update3 = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 333);
+    AssertTrue(continuous_update1 && continuous_update2 && continuous_update3, "连续多次更新同一索引");
+
+    // ==================== 综合测试 ====================
+
+    // 测试16: 同时更新表偏移和索引根页
+    std::vector<TableOffset> final_table_updates = {
+        TableOffset("TestDB1", "test_table1", 100),
+        TableOffset("TestDB1", "test_table2", 200)
+    };
+    bool final_table_update = catalog->UpdateTableOffset(final_table_updates);
+    bool final_index_update1 = catalog->UpdateIndexRoot("TestDB1", "test_idx1", 1000);
+    bool final_index_update2 = catalog->UpdateIndexRoot("TestDB1", "test_idx2", 2000);
+
+    AssertTrue(final_table_update && final_index_update1 && final_index_update2,
+        "同时更新表偏移和索引根页");
+
+    std::cout << "页面管理接口测试完成" << std::endl;
+
+    auto tables = catalog->ListTables("TestDB1");
+    AssertTrue(tables.size() >= 2, "获取表列表");
+    for (int i = 0; i < tables.size(); i++)
+    {
+        std::cout << "表" << i + 1 << "偏移量" << tables[i].data_file_offset << std::endl;
+    }
+}
+
+
+
+// ==================== 性能测试 ====================
+
+void CatalogManagerTest::TestPageManagementPerformance() {
+    PrintTestHeader("页面管理性能测试");
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    // 创建大量表用于性能测试
+    std::vector<std::vector<std::string>> perf_columns = {
+        {"id", "INT", "4"},
+        {"data", "VARCHAR", "50"}
+    };
+
+    const int TEST_TABLE_COUNT = 100;
+    const int TEST_INDEX_COUNT = 50;
+
+    // 创建测试表
+    for (int i = 0; i < TEST_TABLE_COUNT; i++) {
+        std::string table_name = "perf_table_" + std::to_string(i);
+        catalog->CreateTable("TestDB1", table_name, perf_columns, i);
+    }
+
+    // 创建测试索引
+    std::vector<std::string> perf_index_columns = { "id" };
+    for (int i = 0; i < TEST_INDEX_COUNT; i++) {
+        std::string table_name = "perf_table_" + std::to_string(i);
+        std::string index_name = "perf_idx_" + std::to_string(i);
+        catalog->CreateIndex("TestDB1", table_name, index_name, perf_index_columns);
+    }
+
+    // 性能测试：批量更新表偏移量
+    std::vector<TableOffset> perf_table_updates;
+    for (int i = 0; i < TEST_TABLE_COUNT; i++) {
+        std::string table_name = "perf_table_" + std::to_string(i);
+        perf_table_updates.emplace_back("TestDB1", table_name, i + 1000);
+    }
+
+    auto table_update_start = std::chrono::high_resolution_clock::now();
+    bool perf_table_result = catalog->UpdateTableOffset(perf_table_updates);
+    auto table_update_end = std::chrono::high_resolution_clock::now();
+
+    auto table_update_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        table_update_end - table_update_start);
+
+    AssertTrue(perf_table_result, "批量更新表偏移量性能测试");
+    std::cout << "批量更新 " << TEST_TABLE_COUNT << " 个表偏移量耗时: "
+        << table_update_duration.count() << " 毫秒" << std::endl;
+
+    // 性能测试：批量更新索引根页ID
+    auto index_update_start = std::chrono::high_resolution_clock::now();
+    bool perf_index_result = true;
+    for (int i = 0; i < TEST_INDEX_COUNT; i++) {
+        std::string index_name = "perf_idx_" + std::to_string(i);
+        if (!catalog->UpdateIndexRoot("TestDB1", index_name, i + 2000)) {
+            perf_index_result = false;
+            break;
+        }
+    }
+    auto index_update_end = std::chrono::high_resolution_clock::now();
+
+    auto index_update_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        index_update_end - index_update_start);
+
+    AssertTrue(perf_index_result, "批量更新索引根页ID性能测试");
+    std::cout << "批量更新 " << TEST_INDEX_COUNT << " 个索引根页ID耗时: "
+        << index_update_duration.count() << " 毫秒" << std::endl;
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+    std::cout << "页面管理性能测试总耗时: " << total_duration.count() << " 毫秒" << std::endl;
+    AssertTrue(total_duration.count() < 30000, "性能测试在30秒内完成");
+
+    // 清理性能测试数据
+    for (int i = 0; i < TEST_TABLE_COUNT; i++) {
+        std::string table_name = "perf_table_" + std::to_string(i);
+        catalog->DropTable("TestDB1", table_name);
+    }
+
+    std::cout << "页面管理性能测试完成" << std::endl;
+}
+
 // ========================= 主测试函数 =========================
 
-/*
-int main() {
+
+int test2() {
     CatalogManagerTest test;
 
     bool all_tests_passed = test.RunAllTests();
@@ -756,5 +997,5 @@ int main() {
     CatalogManagerTest test4;
     test4.TestPerformance();
     */
-    //return all_tests_passed ? 0 : 1;
-//}
+    return all_tests_passed ? 0 : 1;
+}

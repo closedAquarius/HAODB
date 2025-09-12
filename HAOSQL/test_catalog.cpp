@@ -32,7 +32,7 @@ void test()
         {"name", "VARCHAR", "50"},
         {"age", "INT", "4"}
     };
-    catalog.CreateTable("Students", "student_info", columns);
+    catalog.CreateTable("Students", "student_info", columns, 0);
     catalog.ShowTableList("Students");
     catalog.ShowTableStructure("Students", "student_info");
 
