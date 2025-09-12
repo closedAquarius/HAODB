@@ -131,7 +131,7 @@ bool CatalogManager::CreateDatabase(const std::string& db_name, const std::strin
         std::string db_name_lower = db_name;
         std::transform(db_name_lower.begin(), db_name_lower.end(), db_name_lower.begin(), ::tolower);
 
-        db_manager->SetDataFilePath(db_path + "\\data\\" + db_name_lower + ".dat");
+        db_manager->SetDataFilePath(db_path + "\\data\\" + "database.db");
         db_manager->SetLogFilePath(db_path + "\\logs\\" + db_name_lower + ".log");
         db_manager->SetIndexFilePath(db_path + "\\index\\" + db_name_lower + ".idx");
 
