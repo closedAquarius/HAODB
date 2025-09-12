@@ -161,6 +161,11 @@ void CatalogManagerTest::TestDatabaseManagement() {
     bool create_db3 = catalog->CreateDatabase("TestDB3", "user1");
     AssertTrue(create_db3, "创建数据库TestDB3");
 
+    catalog->ShowLogConfig("TestDB1");
+    std::cout << "数据文件目录" << catalog->GetStorageConfig("TestDB1").data_file_path << std::endl;
+    std::cout << "日志文件目录" << catalog->GetStorageConfig("TestDB1").log_file_path << std::endl;
+    std::cout << "索引文件目录" << catalog->GetStorageConfig("TestDB1").index_file_path << std::endl;
+
     // 测试2: 检查数据库是否存在
     bool exists1 = catalog->DatabaseExists("TestDB1");
     AssertTrue(exists1, "检查TestDB1是否存在");
@@ -892,8 +897,6 @@ void CatalogManagerTest::TestPageManagementInterfaces() {
     }
 }
 
-
-
 // ==================== 性能测试 ====================
 
 void CatalogManagerTest::TestPageManagementPerformance() {
@@ -979,7 +982,7 @@ void CatalogManagerTest::TestPageManagementPerformance() {
 // ========================= 主测试函数 =========================
 
 
-int test2() {
+int main() {
     CatalogManagerTest test;
 
     bool all_tests_passed = test.RunAllTests();

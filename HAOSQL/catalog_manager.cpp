@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "catalog_manager.h"
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
@@ -257,6 +258,121 @@ DatabaseInfo CatalogManager::GetDatabaseInfo(const std::string& db_name) {
     }
 
     return info;
+}
+
+LogConfigInfo CatalogManager::GetLogConfig(const std::string& db_name) 
+{
+    LogConfigInfo result;
+
+    try {
+        // 检查数据库是否存在
+        if (!DatabaseExists(db_name))
+        {
+            std::cerr << "数据库不存在: " << db_name << std::endl;
+            return result;  // 返回默认配置
+        }
+
+        // 加载数据库管理器
+        if (!LoadDatabaseManager(db_name)) 
+        {
+            std::cerr << "加载数据库管理器失败: " << db_name << std::endl;
+            return result;  // 返回默认配置
+        }
+
+        auto& db_manager = database_managers[db_name];
+        const LogConfig& log_config = db_manager->GetLogConfig();
+
+        // 转换为用户友好的结构
+        result.log_level_code = log_config.log_level;
+        result.log_file_size_mb = log_config.log_file_size;
+        result.log_file_count = log_config.log_file_count;
+        result.enable_wal = (log_config.enable_wal != 0);
+        result.wal_buffer_size_mb = log_config.wal_buffer_size / (1024 * 1024);  // 转换为MB
+        result.sync_mode_code = log_config.sync_mode;
+        result.wal_checkpoint_size_mb = log_config.wal_checkpoint_size / (1024 * 1024);  // 转换为MB
+        result.enable_log_rotation = (log_config.enable_log_rotation != 0);
+
+        // 转换日志级别名称
+        switch (result.log_level_code) 
+        {
+        case 0: result.log_level_name = "ERROR"; break;
+        case 1: result.log_level_name = "WARN"; break;
+        case 2: result.log_level_name = "INFO"; break;
+        case 3: result.log_level_name = "DEBUG"; break;
+        default: result.log_level_name = "UNKNOWN"; break;
+        }
+
+        // 转换同步模式名称
+        switch (result.sync_mode_code) 
+        {
+        case 0: result.sync_mode_name = "异步"; break;
+        case 1: result.sync_mode_name = "同步"; break;
+        case 2: result.sync_mode_name = "全同步"; break;
+        default: result.sync_mode_name = "未知"; break;
+        }
+
+        std::cout << "成功获取数据库 " << db_name << " 的日志配置" << std::endl;
+
+    }
+    catch (const std::exception& e) 
+    {
+        std::cerr << "获取日志配置时发生异常: " << db_name << " - " << e.what() << std::endl;
+    }
+
+    return result;
+}
+
+void CatalogManager::ShowLogConfig(const std::string& db_name) 
+{
+    std::cout << "\n=== 数据库 " << db_name << " 日志配置 ===" << std::endl;
+
+    LogConfigInfo log_config = GetLogConfig(db_name);
+
+    std::cout << "日志级别: " << log_config.log_level_name
+        << " (" << (int)log_config.log_level_code << ")" << std::endl;
+    std::cout << "日志文件大小: " << log_config.log_file_size_mb << " MB" << std::endl;
+    std::cout << "保留文件数量: " << log_config.log_file_count << std::endl;
+    std::cout << "WAL日志: " << (log_config.enable_wal ? "启用" : "禁用") << std::endl;
+    std::cout << "WAL缓冲区: " << log_config.wal_buffer_size_mb << " MB" << std::endl;
+    std::cout << "同步模式: " << log_config.sync_mode_name
+        << " (" << (int)log_config.sync_mode_code << ")" << std::endl;
+    std::cout << "WAL检查点大小: " << log_config.wal_checkpoint_size_mb << " MB" << std::endl;
+    std::cout << "日志轮转: " << (log_config.enable_log_rotation ? "启用" : "禁用") << std::endl;
+}
+
+StorageConfigInfo CatalogManager::GetStorageConfig(const std::string& db_name)
+{
+    StorageConfigInfo result;
+
+    try {
+        // 检查数据库是否存在
+        if (!DatabaseExists(db_name))
+        {
+            std::cerr << "数据库不存在: " << db_name << std::endl;
+            return result;  // 返回默认配置
+        }
+
+        // 加载数据库管理器
+        if (!LoadDatabaseManager(db_name))
+        {
+            std::cerr << "加载数据库管理器失败: " << db_name << std::endl;
+            return result;  // 返回默认配置
+        }
+
+        auto& db_manager = database_managers[db_name];
+        const StorageConfig& storage_config = db_manager->GetStorageConfig();
+
+        std::string str;
+        result.data_file_path = str.assign(storage_config.data_file_path);
+        result.index_file_path = str.assign(storage_config.index_file_path);
+        result.log_file_path = str.assign(storage_config.log_file_path);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "获取日志配置时发生异常: " << db_name << " - " << e.what() << std::endl;
+    }
+
+    return result;
 }
 
 // ==================== 数据表管理 ====================

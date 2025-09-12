@@ -118,7 +118,7 @@ bool DatabaseMetadataManager::CreateNewDatabase(const std::string& db_name, uint
 
     // ÉèÖÃÄ¬ÈÏÂ·¾¶
     std::string base_path = "HAODB\\" + db_name + "\\";
-    strcpy(storage_config.data_file_path, (base_path + "data\\" + db_name + ".dat").c_str());
+    strcpy(storage_config.data_file_path, (base_path + "data\\" + "database" + ".db").c_str());
     strcpy(storage_config.log_file_path, (base_path + "logs\\" + db_name + ".log").c_str());
     strcpy(storage_config.index_file_path, (base_path + "index\\" + db_name + ".idx").c_str());
 

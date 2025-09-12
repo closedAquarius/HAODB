@@ -37,6 +37,38 @@ struct DatabaseInfo {
     uint64_t total_size;
 };
 
+struct LogConfigInfo {
+    std::string log_level_name;        // 日志级别名称："ERROR", "WARN", "INFO", "DEBUG"
+    uint8_t log_level_code;           // 日志级别代码：0-3
+    uint32_t log_file_size_mb;        // 日志文件大小（MB）
+    uint32_t log_file_count;          // 保留的日志文件数量
+    bool enable_wal;                  // 是否启用WAL
+    uint32_t wal_buffer_size_mb;      // WAL缓冲区大小（MB）
+    std::string sync_mode_name;       // 同步模式名称："异步", "同步", "全同步"
+    uint8_t sync_mode_code;           // 同步模式代码：0-2
+    uint32_t wal_checkpoint_size_mb;  // WAL检查点大小（MB）
+    bool enable_log_rotation;         // 是否启用日志轮转
+
+    LogConfigInfo() {
+        log_level_name = "INFO";
+        log_level_code = 2;
+        log_file_size_mb = 50;
+        log_file_count = 5;
+        enable_wal = true;
+        wal_buffer_size_mb = 8;
+        sync_mode_name = "同步";
+        sync_mode_code = 1;
+        wal_checkpoint_size_mb = 64;
+        enable_log_rotation = true;
+    }
+};
+
+struct StorageConfigInfo {
+    std::string data_file_path;
+    std::string log_file_path;
+    std::string index_file_path;
+};
+
 // 表信息结构
 struct TableInfo {
     std::string table_name;
@@ -129,9 +161,16 @@ public:
     // (3) 删除数据库
     bool DropDatabase(const std::string& db_name);
 
-    // 其他数据库操作
+    // (4) 其他数据库操作
     bool DatabaseExists(const std::string& db_name);
     DatabaseInfo GetDatabaseInfo(const std::string& db_name);
+
+    // (5) 获取数据库日志配置信息
+    LogConfigInfo GetLogConfig(const std::string& db_name);
+    void ShowLogConfig(const std::string& db_name);
+
+    // (6)获取数据库存储配置信息
+    StorageConfigInfo GetStorageConfig(const std::string& db_name);
 
     // ==================== 数据表管理 ====================
 
