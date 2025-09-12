@@ -1,10 +1,14 @@
 #pragma once
-#include <string>
 #include <cstdint>
 #include <cstring>
-#include <fstream>
+#include <vector>
+#include <stdexcept>
+#include <unordered_map>
 #include <iostream>
+#include <fstream>
+#include <sys/stat.h>
 
+// 页大小固定为4KB
 const size_t PAGE_SIZE = 4096;
 
 enum PageType {
@@ -16,43 +20,52 @@ enum PageType {
 
 // 页头信息
 struct PageHeader {
-    PageType type;        // 页类型
-    uint32_t page_id;     // 页号
-    uint16_t free_offset; // 数据区下一个可写偏移
-    uint16_t record_count;// 当前记录数
+    PageType type;          // 页类型
+    uint32_t page_id;       // 页号
+    uint16_t free_offset;   // 数据区下一个可写位置(从头往后生长)
+    uint16_t slot_count;    // 槽数量
+
 };
 
-// Slot结构，用于记录页内每条记录偏移和长度
+// 槽结构，位于页尾
 struct Slot {
-    uint16_t offset;  // Data区偏移
+    uint16_t offset;  // 数据区偏移
     uint16_t length;  // 记录长度
 };
 
+using PageId = int;
 class Page {
 public:
-    PageHeader header;
-    Slot slots[100];          // 最多100条记录（可调整或动态）
-    char data[PAGE_SIZE - sizeof(PageHeader) - sizeof(slots)];
+    char data[PAGE_SIZE];   //整个页空间
 public:
-    Page(PageType t = DATA_PAGE, uint32_t id = 0);
+    PageId id;
+    bool dirty;
+    int pin_count;
 
-    bool insertRecord(const std::string& record);
-    std::string getRecord(int slot_id) const;
+    Page(PageType type);
 
-    void writeToDisk(const std::string& filename);
-    static Page readFromDisk(const std::string& filename, uint32_t page_id);
+    // 页空间固定，手动控制页头
+    PageHeader* header();
+    const PageHeader* header() const;
 
-    void printInfo() const;
+    // 页空间固定，手动获取 idx 位置的Slot数据
+    Slot* getSlot(int idx);
+    const Slot* getSlot(int idx) const;
 
-    char* getData();
+    int insertRecord(const char* record, uint16_t len);
+    std::string readRecord(int idx) const;
+    void deleteRecord(int idx);
+    void compact();
 
-    const char* getDataConst() const { return data; }
+    char* rawData();
+    const char* rawData() const;
+};
 
-    // 把任意二进制数据写入 page 的 data 区（不会改变 slots 语义）
-    void setData(const void* src, size_t len) {
-        if (len > sizeof(data)) len = sizeof(data);
-        std::memcpy(data, src, len);
-        header.free_offset = static_cast<uint16_t>(len);
-        // record_count 不必修改（我们不使用 slot 语义）
-    }
+class DiskManager {
+private:
+    std::string diskName;
+public:
+    DiskManager(std::string d);
+    DiskManager* readPage(int pageId, Page& pageData);
+    DiskManager* writePage(int pageId, Page& pageData);
 };

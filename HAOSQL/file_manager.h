@@ -1,11 +1,10 @@
 // file_manager.h
 #pragma once
-#include "page.h"
-#include <string>
 #include <fstream>
 #include <unordered_map>
 #include <iostream>
 #include <sys/stat.h>
+#include "page.h"
 
 class FileManager {
 public:
@@ -34,4 +33,3 @@ private:
     std::unordered_map<int, std::fstream*> open_files;
     int next_file_id = 1;
 };
-#pragma once

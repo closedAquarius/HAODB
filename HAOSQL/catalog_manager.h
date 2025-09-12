@@ -16,10 +16,11 @@ struct ColumnDefinition {
     bool is_nullable;
     bool is_unique;
     std::string default_value;
+    uint32_t column_offset;
 
     ColumnDefinition(const std::string& name, const std::string& type, uint32_t length)
         : column_name(name), data_type(type), max_length(length),
-        is_primary_key(false), is_nullable(true), is_unique(false) {
+        is_primary_key(false), is_nullable(true), is_unique(false),column_offset(0) {
     }
 };
 
@@ -44,6 +45,7 @@ struct TableInfo {
     uint32_t column_count;
     std::vector<ColumnDefinition> columns;
     uint64_t create_time;
+    uint32_t data_file_offset;
 };
 
 // 索引信息结构
@@ -91,6 +93,7 @@ private:
     bool ValidateDatabaseName(const std::string& db_name);
     bool ValidateTableName(const std::string& table_name);
     bool ValidateColumnName(const std::string& column_name);
+    bool UpdateColumnOffset(std::vector<ColumnMeta>& columns);
 
 public:
     explicit CatalogManager(const std::string& haodb_path = "HAODB");
@@ -167,6 +170,10 @@ public:
     // 其他索引操作
     std::vector<IndexInfo> ListIndexes(const std::string& db_name, const std::string& table_name = "");
     bool IndexExists(const std::string& db_name, const std::string& index_name);
+    std::vector<IndexInfo> FindIndexesWithColumns(
+        const std::string& db_name,
+        const std::string& table_name,
+        const std::vector<std::string>& column_names);
 
     // ==================== 统计信息管理 ====================
 
