@@ -28,6 +28,9 @@
     <Filter Include="源文件\sql_compiler\grammar">
       <UniqueIdentifier>{31b04dfd-81f1-430e-9389-2b70fb3436bf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\index">
+      <UniqueIdentifier>{e3168409-d09e-4b77-bb0e-bfe76dbf3b57}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HAOSQL.cpp">
@@ -57,6 +60,36 @@
     <ClCompile Include="buffer_pool.cpp">
       <Filter>源文件\storage</Filter>
     </ClCompile>
+    <ClCompile Include="catalog_manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="database_metadata_manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="database_registry_Manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="metadata_structures.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="system_config_manager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_catalog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_catalog2.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_storage.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="B+tree.cpp">
+      <Filter>源文件\index</Filter>
+    </ClCompile>
+    <ClCompile Include="index_manager.cpp">
+      <Filter>源文件\index</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
@@ -84,6 +117,27 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="buffer_pool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="catalog_manager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="database_metadata_manager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="database_registry_manager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="B+tree.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="metadata_structures.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="system_config_manager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="index_manager.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,17 +1,17 @@
 #include "semantic.h"
 
-// ¹¤¾ßº¯Êı£º×Ö·û´®×ª´óĞ´
+// ï¿½ï¿½ï¿½ßºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½×ªï¿½ï¿½Ğ´
 string SemanticAnalyzer::upper(string s) const {
     transform(s.begin(), s.end(), s.begin(), ::toupper);
     return s;
 }
 
-// ¹¤¾ßº¯Êı£ºÉú³ÉÁÙÊ±±äÁ¿
+// ï¿½ï¿½ï¿½ßºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
 string SemanticAnalyzer::newTemp() {
     return "T" + to_string(tempId++);
 }
 
-// --- ¹¤¾ß·½·¨ ---
+// --- ï¿½ï¿½ï¿½ß·ï¿½ï¿½ï¿½ ---
 const Token& SemanticAnalyzer::peek(int k) const {
     if (pos + k >= toks->size())
         throw SemanticError("Unexpected end of input", 0, 0);
@@ -62,7 +62,7 @@ void SemanticAnalyzer::expectOp(const char* op) {
 }
 
 string SemanticAnalyzer::expectIdent() {
-    if (pos >= toks->size() || toks->at(pos).type != 2) // 2=±êÊ¶·û
+    if (pos >= toks->size() || toks->at(pos).type != 2) // 2=ï¿½ï¿½Ê¶ï¿½ï¿½
         throw SemanticError("Expected identifier", peek().line, peek().column);
     return toks->at(pos++).value;
 }
@@ -73,7 +73,7 @@ string SemanticAnalyzer::expectConstOrString() {
     return toks->at(pos++).value;
 }
 
-// --- ÓïÒå·ÖÎöÈë¿Ú ---
+// --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
 vector<Quadruple> SemanticAnalyzer::analyze(const vector<Token>& tokens) {
     toks = &tokens;
     pos = 0;
@@ -121,7 +121,7 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
     vector<Quadruple> out;
     expectKeyword("SELECT");
 
-    // ±£´æËùÓĞ SELECT µÄÁĞÃû
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SELECT ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     vector<string> cols;
     cols.push_back(expectIdent());
 
@@ -129,13 +129,13 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
         cols.push_back(expectIdent());
     }
 
-    // FROM ×Ó¾ä
+    // FROM ï¿½Ó¾ï¿½
     expectKeyword("FROM");
     string table = expectIdent();
     string fromTemp = newTemp();
     out.push_back({ "FROM", table, "-", fromTemp });
 
-    // WHERE ×Ó¾ä
+    // WHERE ï¿½Ó¾ï¿½
     string source = fromTemp;
     if (matchKeyword("WHERE")) {
         string cond = parseOr(out);
@@ -144,7 +144,7 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
         source = whereTemp;
     }
 
-    // SELECT ËÄÔªÊ½£¨ºÏ²¢ËùÓĞÁĞÃûµ½Ò»¸ö×Ö·û´®£©
+    // SELECT ï¿½ï¿½ÔªÊ½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½
     string colList = "";
     for (size_t i = 0; i < cols.size(); ++i) {
         if (i > 0) colList += ",";
@@ -154,7 +154,7 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
     out.push_back({ "SELECT", colList, source, selectTemp });
     source = selectTemp;
 
-    // ORDER BY ×Ó¾ä
+    // ORDER BY ï¿½Ó¾ï¿½
     if (matchKeyword("ORDER")) {
         expectKeyword("BY");
         string orderCol = expectIdent();
@@ -163,7 +163,7 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
         source = orderTemp;
     }
 
-    // RESULT ËÄÔªÊ½£¨Ö»´«Ò»¸ö²ÎÊı£©
+    // RESULT ï¿½ï¿½ÔªÊ½ï¿½ï¿½Ö»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     out.push_back({ "RESULT", source, "-", "-" });
 
     return out;
@@ -176,9 +176,18 @@ vector<Quadruple> SemanticAnalyzer::handleInsert() {
     vector<Quadruple> out;
     expectKeyword("INSERT");
     expectKeyword("INTO");
-    string table = expectIdent();
-    string fromTemp = newTemp();
-    out.push_back({ "FROM", table, "-", fromTemp });
+    string table = expectIdent();  // ï¿½ï¿½ï¿½ï¿½
+
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ±ï¿½
+    expectDelim('(');
+    string cols = "";
+    while (true) {
+        string col = expectIdent();
+        if (!cols.empty()) cols += ",";
+        cols += col;
+        if (matchDelim(')')) break;
+        expectDelim(',');
+    }
 
     expectKeyword("VALUES");
     expectDelim('(');
@@ -191,64 +200,142 @@ vector<Quadruple> SemanticAnalyzer::handleInsert() {
         expectDelim(',');
     }
 
-    string insertTemp = newTemp();
-    out.push_back({ "INSERT", vals, fromTemp, insertTemp });
+    // ï¿½ï¿½ï¿½ï¿½ VALUES ï¿½ï¿½ÔªÊ½
+    string valuesTemp = newTemp();
+    out.push_back({ "VALUES", cols, vals, valuesTemp });
 
+    // ï¿½ï¿½ï¿½ï¿½ INSERT ï¿½ï¿½ÔªÊ½
+    string insertTemp = newTemp();
+    out.push_back({ "INSERT", table, valuesTemp, insertTemp });
+
+    // ï¿½ï¿½ï¿½ï¿½ RESULT ï¿½ï¿½ÔªÊ½
     out.push_back({ "RESULT", insertTemp, "-", "-" });
+
     return out;
 }
 
+// =====================
+// parsePrimaryï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å±ï¿½ï¿½ï¿½Ê½
+// =====================
+string SemanticAnalyzer::parsePrimary(vector<Quadruple>& out) {
+    if (matchDelim('(')) {
+        string temp = parseOr(out);
+        expectDelim(')');
+        return temp;
+    }
+    else {
+        return expectIdentOrConst();
+    }
+}
 
-// --- UPDATE ---
+// è§£æç®€å• WHERE æ¡ä»¶ï¼Œè¿”å›æ¡ä»¶ä¸´æ—¶å˜é‡å
+string SemanticAnalyzer::parseWhereCondition(vector<Quadruple>& out, const string& sourceTemp) {
+    if (!matchKeyword("WHERE")) return sourceTemp;
+
+    // å·¦è¾¹åˆ—
+    string left = expectIdent();
+    expectOp("=");
+    // å³è¾¹å¸¸é‡
+    string right = expectConstOrString();
+
+    // ç”Ÿæˆæ¡ä»¶ä¸´æ—¶å˜é‡
+    string condTemp = newTemp();
+    out.push_back({ "=", left, right, condTemp });
+
+    // ç”Ÿæˆ WHERE å››å…ƒå¼
+    string whereTemp = newTemp();
+    out.push_back({ "WHERE", sourceTemp, condTemp, whereTemp });
+
+    return whereTemp;
+}
+
+
 vector<Quadruple> SemanticAnalyzer::handleUpdate() {
     vector<Quadruple> out;
 
+    // ===== UPDATE table =====
     expectKeyword("UPDATE");
     string table = expectIdent();
     string fromTemp = newTemp();
     out.push_back({ "FROM", table, "-", fromTemp });
 
-    // ===== SET =====
+    string source = fromTemp;
+
+    // ===== æš‚å­˜ SET åˆ—å’Œè¡¨è¾¾å¼ =====
     expectKeyword("SET");
-    string assigns = "";
+    struct SetItem { string col; string exprStr; };
+    vector<SetItem> setList;
+
     while (true) {
         string col = expectIdent();
         expectOp("=");
-        string val = expectConstOrString();
-        if (!assigns.empty()) assigns += ",";
-        assigns += col + "=" + val;
+
+        // æš‚æ—¶åªè§£æå³è¾¹è¡¨è¾¾å¼ä¸ºå­—ç¬¦ä¸²ï¼Œä¸ç”Ÿæˆå››å…ƒå¼
+        string exprStr;
+        if (matchOp("+") || matchOp("-") || matchOp("*") || matchOp("/")) {
+            string op = toks->at(pos - 1).value;
+            string val = expectIdentOrConst();
+            exprStr = op + val;   // "+1" æˆ– "-5"
+        }
+        else {
+            exprStr = expectIdentOrConst(); // 24 æˆ– age
+        }
+
+        setList.push_back({ col, exprStr });
+
         if (!matchDelim(',')) break;
     }
-    string setTemp = newTemp();
-    out.push_back({ "SET", assigns, fromTemp, setTemp });
-    string source = setTemp;
 
-    // ===== WHERE =====
+    // ===== WHERE æ¡ä»¶ =====
     if (matchKeyword("WHERE")) {
-        string cond = parseOr(out);
+        string left = expectIdent();
+        expectOp("=");
+        string right = expectConstOrString();
+
+        string condTemp = newTemp();
+        out.push_back({ "=", left, right, condTemp });
+
         string whereTemp = newTemp();
-        out.push_back({ "WHERE", cond, source, whereTemp });
+        out.push_back({ "WHERE", source, condTemp, whereTemp });
         source = whereTemp;
+    }
+
+    // ===== ç”Ÿæˆ SELECT + SET å››å…ƒå¼ =====
+    for (auto& item : setList) {
+        string selectTemp = newTemp();
+        out.push_back({ "SELECT", item.col, source, selectTemp });
+
+        string setTemp = newTemp();
+        out.push_back({ "SET", selectTemp, item.exprStr, setTemp });
+
+        // UPDATE ä½¿ç”¨æœ€åä¸€ä¸ª SET çš„ç»“æœä½œä¸º source
+        source = setTemp;
     }
 
     // ===== UPDATE =====
     string updateTemp = newTemp();
-    out.push_back({ "UPDATE", table, source, updateTemp });
-
-    // ===== RESULT =====
+    out.push_back({ "UPDATE", source, source, updateTemp }); // UPDATE source -> source
     out.push_back({ "RESULT", updateTemp, "-", "-" });
 
     return out;
 }
 
 
-
+// æ–°å¢è¾…åŠ©å‡½æ•°
+string SemanticAnalyzer::expectIdentOrConst() {
+    if (pos >= toks->size()) throw SemanticError("Unexpected end of input", 0, 0);
+    string val = toks->at(pos).value;
+    pos++;
+    return val;
+}
 
 
 
 // --- DELETE ---
 vector<Quadruple> SemanticAnalyzer::handleDelete() {
     vector<Quadruple> out;
+
+    // ===== DELETE FROM table =====
     expectKeyword("DELETE");
     expectKeyword("FROM");
     string table = expectIdent();
@@ -257,23 +344,34 @@ vector<Quadruple> SemanticAnalyzer::handleDelete() {
 
     string source = fromTemp;
 
+    // ===== WHERE æ¡ä»¶ =====
     if (matchKeyword("WHERE")) {
-        string cond = parseOr(out);
+        // ç®€å•ç­‰å·æ¡ä»¶è§£æ
+        string left = expectIdent();
+        expectOp("=");
+        string right = expectConstOrString();
+
+        string condTemp = newTemp();
+        out.push_back({ "=", left, right, condTemp });
+
         string whereTemp = newTemp();
-        out.push_back({ "WHERE", source, cond, whereTemp });
+        out.push_back({ "WHERE", source, condTemp, whereTemp });
         source = whereTemp;
     }
 
+    // ===== DELETE æ“ä½œ =====
     string delTemp = newTemp();
     out.push_back({ "DELETE", "-", source, delTemp });
     source = delTemp;
 
+    // ===== RESULT =====
     out.push_back({ "RESULT", source, "-", "-" });
+
     return out;
 }
 
 
-// --- WHERE ±í´ïÊ½µİ¹éÏÂ½µ½âÎö ---
+// --- WHERE ï¿½ï¿½ï¿½ï¿½Ê½ï¿½İ¹ï¿½ï¿½Â½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
 string SemanticAnalyzer::parseOr(vector<Quadruple>& out) {
     string left = parseAnd(out);
     while (matchKeyword("OR")) {
@@ -315,4 +413,18 @@ string SemanticAnalyzer::parseOperand() {
         return v;
     }
     throw SemanticError("Unexpected end in operand", 0, 0);
+}
+
+string SemanticAnalyzer::parseExpression(vector<Quadruple>& out) {
+    string left = parsePrimary(out);
+
+    while (matchOp("+") || matchOp("-") || matchOp("*") || matchOp("/")) {
+        string op = toks->at(pos - 1).value;
+        string right = parsePrimary(out);
+        string temp = newTemp();
+        out.push_back({ op, left, right, temp });
+        left = temp;
+    }
+
+    return left;
 }
