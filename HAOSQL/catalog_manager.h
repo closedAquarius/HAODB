@@ -177,7 +177,7 @@ public:
     // (13) 创建索引
     bool CreateIndex(const std::string& db_name, const std::string& table_name,
         const std::string& index_name, const std::vector<std::string>& column_names,
-        bool is_unique = false);
+        bool is_unique = false,  uint64_t root_page_id=0);
 
     // (14) 删除索引
     bool DropIndex(const std::string& db_name, const std::string& index_name);

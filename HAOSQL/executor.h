@@ -7,7 +7,7 @@
 #include <functional>
 #include "dataType.h"
 #include "buffer_pool.h"
-#include "B+tree.h"
+#include "index_manager.h"
 
 using namespace std;
 
@@ -97,16 +97,53 @@ void getColumns(vector<string>& cols, string s);
 // ========== 构建算子树 ==========
 Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
 
-class IndexScan : public Operator {
-private:
-	BPlusTree* index;   // B+ 树指针
-	Table* table;       // 数据表
-	string column;      // 查询列
-	int value;       // 查询值
-	vector<RID> rids;   // 查询到的 RID 列表
+/**
+ * IndexScan: 基于索引的查询扫描器
+ * 如果指定列有 B+ 树索引，则通过索引快速获取 RID，
+ * 并通过 BufferPool + DiskManager 读取对应页中的记录。
+ */
+class IndexScan {
 public:
-	IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val);
-	vector<Row> execute() override;
+	/**
+	 * 构造函数
+	 * @param idxMgr IndexManager 指针
+	 * @param dbFile 数据库文件路径
+	 * @param tableName 表名
+	 * @param col 查询列
+	 * @param val 查询值
+	 */
+	IndexScan(IndexManager* idxMgr,
+		const std::string& dbFile,
+		const std::string& tableName,
+		const std::string& col,
+		int val);
+
+	~IndexScan();
+
+	/**
+	 * 执行索引扫描
+	 * @return 满足条件的 Row 列表
+	 */
+	std::vector<Row> execute();
+
+private:
+	IndexManager* indexMgr = nullptr;
+	std::string databaseFile;
+	std::string tableName;
+	std::string column;
+	int value;
+
+	std::string indexName;
+	bool useIndex = false;
+
+	DiskManager* diskManager = nullptr;
+	BufferPoolManager* bpm = nullptr;
+
+	/**
+	 * 解析页中原始记录为 Row
+	 * 用户需要根据存储格式实现
+	 */
+	Row parseRecord(const std::string& record);
 };
 
 class Insert : public Operator {

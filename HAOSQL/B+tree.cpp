@@ -765,6 +765,7 @@ int BPlusTree::getRootPid() {
     //tree.printTree();
     return 0;
 }*/
+
 int test() {
     std::string indexFileName = "students";
 
@@ -825,5 +826,5 @@ int test() {
     std::cout << "Index destroyed.\n";
 
     return 0;
-}*/
+}
 

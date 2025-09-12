@@ -1,4 +1,4 @@
-/*#include "executor.h"
+#include "executor.h"
 
 using namespace std;
 
@@ -179,14 +179,6 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 
 
 
-IndexScan::IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val)
-	: index(idx), table(tbl), column(col), value(val) {}
 
-vector<Row> IndexScan::execute() {
-	rids = index->search(value);  // 从 B+ 树查找符合的 RID
-	vector<Row> output;
-	for (auto& rid : rids) {
-		//output.push_back(table->getRow(rid));  // 根据 RID 获取行
-	}
-	return output;
-}*/
+
+

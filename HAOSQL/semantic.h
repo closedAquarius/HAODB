@@ -21,12 +21,15 @@ public:
     vector<Quadruple> analyze(const vector<Token>& tokens);
 
 private:
-    // CRUD ����
+    // SQL 各类处理
     vector<Quadruple> handleCreateTable();
     vector<Quadruple> handleSelect();
     vector<Quadruple> handleInsert();
     vector<Quadruple> handleUpdate();
     vector<Quadruple> handleDelete();
+    vector<Quadruple> handleCreateDatabase();
+    vector<Quadruple> handleAlterTable();
+    vector<Quadruple> handleDropTable();
 
     // WHERE ����ʽ����
     string parseOr(vector<Quadruple>& out);
