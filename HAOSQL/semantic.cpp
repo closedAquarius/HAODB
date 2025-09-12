@@ -338,7 +338,8 @@ vector<Quadruple> SemanticAnalyzer::handleDelete() {
 // =====================
 vector<Quadruple> SemanticAnalyzer::handleAlterTable() {
     vector<Quadruple> out;
-    expectKeyword("ALTER"); expectKeyword("TABLE");
+    expectKeyword("ALTER");
+    expectKeyword("TABLE");
     string table = expectIdent();
 
     if (matchKeyword("ADD")) {
@@ -346,8 +347,12 @@ vector<Quadruple> SemanticAnalyzer::handleAlterTable() {
         string col = expectIdent();
         string type = upper(expectIdent());
         string len = "-1";
-        if (matchDelim('(')) { len = expectConstOrString(); expectDelim(')'); }
+        if (matchDelim('(')) {
+            len = expectConstOrString();
+            expectDelim(')');
+        }
 
+        // 列名和类型
         string colNameTemp = newTemp();
         string colTypeTemp = newTemp();
         string colDefTemp = newTemp();
@@ -355,8 +360,29 @@ vector<Quadruple> SemanticAnalyzer::handleAlterTable() {
         out.push_back({ "COLUMN_TYPE", type, len, colTypeTemp });
         out.push_back({ "COLUMNS", colNameTemp, colTypeTemp, colDefTemp });
 
+        // 添加列
         string addTemp = newTemp();
         out.push_back({ "ADD_COLUMN", table, colDefTemp, addTemp });
+
+        // ---- 检查附加约束 ----
+        while (true) {
+            if (matchKeyword("NOT")) {
+                expectKeyword("NULL");
+                string nnTemp = newTemp();
+                out.push_back({ "NOT_NULL", table, col, nnTemp });
+            }
+            else if (matchKeyword("UNIQUE")) {
+                string uqTemp = newTemp();
+                out.push_back({ "UNIQUE", table, col, uqTemp });
+            }
+            else if (matchKeyword("DEFAULT")) {
+                string val = expectConstOrString();
+                string dfTemp = newTemp();
+                out.push_back({ "DEFAULT", col, val, dfTemp });
+            }
+            else break; // 没有更多约束
+        }
+
         out.push_back({ "RESULT", addTemp, "-", "-" });
         return out;
     }
@@ -368,8 +394,10 @@ vector<Quadruple> SemanticAnalyzer::handleAlterTable() {
         out.push_back({ "RESULT", dropTemp, "-", "-" });
         return out;
     }
+
     throw SemanticError("Unsupported ALTER TABLE operation", peek().line, peek().column);
 }
+
 
 // =====================
 // DROP TABLE
