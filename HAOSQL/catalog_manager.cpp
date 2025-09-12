@@ -699,7 +699,7 @@ bool CatalogManager::UpdateTableRowCount(const std::string& db_name, const std::
 
 bool CatalogManager::CreateIndex(const std::string& db_name, const std::string& table_name,
     const std::string& index_name, const std::vector<std::string>& column_names,
-    bool is_unique) {
+    bool is_unique, uint64_t root_page_id) {
     if (!LoadDatabaseManager(db_name)) {
         return false;
     }
@@ -730,7 +730,7 @@ bool CatalogManager::CreateIndex(const std::string& db_name, const std::string& 
     }
 
     uint32_t index_id = GenerateNewIndexId(db_name);
-    uint64_t root_page_id = 1;  // 临时值，实际应该由存储引擎分配
+    //uint64_t root_page_id = 1;  // 临时值，实际应该由存储引擎分配
 
     if (!db_manager->CreateIndex(index_name, index_id, table->table_id, column_ids, is_unique, root_page_id)) {
         return false;

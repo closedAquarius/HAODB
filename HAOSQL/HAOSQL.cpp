@@ -10,7 +10,6 @@
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
-/*
 int main()
 {
     std::cout << "Hello World!\n";
@@ -22,31 +21,31 @@ int main()
         cout << sql << endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
 
-    // 创建 DiskManager
-    DiskManager dm("database.db");
-    // 创建 BufferPoolManager
-    // 缓冲池大小 10
-    BufferPoolManager bpm(10, &dm);
+        /*// 创建 DiskManager
+        DiskManager dm("database.db");
+        // 创建 BufferPoolManager
+        // 缓冲池大小 10
+        BufferPoolManager bpm(10, &dm);
 
-    // 构建并执行计划
-    vector<string> columns;
-    Operator* root = buildPlan(quadruple, columns, &bpm);
-    vector<Row> result = root->execute();
+        // 构建并执行计划
+        vector<string> columns;
+        Operator* root = buildPlan(quadruple, columns, &bpm);
+        vector<Row> result = root->execute();
 
-        if (!result.empty()) {
-            cout << "主函数打印" << endl;
-            // 输出结果
-            cout << endl;
-            for (auto& row : result) {
-                for (auto& col : columns) {
-                    cout << row.at(col) << "\t|";
-                }
+            if (!result.empty()) {
+                cout << "主函数打印" << endl;
+                // 输出结果
                 cout << endl;
+                for (auto& row : result) {
+                    for (auto& col : columns) {
+                        cout << row.at(col) << "\t|";
+                    }
+                    cout << endl;
+                }
             }
-        }
+        }*/
     }
-   
-}*/
+}
 
 vector<Quadruple> sql_compiler(string sql)
 {

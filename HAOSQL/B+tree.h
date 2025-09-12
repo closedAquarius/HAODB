@@ -36,6 +36,7 @@ public:
     void destroyIndex(FileManager& fm, int root_pid, int file_id);
 
     void setRootPid(int rootid);
+    int getRootPid();
 
     // ´òÓ¡Ê÷
     void printTree();

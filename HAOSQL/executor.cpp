@@ -1,4 +1,4 @@
-/*#include "executor.h"
+#include "executor.h"
 
 using namespace std;
 
@@ -176,17 +176,123 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 }
 
 
+Executor::Executor(IndexManager* idxMgr, const std::string& tableName, DiskManager* disk, int bufferSize)
+    : indexMgr_(idxMgr), tableName_(tableName), diskManager_(disk) {
+    bufferPool_ = std::make_unique<BufferPoolManager>(bufferSize, diskManager_);
+}
+
+// ---------------- Select ----------------
+std::vector<Row> Executor::select(const std::string& column, int value) {
+    std::vector<Row> output;
+
+    auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { column });
+    if (indexes.empty()) {
+        // 没有索引，直接返回空
+        return output;
+    }
+
+    const std::string indexName = indexes[0].index_name;
+    auto rids = indexMgr_->Search(indexName, value);
+
+    for (auto& rid : rids) {
+        Page* page = bufferPool_->fetchPage(rid.page_id);
+        if (!page) continue;
+
+        std::string record = page->readRecord(rid.slot_id);
+        Row row = parseRecord(record);
+        output.push_back(row);
+
+        bufferPool_->unpinPage(rid.page_id, false);
+    }
+
+    return output;
+}
+
+// ---------------- Insert ----------------
+bool Executor::insertRow(const Row& newRow, const RID& rid) {
+    //assert(indexMgr_ != nullptr);
+
+    for (const auto& col : newRow) {
+        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
+        for (const auto& idxInfo : indexes) {
+            int key = std::stoi(col.second);
+            if (!indexMgr_->InsertEntry(idxInfo.index_name, key, rid)) {
+                std::cerr << "[InsertIndex] Failed to insert key " << key
+                    << " into index " << idxInfo.index_name << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// ---------------- Delete ----------------
+bool Executor::deleteRow(const Row& oldRow, const RID& rid) {
+    //assert(indexMgr_ != nullptr);
+
+    for (const auto& col : oldRow) {
+        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
+        for (const auto& idxInfo : indexes) {
+            int key = std::stoi(col.second);
+            if (!indexMgr_->DeleteEntry(idxInfo.index_name, key, rid)) {
+                std::cerr << "[DeleteIndex] Failed to delete key " << key
+                    << " from index " << idxInfo.index_name << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// ---------------- Update ----------------
+bool Executor::updateRow(const Row& oldRow, const Row& newRow, const RID& rid) {
+    //assert(indexMgr_ != nullptr);
+
+    for (const auto& col : newRow) {
+        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
+        for (const auto& idxInfo : indexes) {
+            int oldKey = std::stoi(oldRow.at(col.first));
+            int newKey = std::stoi(newRow.at(col.first));
+
+            if (oldKey != newKey) {
+                if (!indexMgr_->DeleteEntry(idxInfo.index_name, oldKey, rid)) {
+                    std::cerr << "[UpdateIndex] Failed to delete old key " << oldKey
+                        << " from index " << idxInfo.index_name << std::endl;
+                    return false;
+                }
+                if (!indexMgr_->InsertEntry(idxInfo.index_name, newKey, rid)) {
+                    std::cerr << "[UpdateIndex] Failed to insert new key " << newKey
+                        << " into index " << idxInfo.index_name << std::endl;
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+// ---------------- parseRecord ----------------
+Row Executor::parseRecord(const std::string& record) {
+    Row row;
+    // 简单假设每条记录用逗号分隔，键值用冒号，如 "id:1,name:Alice,score:95"
+    size_t start = 0;
+    while (start < record.size()) {
+        size_t commaPos = record.find(',', start);
+        std::string token = record.substr(start, commaPos - start);
+        size_t colonPos = token.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = token.substr(0, colonPos);
+            std::string value = token.substr(colonPos + 1);
+            row[key] = value;
+        }
+        if (commaPos == std::string::npos) break;
+        start = commaPos + 1;
+    }
+    return row;
+}
 
 
 
-IndexScan::IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val)
-	: index(idx), table(tbl), column(col), value(val) {}
 
-vector<Row> IndexScan::execute() {
-	rids = index->search(value);  // 从 B+ 树查找符合的 RID
-	vector<Row> output;
-	for (auto& rid : rids) {
-		//output.push_back(table->getRow(rid));  // 根据 RID 获取行
-	}
-	return output;
-}*/
+

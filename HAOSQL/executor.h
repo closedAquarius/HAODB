@@ -7,7 +7,8 @@
 #include <functional>
 #include "dataType.h"
 #include "buffer_pool.h"
-#include "B+tree.h"
+#include "index_manager.h"
+#include <sstream>
 
 using namespace std;
 
@@ -97,16 +98,31 @@ void getColumns(vector<string>& cols, string s);
 // ========== 构建算子树 ==========
 Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
 
-class IndexScan : public Operator {
-private:
-	BPlusTree* index;   // B+ 树指针
-	Table* table;       // 数据表
-	string column;      // 查询列
-	int value;       // 查询值
-	vector<RID> rids;   // 查询到的 RID 列表
+// ---------------- Executor ----------------
+class Executor {
 public:
-	IndexScan(BPlusTree* idx, Table* tbl, const string& col, const int& val);
-	vector<Row> execute() override;
+	Executor(IndexManager* idxMgr, const std::string& tableName, DiskManager* disk, int bufferSize = 100);
+
+	// ---------------- Select ----------------
+	// 根据列和值查询，如果有索引走索引，否则返回空
+	std::vector<Row> select(const std::string& column, int value);
+
+	// ---------------- Insert / Delete / Update ----------------
+	bool insertRow(const Row& newRow, const RID& rid);
+	bool deleteRow(const Row& oldRow, const RID& rid);
+	bool updateRow(const Row& oldRow, const Row& newRow, const RID& rid);
+
+private:
+	// 辅助函数：解析页中的记录成 Row
+	Row parseRecord(const std::string& record);
+
+	// 索引相关
+	IndexManager* indexMgr_;
+	std::string tableName_;
+
+	// 缓存和磁盘管理
+	std::unique_ptr<BufferPoolManager> bufferPool_;
+	DiskManager* diskManager_;
 };
 
 class Insert : public Operator {

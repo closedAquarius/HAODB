@@ -736,6 +736,10 @@ void BPlusTree::setRootPid(int rootid) {
     this->root_pid = rootid;
 }
 
+int BPlusTree::getRootPid() {
+    return this->root_pid;
+}
+
 /*int main() {
     FileManager fm("./");
     int file_id = fm.openFile("students_idx");
@@ -761,6 +765,7 @@ void BPlusTree::setRootPid(int rootid) {
     //tree.printTree();
     return 0;
 }*/
+
 int test() {
     std::string indexFileName = "students";
 

@@ -21,21 +21,28 @@ public:
     vector<Quadruple> analyze(const vector<Token>& tokens);
 
 private:
-    // CREATE TABLE / SELECT / INSERT / UPDATE / DELETE
+    // SQL å„ç±»å¤„ç†
     vector<Quadruple> handleCreateTable();
     vector<Quadruple> handleSelect();
     vector<Quadruple> handleInsert();
     vector<Quadruple> handleUpdate();
     vector<Quadruple> handleDelete();
+    vector<Quadruple> handleCreateDatabase();
+    vector<Quadruple> handleAlterTable();
+    vector<Quadruple> handleDropTable();
 
-    // WHERE ±í´ïÊ½½âÎö
+    // WHERE ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½
     string parseOr(vector<Quadruple>& out);
     string parseAnd(vector<Quadruple>& out);
-    string parsePrimary(vector<Quadruple>& out);
     string parseComparison(vector<Quadruple>& out);
     string parseOperand();
+    string parsePrimary(vector<Quadruple>& out);
+    string parseExpression(vector<Quadruple>& out); // å£°æ˜ parseExpression
+    string expectIdentOrConst(); // å£°æ˜ expectIdentOrConst
 
-    // ¹¤¾ß
+    string parseWhereCondition(vector<Quadruple>& out, const string& sourceTemp);
+
+    // ï¿½ï¿½ï¿½ï¿½
     const Token& peek(int k = 0) const;
     bool matchKeyword(const char* kw);
     bool matchOp(const char* op);
@@ -57,4 +64,3 @@ private:
 };
 
 #endif
-#pragma once

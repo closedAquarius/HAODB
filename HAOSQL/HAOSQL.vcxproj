@@ -137,6 +137,7 @@
     <ClCompile Include="executor.h" />
     <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
+    <ClCompile Include="index_manager.cpp" />
     <ClCompile Include="lexer.cpp" />
     <ClCompile Include="metadata_structures.cpp" />
     <ClCompile Include="page.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="buffer_pool.h" />
     <ClInclude Include="dataType.h" />
     <ClInclude Include="file_manager.h" />
+    <ClInclude Include="index_manager.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="metadata_structures.h" />
     <ClInclude Include="page.h" />
