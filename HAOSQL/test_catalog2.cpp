@@ -982,7 +982,7 @@ void CatalogManagerTest::TestPageManagementPerformance() {
 // ========================= 主测试函数 =========================
 
 
-int main() {
+int test2() {
     CatalogManagerTest test;
 
     bool all_tests_passed = test.RunAllTests();
