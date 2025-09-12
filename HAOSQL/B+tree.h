@@ -3,6 +3,8 @@
 #include "page.h"
 #include "file_manager.h"
 
+using namespace std;
+
 // B+树节点
 struct BPlusTreeNode {
     bool isLeaf;                 // 是否是叶子节点

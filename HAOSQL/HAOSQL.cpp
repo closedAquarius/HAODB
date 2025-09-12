@@ -16,10 +16,12 @@ int main()
     string sql;
     while (true)
     {
+        
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
+        
 
         /*// 创建 DiskManager
         DiskManager dm("database.db");
@@ -44,6 +46,8 @@ int main()
                 }
             }
         }*/
+
+        
     }
 }
 

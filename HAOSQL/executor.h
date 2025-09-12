@@ -97,7 +97,7 @@ void split(const string& str, const string& splits, vector<string>& result);
 void getColumns(vector<string>& cols, string s);
 
 // ========== 构建算子树 ==========
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm, CatalogManager* catalog);
 
 // ---------------- Executor ----------------
 class Executor {
@@ -266,8 +266,6 @@ public:
     void setUniqueColumns(const vector<string>& columns) { unique_columns_ = columns; }
 
     vector<Row> execute() override {
-		catalog_->Initialize();
-
         try {
             // 1. 创建基础表
             bool success = catalog_->CreateTable(DBName, table_name_, column_specs_, page_id_);
@@ -330,8 +328,6 @@ public:
     }
 
     vector<Row> execute() override {
-		catalog_->Initialize();
-
         try {
             // 如果指定了IF EXISTS，先检查表是否存在
             if (if_exists_) {
@@ -376,8 +372,6 @@ public:
     void setUniqueColumns(const vector<string>& columns) { unique_columns_ = columns; }
 
     vector<Row> execute() override {
-		catalog_->Initialize();
-
         try {
             // 1. 添加列
             bool success = catalog_->AddColumns(DBName, table_name_, column_specs_);
@@ -431,8 +425,6 @@ public:
     }
 
     vector<Row> execute() override {
-		catalog_->Initialize();
-
         try {
             bool success = catalog_->DropColumns(DBName, table_name_, column_names_);
             if (!success) {
@@ -448,3 +440,44 @@ public:
         }
     }
 };
+
+// ========== DDL辅助数据结构 ==========
+
+// DDL构建过程中的临时状态
+struct DDLBuildState {
+	// 列定义相关
+	vector<string> column_names;
+	vector<string> column_types;
+	vector<string> column_lengths;
+	vector<vector<string>> column_specs;
+
+	// 约束相关
+	vector<string> primary_keys;
+	vector<string> not_null_columns;
+	vector<string> unique_columns;
+
+	// 表名
+	string table_name;
+
+	// 清空状态
+	void clear() {
+		column_names.clear();
+		column_types.clear();
+		column_lengths.clear();
+		column_specs.clear();
+		primary_keys.clear();
+		not_null_columns.clear();
+		unique_columns.clear();
+		table_name.clear();
+	}
+};
+
+// ========== 工具函数 ==========
+
+// 解析逗号分隔的字符串列表
+vector<string> parseColumnList(const string& str);
+
+// 构建列规格
+vector<vector<string>> buildColumnSpecs(const vector<string>& names,
+	const vector<string>& types,
+	const vector<string>& lengths);

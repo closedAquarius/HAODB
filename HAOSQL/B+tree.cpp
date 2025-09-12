@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstring>
 
+using namespace std;
+
 // ================= ¹¹Ôìº¯Êý =================
 BPlusTree::BPlusTree(FileManager& fm, int file_id, int degree, int root_pid)
     : fm(fm), file_id(file_id), degree(degree), root_pid(root_pid) {}
