@@ -36,3 +36,6 @@ struct RID {
         return slot_id < other.slot_id;
     }
 };
+
+// 全局变量：存储数据库名称
+extern string DBName = "TestDB";
