@@ -8,6 +8,7 @@
 #include "dataType.h"
 #include "buffer_pool.h"
 #include "index_manager.h"
+#include <sstream>
 
 using namespace std;
 
@@ -97,53 +98,31 @@ void getColumns(vector<string>& cols, string s);
 // ========== 构建算子树 ==========
 Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns);
 
-/**
- * IndexScan: 基于索引的查询扫描器
- * 如果指定列有 B+ 树索引，则通过索引快速获取 RID，
- * 并通过 BufferPool + DiskManager 读取对应页中的记录。
- */
-class IndexScan {
+// ---------------- Executor ----------------
+class Executor {
 public:
-	/**
-	 * 构造函数
-	 * @param idxMgr IndexManager 指针
-	 * @param dbFile 数据库文件路径
-	 * @param tableName 表名
-	 * @param col 查询列
-	 * @param val 查询值
-	 */
-	IndexScan(IndexManager* idxMgr,
-		const std::string& dbFile,
-		const std::string& tableName,
-		const std::string& col,
-		int val);
+	Executor(IndexManager* idxMgr, const std::string& tableName, DiskManager* disk, int bufferSize = 100);
 
-	~IndexScan();
+	// ---------------- Select ----------------
+	// 根据列和值查询，如果有索引走索引，否则返回空
+	std::vector<Row> select(const std::string& column, int value);
 
-	/**
-	 * 执行索引扫描
-	 * @return 满足条件的 Row 列表
-	 */
-	std::vector<Row> execute();
+	// ---------------- Insert / Delete / Update ----------------
+	bool insertRow(const Row& newRow, const RID& rid);
+	bool deleteRow(const Row& oldRow, const RID& rid);
+	bool updateRow(const Row& oldRow, const Row& newRow, const RID& rid);
 
 private:
-	IndexManager* indexMgr = nullptr;
-	std::string databaseFile;
-	std::string tableName;
-	std::string column;
-	int value;
-
-	std::string indexName;
-	bool useIndex = false;
-
-	DiskManager* diskManager = nullptr;
-	BufferPoolManager* bpm = nullptr;
-
-	/**
-	 * 解析页中原始记录为 Row
-	 * 用户需要根据存储格式实现
-	 */
+	// 辅助函数：解析页中的记录成 Row
 	Row parseRecord(const std::string& record);
+
+	// 索引相关
+	IndexManager* indexMgr_;
+	std::string tableName_;
+
+	// 缓存和磁盘管理
+	std::unique_ptr<BufferPoolManager> bufferPool_;
+	DiskManager* diskManager_;
 };
 
 class Insert : public Operator {
