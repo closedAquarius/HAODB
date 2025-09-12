@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sys/stat.h>
 
-// Ò³´óĞ¡¹Ì¶¨Îª4KB
+// é¡µå¤§å°å›ºå®šä¸º4KB
 const size_t PAGE_SIZE = 4096;
 
 enum PageType {
@@ -18,37 +18,39 @@ enum PageType {
     FREE_PAGE
 };
 
-// Ò³Í·ĞÅÏ¢
+// é¡µå¤´ä¿¡æ¯
 struct PageHeader {
-    PageType type;          // Ò³ÀàĞÍ
-    uint32_t page_id;       // Ò³ºÅ
-    uint16_t free_offset;   // Êı¾İÇøÏÂÒ»¸ö¿ÉĞ´Î»ÖÃ(´ÓÍ·ÍùºóÉú³¤)
-    uint16_t slot_count;    // ²ÛÊıÁ¿
+    PageType type;          // é¡µç±»å‹
+    uint32_t page_id;       // é¡µå·
+    uint16_t free_offset;   // æ•°æ®åŒºä¸‹ä¸€ä¸ªå¯å†™ä½ç½®(ä»å¤´å¾€åç”Ÿé•¿)
+    uint16_t slot_count;    // æ§½æ•°é‡
 
 };
 
-// ²Û½á¹¹£¬Î»ÓÚÒ³Î²
+// æ§½ç»“æ„ï¼Œä½äºé¡µå°¾
 struct Slot {
-    uint16_t offset;  // Êı¾İÇøÆ«ÒÆ
-    uint16_t length;  // ¼ÇÂ¼³¤¶È
+    uint16_t offset;  // æ•°æ®åŒºåç§»
+    uint16_t length;  // è®°å½•é•¿åº¦
 };
 
 using PageId = int;
 class Page {
 public:
-    char data[PAGE_SIZE];   //Õû¸öÒ³¿Õ¼ä
+    char data[PAGE_SIZE];   //æ•´ä¸ªé¡µç©ºé—´
 public:
     PageId id;
     bool dirty;
     int pin_count;
 
-    Page(PageType type);
+    // âœ… ç»Ÿä¸€æ„é€ å‡½æ•°ï¼Œå…¼å®¹å¤šç§ç”¨æ³•
+    Page(PageType t = DATA_PAGE, uint32_t id = 0);
 
-    // Ò³¿Õ¼ä¹Ì¶¨£¬ÊÖ¶¯¿ØÖÆÒ³Í·
+
+    // é¡µç©ºé—´å›ºå®šï¼Œæ‰‹åŠ¨æ§åˆ¶é¡µå¤´
     PageHeader* header();
     const PageHeader* header() const;
 
-    // Ò³¿Õ¼ä¹Ì¶¨£¬ÊÖ¶¯»ñÈ¡ idx Î»ÖÃµÄSlotÊı¾İ
+    // é¡µç©ºé—´å›ºå®šï¼Œæ‰‹åŠ¨è·å– idx ä½ç½®çš„Slotæ•°æ®
     Slot* getSlot(int idx);
     const Slot* getSlot(int idx) const;
 

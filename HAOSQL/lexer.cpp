@@ -43,6 +43,11 @@ vector<Token> Lexer::analyze() {
             else
                 tokens.push_back({ 2, word, line, startCol });
         }
+        else if (c == '\'' || c == '"') {
+            int startCol = column;
+            string str = readString();
+            tokens.push_back({ 6, str, line, startCol }); // 6 = 字符串类型
+        }
         else if (isdigit(c)) { // 常数
             int startCol = column;
             string number = readNumber();
@@ -127,6 +132,26 @@ string Lexer::readNumber() {
     return result;
 }
 
+string Lexer::readString() {
+    string result;
+    char quote = input[pos]; // ' 或 "
+    int startCol = column;
+    pos++;
+    column++;
+    while (pos < input.size() && input[pos] != quote) {
+        result += input[pos];
+        pos++;
+        column++;
+    }
+    if (pos < input.size() && input[pos] == quote) {
+        pos++;
+        column++;
+    }
+    else {
+        cerr << "词法错误：字符串未闭合 在第" << line << "行 第" << startCol << "列" << endl;
+    }
+    return result;
+}
 
 // 测试主函数
 

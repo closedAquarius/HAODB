@@ -1,3 +1,4 @@
+// B+tree.cpp  — 已适配 PageHeader / Page 结构
 #include "B+tree.h"
 #include <iostream>
 #include <algorithm>
@@ -9,10 +10,20 @@ BPlusTree::BPlusTree(FileManager& fm, int file_id, int degree, int root_pid)
 
 // ================= 序列化 =================
 void BPlusTree::serializeNode(const BPlusTreeNode& node, Page& page) {
-    // 清页数据（可选）
+    // 清页数据
     std::memset(page.data, 0, sizeof(page.data));
 
-    char* buf = page.data;
+    // 准备并写入 PageHeader（把头部放在 page.data 开头）
+    PageHeader ph;
+    ph.type = node.isLeaf ? DATA_PAGE : INDEX_PAGE;
+    ph.page_id = page.id;
+    ph.free_offset = sizeof(PageHeader); // 我们把负载写在 header 之后
+    ph.slot_count = 0; // B+Tree 节点不使用 slot 机制（可扩展）
+    std::memcpy(page.data, &ph, sizeof(PageHeader));
+
+    // buf 指向 header 之后，开始写序列化的 node 内容
+    char* buf = page.data + sizeof(PageHeader);
+
     // 写基础头信息
     std::memcpy(buf, &node.isLeaf, sizeof(bool)); buf += sizeof(bool);
     std::memcpy(buf, &node.keyCount, sizeof(int)); buf += sizeof(int);
@@ -26,12 +37,10 @@ void BPlusTree::serializeNode(const BPlusTreeNode& node, Page& page) {
     if (node.isLeaf) {
         // 叶子：对于每个 key 写入 RID 列表长度 + RID 列表内容
         for (int i = 0; i < node.keyCount; ++i) {
-            // 使用 uint16_t 存储每个 key 对应的 RID 数量
             uint16_t cnt = 0;
             if (i < (int)node.ridLists.size()) cnt = static_cast<uint16_t>(node.ridLists[i].size());
             std::memcpy(buf, &cnt, sizeof(uint16_t)); buf += sizeof(uint16_t);
 
-            // 写入 cnt 个 RID
             for (uint16_t j = 0; j < cnt; ++j) {
                 const RID& r = node.ridLists[i][j];
                 std::memcpy(buf, &r, sizeof(RID)); buf += sizeof(RID);
@@ -47,14 +56,20 @@ void BPlusTree::serializeNode(const BPlusTreeNode& node, Page& page) {
         }
     }
 
-    // （可选）更新 page.header 等由调用方处理
+    // （可选）如果你希望 header.free_offset 反映有效载荷末尾，可以计算并更新它
+    // size_t used = (buf - (page.data + sizeof(PageHeader)));
+    // ph.free_offset = sizeof(PageHeader) + used;
+    // std::memcpy(page.data, &ph, sizeof(PageHeader));
 }
-
 
 // ================= 反序列化 =================
 BPlusTreeNode BPlusTree::deserializeNode(const Page& page) {
     BPlusTreeNode node;
-    const char* buf = page.data;
+    // 读取页头（如果将来需要校验类型可以用）
+    PageHeader ph;
+    std::memcpy(&ph, page.data, sizeof(PageHeader));
+
+    const char* buf = page.data + sizeof(PageHeader);
 
     // 读基础头信息
     std::memcpy(&node.isLeaf, buf, sizeof(bool)); buf += sizeof(bool);
@@ -118,11 +133,9 @@ std::vector<RID> BPlusTree::search(int key) {
     // 在当前叶子中查找等于 key 的位置，并收集对应的 ridLists
     for (int i = 0; i < node.keyCount; ++i) {
         if (node.keys[i] == key) {
-            // 把该 key 的所有 RID 加入结果
             for (const RID& r : node.ridLists[i]) results.push_back(r);
         }
         else if (node.keys[i] > key) {
-            // 因为 keys 升序，一旦大于 key，可以提前结束当前叶的扫描
             return results;
         }
     }
@@ -178,8 +191,7 @@ std::vector<RID> BPlusTree::searchRange(int keyLow, int keyHigh) {
         for (int i = 0; i < node.keyCount; ++i) {
             int k = node.keys[i];
             if (k < keyLow) continue;
-            if (k > keyHigh) return results; // 可提前结束整个范围扫描
-            // k 在 [keyLow, keyHigh]
+            if (k > keyHigh) return results;
             for (const RID& r : node.ridLists[i]) results.push_back(r);
         }
         curPid = node.nextLeaf;
@@ -187,8 +199,6 @@ std::vector<RID> BPlusTree::searchRange(int keyLow, int keyHigh) {
 
     return results;
 }
-
-
 
 // ---------- IO 封装 ----------
 BPlusTreeNode BPlusTree::loadNode(int pid) {
@@ -203,19 +213,16 @@ BPlusTreeNode BPlusTree::loadNode(int pid) {
 }
 
 void BPlusTree::saveNode(const BPlusTreeNode& node) {
-    Page p(DATA_PAGE, node.page_id);
+    Page p(node.isLeaf ? DATA_PAGE : INDEX_PAGE, node.page_id);
     serializeNode(node, p);
     fm.writePage(file_id, p);
 }
 
 // ---------- 辅助 ----------
 int BPlusTree::minKeysLeaf() const {
-    // leaf 最大 key = degree - 1
-    // 通常最小 = ceil((degree-1)/2) => 简化取 (degree-1+1)/2 = degree/2
     return degree / 2;
 }
 int BPlusTree::minKeysInternal() const {
-    // internal 最小 keys = ceil(degree/2) - 1
     int minChildren = (degree + 1) / 2;
     return minChildren - 1;
 }
@@ -227,13 +234,12 @@ int BPlusTree::findChildIndex(const BPlusTreeNode& parent, int childPid) const {
 // ================= 插入 =================
 // ================== 插入入口 ==================
 void BPlusTree::insert(int key, const RID& rid) {
-    // 如果文件为空，创建根叶子（page 0）
     if (fm.getPageCount(file_id) == 0) {
         BPlusTreeNode root;
         root.isLeaf = true;
         root.page_id = 0;
         root.keys = { key };
-        root.ridLists = { std::vector<RID>{rid} }; // 注意：使用 ridLists
+        root.ridLists = { std::vector<RID>{rid} };
         root.keyCount = 1;
         root.nextLeaf = -1;
 
@@ -244,13 +250,11 @@ void BPlusTree::insert(int key, const RID& rid) {
         return;
     }
 
-    // 递归插入
     int newChildPid = -1;
     int upKey = -1;
     bool hasSplit = insertRecursive(root_pid, key, rid, upKey, newChildPid);
 
     if (hasSplit) {
-        // 根被分裂，新建根（在文件末尾追加）
         int newRootPid = fm.getPageCount(file_id);
 
         BPlusTreeNode newRoot;
@@ -260,7 +264,7 @@ void BPlusTree::insert(int key, const RID& rid) {
         newRoot.children = { root_pid, newChildPid };
         newRoot.keyCount = 1;
 
-        Page rootPage(DATA_PAGE, newRootPid);
+        Page rootPage(INDEX_PAGE, newRootPid);
         serializeNode(newRoot, rootPage);
         fm.writePage(file_id, rootPage);
 
@@ -270,60 +274,49 @@ void BPlusTree::insert(int key, const RID& rid) {
 
 // ================== 递归插入 ==================
 bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey, int& newChildPid) {
-    // 读当前节点
     Page page(DATA_PAGE, nodePid);
     fm.readPage(file_id, nodePid, page);
     BPlusTreeNode node = deserializeNode(page);
 
     if (node.isLeaf) {
-        // -------- 叶子节点插入 --------
-        // 先查找是否已有该 key
         auto it = std::lower_bound(node.keys.begin(), node.keys.end(), key);
         int idx = it - node.keys.begin();
 
         if (it != node.keys.end() && *it == key) {
-            // key 已存在：把 rid 加到对应的 ridLists 中（不新增 key）
             node.ridLists[idx].push_back(rid);
-            // 写回页（无需分裂处理，除非你按字节检测溢出）
             Page p(DATA_PAGE, node.page_id);
             serializeNode(node, p);
             fm.writePage(file_id, p);
-            return false; // 没分裂
+            return false;
         }
 
-        // key 不存在：插入新 key 与对应的 rid 列表
         node.keys.insert(it, key);
         node.ridLists.insert(node.ridLists.begin() + idx, std::vector<RID>{rid});
         node.keyCount = static_cast<int>(node.keys.size());
 
         if (node.keyCount < degree) {
-            // 没超出容量，直接写回
             Page p(DATA_PAGE, node.page_id);
             serializeNode(node, p);
             fm.writePage(file_id, p);
-            return false; // 没分裂
+            return false;
         }
 
-        // 分裂叶子
         int mid = node.keyCount / 2;
         int newPageId = fm.getPageCount(file_id);
 
         BPlusTreeNode newLeaf;
         newLeaf.isLeaf = true;
         newLeaf.page_id = newPageId;
-        // keys 和 ridLists 都从 mid 开始搬到新叶
         newLeaf.keys.assign(node.keys.begin() + mid, node.keys.end());
         newLeaf.ridLists.assign(node.ridLists.begin() + mid, node.ridLists.end());
         newLeaf.keyCount = static_cast<int>(newLeaf.keys.size());
         newLeaf.nextLeaf = node.nextLeaf;
 
-        // shrink left (原 node)
         node.keys.resize(mid);
         node.ridLists.resize(mid);
         node.keyCount = static_cast<int>(node.keys.size());
         node.nextLeaf = newPageId;
 
-        // 写回两页
         Page oldPage(DATA_PAGE, node.page_id);
         serializeNode(node, oldPage);
         fm.writePage(file_id, oldPage);
@@ -332,13 +325,11 @@ bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey
         serializeNode(newLeaf, newPage);
         fm.writePage(file_id, newPage);
 
-        // 返回分裂信息：提升 newLeaf.keys[0]
         upKey = newLeaf.keys[0];
         newChildPid = newLeaf.page_id;
         return true;
     }
     else {
-        // -------- 内部节点 --------
         int i = 0;
         while (i < node.keys.size() && key >= node.keys[i]) ++i;
 
@@ -350,19 +341,17 @@ bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey
             return false;
         }
 
-        // 子节点分裂，插入新的 key 和 child
         node.keys.insert(node.keys.begin() + i, childUpKey);
         node.children.insert(node.children.begin() + i + 1, childNewPid);
         node.keyCount = static_cast<int>(node.keys.size());
 
         if (node.keyCount < degree) {
-            Page p(DATA_PAGE, node.page_id);
+            Page p(INDEX_PAGE, node.page_id);
             serializeNode(node, p);
             fm.writePage(file_id, p);
             return false;
         }
 
-        // 内部节点分裂
         int mid = node.keyCount / 2;
         upKey = node.keys[mid];
 
@@ -371,22 +360,19 @@ bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey
         newInternal.isLeaf = false;
         newInternal.page_id = newPageId;
 
-        // 右半部分（keys after mid, children after mid+1）
         newInternal.keys.assign(node.keys.begin() + mid + 1, node.keys.end());
         newInternal.children.assign(node.children.begin() + mid + 1, node.children.end());
         newInternal.keyCount = static_cast<int>(newInternal.keys.size());
 
-        // 左半部分 shrink
         node.keys.resize(mid);
         node.children.resize(mid + 1);
         node.keyCount = static_cast<int>(node.keys.size());
 
-        // 写回
-        Page oldPage(DATA_PAGE, node.page_id);
+        Page oldPage(INDEX_PAGE, node.page_id);
         serializeNode(node, oldPage);
         fm.writePage(file_id, oldPage);
 
-        Page newPage(DATA_PAGE, newInternal.page_id);
+        Page newPage(INDEX_PAGE, newInternal.page_id);
         serializeNode(newInternal, newPage);
         fm.writePage(file_id, newPage);
 
@@ -402,13 +388,11 @@ void BPlusTree::remove(int key, const RID& rid) {
 
     deleteEntry(root_pid, -1, -1, key, rid);
 
-    // 检查 root 是否需要收缩
     Page rootPage(DATA_PAGE, root_pid);
     fm.readPage(file_id, root_pid, rootPage);
     BPlusTreeNode root = deserializeNode(rootPage);
 
     if (!root.isLeaf && root.keyCount == 0) {
-        // 根被删空 -> 提升唯一子节点为新根
         int newRootPid = root.children[0];
         root_pid = newRootPid;
     }
@@ -420,22 +404,19 @@ void BPlusTree::deleteEntry(int node_pid, int parent_pid, int childIndex, int ke
     BPlusTreeNode node = loadNode(node_pid);
 
     if (node.isLeaf) {
-        // 找 key
         auto it = std::lower_bound(node.keys.begin(), node.keys.end(), key);
         if (it == node.keys.end() || *it != key) {
-            return; // key 不存在
+            return;
         }
         int idx = it - node.keys.begin();
 
-        // 在 ridList 里删 rid
         auto& ridList = node.ridLists[idx];
         auto ridIt = std::find(ridList.begin(), ridList.end(), rid);
         if (ridIt == ridList.end()) {
-            return; // 该 rid 不存在
+            return;
         }
         ridList.erase(ridIt);
 
-        // 如果 ridList 为空，整条 key 删掉
         if (ridList.empty()) {
             node.keys.erase(node.keys.begin() + idx);
             node.ridLists.erase(node.ridLists.begin() + idx);
@@ -444,10 +425,8 @@ void BPlusTree::deleteEntry(int node_pid, int parent_pid, int childIndex, int ke
 
         saveNode(node);
 
-        // 根节点直接结束
         if (node.page_id == root_pid) return;
 
-        // 检查下溢
         if (node.keyCount < minKeysLeaf()) {
             if (parent_pid >= 0) {
                 BPlusTreeNode parent = loadNode(parent_pid);
@@ -456,7 +435,6 @@ void BPlusTree::deleteEntry(int node_pid, int parent_pid, int childIndex, int ke
             }
         }
         else {
-            // 更新 parent 分隔键
             if (parent_pid >= 0 && childIndex > 0) {
                 BPlusTreeNode parent = loadNode(parent_pid);
                 parent.keys[childIndex - 1] = node.keys.front();
@@ -465,7 +443,6 @@ void BPlusTree::deleteEntry(int node_pid, int parent_pid, int childIndex, int ke
         }
     }
     else {
-        // 内部节点，递归
         int i = 0;
         while (i < node.keyCount && key >= node.keys[i]) ++i;
         int childPid = node.children[i];
@@ -482,7 +459,6 @@ void BPlusTree::deleteEntry(int node_pid, int parent_pid, int childIndex, int ke
         }
     }
 }
-
 
 // 叶子下溢处理：child 是被下溢的叶子节点，parent 已经 load，parentIndex 是 child 在 parent.children 中的索引
 void BPlusTree::handleLeafUnderflow(BPlusTreeNode& child, BPlusTreeNode& parent, int parentIndex) {
@@ -670,7 +646,6 @@ void BPlusTree::mergeInternals(BPlusTreeNode& left, BPlusTreeNode& right, BPlusT
 
 // ================= 打印树 =================
 void BPlusTree::printTree() {
-    // 记得设置 root_pid
     Page rootPage(DATA_PAGE, root_pid);
     if (!fm.readPage(file_id, root_pid, rootPage)) {
         std::cerr << "无法读取根节点 page " << root_pid << std::endl;
@@ -715,7 +690,6 @@ void BPlusTree::printNode(const BPlusTreeNode& node, int level) {
     }
 }
 
-
 int BPlusTree::createIndex(FileManager& fm, int fileId) {
     // 分配根节点页
     int rootPid = fm.allocatePage(fileId, INDEX_PAGE);
@@ -729,7 +703,7 @@ int BPlusTree::createIndex(FileManager& fm, int fileId) {
 
     // 将根节点序列化写入页
     Page rootPage(INDEX_PAGE, rootPid);
-    serializeNode(root, rootPage);   // 使用已有 BPlusTree 序列化方法
+    serializeNode(root, rootPage);
     fm.writePage(fileId, rootPage);
 
     std::cout << "Index created in file_id=" << fileId
@@ -742,55 +716,21 @@ int BPlusTree::createIndex(FileManager& fm, int fileId) {
 void BPlusTree::destroyIndex(FileManager& fm, int root_pid, int file_id) {
     if (root_pid < 0) return;
 
-    // 读取当前节点
     Page page(DATA_PAGE, root_pid);
     if (!fm.readPage(file_id, root_pid, page)) return;
 
-    BPlusTreeNode node;
-    const char* buf = page.data;
-
-    memcpy(&node.isLeaf, buf, sizeof(bool)); buf += sizeof(bool);
-    memcpy(&node.keyCount, buf, sizeof(int)); buf += sizeof(int);
-    memcpy(&node.page_id, buf, sizeof(int)); buf += sizeof(int);
-
-    node.keys.resize(node.keyCount);
-    for (int i = 0; i < node.keyCount; i++) {
-        memcpy(&node.keys[i], buf, sizeof(int)); buf += sizeof(int);
-    }
+    BPlusTreeNode node = deserializeNode(page);
 
     if (node.isLeaf) {
-        // ridLists
-        node.ridLists.resize(node.keyCount);
-        for (int i = 0; i < node.keyCount; i++) {
-            int ridCount;
-            memcpy(&ridCount, buf, sizeof(int)); buf += sizeof(int);
-            node.ridLists[i].resize(ridCount);
-            for (int j = 0; j < ridCount; j++) {
-                memcpy(&node.ridLists[i][j], buf, sizeof(RID)); buf += sizeof(RID);
-            }
-        }
-        memcpy(&node.nextLeaf, buf, sizeof(int)); buf += sizeof(int);
-
-        // 释放叶子节点页
         fm.freePage(file_id, node.page_id);
     }
     else {
-        // 内部节点
-        node.children.resize(node.keyCount + 1);
-        for (int i = 0; i < node.keyCount + 1; i++) {
-            memcpy(&node.children[i], buf, sizeof(int)); buf += sizeof(int);
-        }
-
-        // 递归销毁子节点
         for (int child_pid : node.children) {
             destroyIndex(fm, child_pid, file_id);
         }
-
-        // 释放内部节点页
         fm.freePage(file_id, node.page_id);
     }
 }
-
 
 void BPlusTree::setRootPid(int rootid) {
     this->root_pid = rootid;
@@ -821,8 +761,6 @@ void BPlusTree::setRootPid(int rootid) {
     //tree.printTree();
     return 0;
 }*/
-
-/*
 int main() {
     std::string indexFileName = "students";
 
@@ -884,5 +822,4 @@ int main() {
 
     return 0;
 }
-*/
 

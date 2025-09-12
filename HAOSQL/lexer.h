@@ -27,6 +27,7 @@ private:
 
     string readWord();                 // 读取标识符/关键字
     string readNumber();               // 读取常数
+    string readString();
 
 public:
     Lexer(string src);                 // 构造函数

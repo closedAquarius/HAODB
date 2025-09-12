@@ -68,8 +68,8 @@ string SemanticAnalyzer::expectIdent() {
 }
 
 string SemanticAnalyzer::expectConstOrString() {
-    if (pos >= toks->size() || toks->at(pos).type != 3) // 3=³£Êý
-        throw SemanticError("Expected constant/string", peek().line, peek().column);
+    if (pos >= toks->size() || (toks->at(pos).type != 3 && toks->at(pos).type != 6))
+        throw SemanticError("Expected constant or string", peek().line, peek().column);
     return toks->at(pos++).value;
 }
 
@@ -202,11 +202,13 @@ vector<Quadruple> SemanticAnalyzer::handleInsert() {
 // --- UPDATE ---
 vector<Quadruple> SemanticAnalyzer::handleUpdate() {
     vector<Quadruple> out;
+
     expectKeyword("UPDATE");
     string table = expectIdent();
     string fromTemp = newTemp();
     out.push_back({ "FROM", table, "-", fromTemp });
 
+    // ===== SET =====
     expectKeyword("SET");
     string assigns = "";
     while (true) {
@@ -217,21 +219,31 @@ vector<Quadruple> SemanticAnalyzer::handleUpdate() {
         assigns += col + "=" + val;
         if (!matchDelim(',')) break;
     }
-
     string setTemp = newTemp();
     out.push_back({ "SET", assigns, fromTemp, setTemp });
     string source = setTemp;
 
+    // ===== WHERE =====
     if (matchKeyword("WHERE")) {
         string cond = parseOr(out);
         string whereTemp = newTemp();
-        out.push_back({ "WHERE", source, cond, whereTemp });
+        out.push_back({ "WHERE", cond, source, whereTemp });
         source = whereTemp;
     }
 
-    out.push_back({ "RESULT", source, "-", "-" });
+    // ===== UPDATE =====
+    string updateTemp = newTemp();
+    out.push_back({ "UPDATE", table, source, updateTemp });
+
+    // ===== RESULT =====
+    out.push_back({ "RESULT", updateTemp, "-", "-" });
+
     return out;
 }
+
+
+
+
 
 
 // --- DELETE ---
