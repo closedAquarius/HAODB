@@ -1101,12 +1101,81 @@ void SQLParser::print_analysis_step(const vector<string>& input_symbols, int inp
 
 void SQLParser::emergency(int model)
 {
-    printf("分析完成，清理资源\n");
-    // 这里应该释放所有分配的内存
-    // exit(0);
+    // 清理非终结符链表
+    // printf("清理非终结符链表...\n");
+    noterminal* current_nt = NOTERMINAL_HEAD.next;
+    while (current_nt)
+    {
+        noterminal* temp_nt = current_nt;
+        current_nt = current_nt->next;
+
+        // 清理FIRST和FOLLOW集合（vector会自动析构）
+        temp_nt->FIRST.clear();
+        temp_nt->FOLLOW.clear();
+
+        delete temp_nt;
+    }
+    NOTERMINAL_HEAD.next = nullptr;
+    current_noterminal = &NOTERMINAL_HEAD;
+
+    // 清理终结符链表
+    // printf("清理终结符链表...\n");
+    terminal* current_t = TERMINAL_HEAD.next;
+    while (current_t)
+    {
+        terminal* temp_t = current_t;
+        current_t = current_t->next;
+        delete temp_t;
+    }
+    TERMINAL_HEAD.next = nullptr;
+    current_terminal = &TERMINAL_HEAD;
+
+    // 清理产生式链表
+    // printf("清理产生式链表...\n");
+    production* current_p = PRODUCTION_HEAD.next;
+    while (current_p)
+    {
+        production* temp_p = current_p;
+        current_p = current_p->next;
+
+        // 清理产生式右部vector（会自动析构）
+        temp_p->result.clear();
+
+        delete temp_p;
+    }
+    PRODUCTION_HEAD.next = nullptr;
+    current_production = &PRODUCTION_HEAD;
+
+    // 清理其他容器
+    // printf("清理其他资源...\n");
+    terminal_all.clear();
+    input_tokens.clear();
+    TEST_STACK.clear();
+
+    // 重置计数器
+    amount = 0;
+
+    // printf("资源清理完成\n");
+
+    // 根据model参数决定是否退出程序
+    switch (model)
+    {
+    case 0:
+        break;
+    case 1:
+        printf("文法解析错误退出\n");
+        break;
+    case 2:
+        printf("栈操作错误退出\n");
+        break;
+    default:
+        printf("未知错误退出\n");
+        break;
+    }
 }
 
-/*int main()
+/*
+int main()
 {
     std::cout << "Hello World!\n";
     std::vector<Token> tokens = {

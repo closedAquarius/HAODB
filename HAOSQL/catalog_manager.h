@@ -73,6 +73,17 @@ struct DatabaseStatistics {
     double storage_utilization;
 };
 
+// 表格页偏移更新
+struct TableOffset {
+    std::string db_name;
+    std::string table_name;
+    uint32_t page_id;
+
+    TableOffset(const std::string& db, const std::string& table, uint32_t id)
+        : db_name(db), table_name(table), page_id(id) {
+    }
+};
+
 class CatalogManager {
 private:
     std::string haodb_root_path;
@@ -94,6 +105,10 @@ private:
     bool ValidateTableName(const std::string& table_name);
     bool ValidateColumnName(const std::string& column_name);
     bool UpdateColumnOffset(std::vector<ColumnMeta>& columns);
+
+public:
+    bool UpdateTableOffset(const std::vector<TableOffset>& tables);
+    bool UpdateIndexRoot(const std::string& db_name, const std::string& index_name, uint64_t root_page_id);
 
 public:
     explicit CatalogManager(const std::string& haodb_path = "HAODB");
@@ -122,7 +137,7 @@ public:
 
     // (4) 创建数据表
     bool CreateTable(const std::string& db_name, const std::string& table_name,
-        const std::vector<std::vector<std::string>>& column_specs);
+        const std::vector<std::vector<std::string>>& column_specs, const int pageId);
 
     // (5) 设定/取消主键
     bool SetPrimaryKey(const std::string& db_name, const std::string& table_name,

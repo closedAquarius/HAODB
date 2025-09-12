@@ -180,7 +180,7 @@ std::vector<ColumnMeta> CreateSCColumns() {
 }
 
 
-int test() {
+int testStorage() {
     std::cout << "=== HAODB 完整元数据管理系统演示 ===" << std::endl;
     std::cout << "版本: 1.0 (包含配置管理)" << std::endl;
     std::cout << std::string(60, '=') << std::endl;

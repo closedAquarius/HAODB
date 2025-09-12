@@ -765,7 +765,7 @@ int BPlusTree::getRootPid() {
     //tree.printTree();
     return 0;
 }*/
-/*int main() {
+int test() {
     std::string indexFileName = "students";
 
     // ---------------- 创建文件管理器 ----------------

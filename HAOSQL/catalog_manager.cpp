@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <sstream>
 #include <unordered_set>
+#include <set>
 
 namespace fs = std::filesystem;
 
@@ -130,7 +131,7 @@ bool CatalogManager::CreateDatabase(const std::string& db_name, const std::strin
         std::string db_name_lower = db_name;
         std::transform(db_name_lower.begin(), db_name_lower.end(), db_name_lower.begin(), ::tolower);
 
-        db_manager->SetDataFilePath(db_path + "\\data\\" + db_name_lower + ".dat");
+        db_manager->SetDataFilePath(db_path + "\\data\\" + "database.db");
         db_manager->SetLogFilePath(db_path + "\\logs\\" + db_name_lower + ".log");
         db_manager->SetIndexFilePath(db_path + "\\index\\" + db_name_lower + ".idx");
 
@@ -261,7 +262,7 @@ DatabaseInfo CatalogManager::GetDatabaseInfo(const std::string& db_name) {
 // ==================== 数据表管理 ====================
 
 bool CatalogManager::CreateTable(const std::string& db_name, const std::string& table_name,
-    const std::vector<std::vector<std::string>>& column_specs) {
+    const std::vector<std::vector<std::string>>& column_specs, const int pageId) {
     if (!DatabaseExists(db_name)) {
         std::cerr << "数据库不存在: " << db_name << std::endl;
         return false;
@@ -317,7 +318,7 @@ bool CatalogManager::CreateTable(const std::string& db_name, const std::string& 
         uint32_t table_id = GenerateNewTableId(db_name);
 
         // 创建表
-        if (!db_manager->CreateTable(table_name, table_id, columns, 0)) {
+        if (!db_manager->CreateTable(table_name, table_id, columns, 4096 * pageId)) {
             return false;
         }
 
@@ -1229,8 +1230,10 @@ bool CatalogManager::ValidateColumnName(const std::string& column_name) {
     return true;
 }
 
-bool CatalogManager::UpdateColumnOffset(std::vector<ColumnMeta>& columns) {
-    for (int i = 0; i < columns.size();i++) {
+bool CatalogManager::UpdateColumnOffset(std::vector<ColumnMeta>& columns)
+{
+    for (int i = 0; i < columns.size();i++)
+    {
         if (i == 0)
             columns[i].column_offset = 0;
         else
@@ -1238,4 +1241,140 @@ bool CatalogManager::UpdateColumnOffset(std::vector<ColumnMeta>& columns) {
     }
 
     return true;
+}
+
+bool CatalogManager::UpdateTableOffset(const std::vector<TableOffset>& tables) {
+    if (tables.empty()) {
+        std::cerr << "表偏移更新列表为空" << std::endl;
+        return false;
+    }
+
+    std::cout << "开始批量更新表偏移量，共 " << tables.size() << " 个表" << std::endl;
+
+    bool all_success = true;
+    int success_count = 0;
+    int failure_count = 0;
+
+    for (const auto& table_update : tables) {
+        try {
+            // 检查数据库是否存在
+            if (!DatabaseExists(table_update.db_name)) {
+                std::cerr << "数据库不存在: " << table_update.db_name << std::endl;
+                all_success = false;
+                failure_count++;
+                continue;
+            }
+
+            // 加载数据库管理器
+            if (!LoadDatabaseManager(table_update.db_name)) {
+                std::cerr << "加载数据库管理器失败: " << table_update.db_name << std::endl;
+                all_success = false;
+                failure_count++;
+                continue;
+            }
+
+            auto& db_manager = database_managers[table_update.db_name];
+
+            // 获取表元数据
+            TableMeta* table = db_manager->GetTableInfo(table_update.table_name);
+            if (!table) {
+                std::cerr << "未找到表: " << table_update.db_name << "." << table_update.table_name << std::endl;
+                all_success = false;
+                failure_count++;
+                continue;
+            }
+
+            // 计算新的偏移量: 4KB * page_id
+            uint64_t new_offset = static_cast<uint64_t>(table_update.page_id) * 4096;
+
+            // 更新表的数据文件偏移量
+            table->data_file_offset = new_offset;
+
+            std::cout << "更新表偏移量: " << table_update.db_name << "." << table_update.table_name
+                << " 页ID=" << table_update.page_id
+                << " 偏移量=" << new_offset << " bytes" << std::endl;
+
+            success_count++;
+
+        }
+        catch (const std::exception& e) {
+            std::cerr << "更新表偏移量时发生异常: " << table_update.db_name
+                << "." << table_update.table_name << " - " << e.what() << std::endl;
+            all_success = false;
+            failure_count++;
+        }
+    }
+
+    // 保存所有涉及的数据库元数据
+    std::set<std::string> updated_databases;
+    for (const auto& table_update : tables) {
+        updated_databases.insert(table_update.db_name);
+    }
+
+    for (const auto& db_name : updated_databases) {
+        if (database_managers.find(db_name) != database_managers.end()) {
+            if (!database_managers[db_name]->SaveMetadata()) {
+                std::cerr << "保存数据库元数据失败: " << db_name << std::endl;
+                all_success = false;
+            }
+        }
+    }
+
+    std::cout << "表偏移量更新完成: 成功 " << success_count << " 个，失败 " << failure_count << " 个" << std::endl;
+    return all_success;
+}
+
+bool CatalogManager::UpdateIndexRoot(const std::string& db_name, const std::string& index_name, uint64_t root_page_id) {
+    if (db_name.empty() || index_name.empty()) {
+        std::cerr << "数据库名或索引名不能为空" << std::endl;
+        return false;
+    }
+
+    try {
+        // 检查数据库是否存在
+        if (!DatabaseExists(db_name)) {
+            std::cerr << "数据库不存在: " << db_name << std::endl;
+            return false;
+        }
+
+        // 加载数据库管理器
+        if (!LoadDatabaseManager(db_name)) {
+            std::cerr << "加载数据库管理器失败: " << db_name << std::endl;
+            return false;
+        }
+
+        auto& db_manager = database_managers[db_name];
+
+        // 获取索引信息
+        IndexMeta* index = db_manager->GetIndexInfo(index_name);
+        if (!index) {
+            std::cerr << "未找到索引: " << db_name << "." << index_name << std::endl;
+            return false;
+        }
+
+        // 记录旧的根页ID
+        uint64_t old_root_page_id = index->root_page_id;
+
+        // 更新索引根页ID
+        index->root_page_id = root_page_id;
+
+        // 保存元数据
+        if (!db_manager->SaveMetadata()) {
+            std::cerr << "保存数据库元数据失败: " << db_name << std::endl;
+            // 恢复旧值
+            index->root_page_id = old_root_page_id;
+            return false;
+        }
+
+        std::cout << "更新索引根页ID: " << db_name << "." << index_name
+            << " 从 " << old_root_page_id << " 更新为 " << root_page_id << std::endl;
+
+        return true;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "更新索引根页ID时发生异常: " << db_name << "." << index_name
+            << " - " << e.what() << std::endl;
+        return false;
+    }
 }
