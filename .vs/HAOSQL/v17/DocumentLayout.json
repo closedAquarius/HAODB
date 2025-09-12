@@ -3,12 +3,20 @@
   "WorkspaceRootPath": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\catalog_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\parser.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\parser.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\test_catalog2.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\test_catalog2.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\catalog_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\page.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -63,14 +71,6 @@
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\lexer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\parser.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\parser.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -90,7 +90,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 213,
-          "SelectedChildIndex": 9,
+          "SelectedChildIndex": 16,
           "Children": [
             {
               "$type": "Bookmark",
@@ -130,20 +130,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "catalog_manager.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\catalog_manager.h",
-              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.h*",
-              "RelativeToolTip": "HAOSQL\\catalog_manager.h*",
-              "ViewState": "AgIAAD8AAAAAAAAAAAAAAE4AAAAbAAAAAAAAAA==",
+              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.h",
+              "RelativeToolTip": "HAOSQL\\catalog_manager.h",
+              "ViewState": "AgIAAFoAAAAAAAAAAAAAAG4AAABcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-09-12T01:51:10.627Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "page.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\page.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\page.cpp",
@@ -156,20 +156,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "test_catalog2.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\test_catalog2.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\test_catalog2.cpp",
               "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\test_catalog2.cpp",
               "RelativeToolTip": "HAOSQL\\test_catalog2.cpp",
-              "ViewState": "AgIAAAcDAAAAAAAAAAAAAAcAAAARAAAAAAAAAA==",
+              "ViewState": "AgIAADwDAAAAAAAAAAAUwEYDAABQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-09-11T15:50:01.163Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "test_catalog.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\test_catalog.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\test_catalog.cpp",
@@ -182,7 +182,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "catalog_manager.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\catalog_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\catalog_manager.cpp",
@@ -195,7 +195,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "metadata_structures.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\metadata_structures.h",
               "RelativeDocumentMoniker": "HAOSQL\\metadata_structures.h",
@@ -208,7 +208,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "test_storage.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\test_storage.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\test_storage.cpp",
@@ -221,7 +221,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 0,
+              "Title": "parser.cpp",
+              "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp",
+              "RelativeDocumentMoniker": "HAOSQL\\parser.cpp",
+              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp*",
+              "RelativeToolTip": "HAOSQL\\parser.cpp*",
+              "ViewState": "AgIAAIEEAAAAAAAAAAAUwI0EAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-09-08T07:46:41.411Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "parser.h",
+              "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h",
+              "RelativeDocumentMoniker": "HAOSQL\\parser.h",
+              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h",
+              "RelativeToolTip": "HAOSQL\\parser.h",
+              "ViewState": "AgIAAA4AAAAAAAAAAAAUwGoAAAAaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-09-08T08:24:42.869Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "database_registry_manager.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\database_registry_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\database_registry_manager.h",
@@ -233,7 +259,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "B\u002Btree.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\B\u002Btree.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\B\u002Btree.cpp",
@@ -246,7 +272,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "database_metadata_manager.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\database_metadata_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\database_metadata_manager.h",
@@ -258,7 +284,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "HAOSQL.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\HAOSQL.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\HAOSQL.cpp",
@@ -270,7 +296,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 13,
               "Title": "sql_grammar.txt",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\sql_grammar.txt",
               "RelativeDocumentMoniker": "HAOSQL\\sql_grammar.txt",
@@ -282,7 +308,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 14,
               "Title": "dataType.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\dataType.h",
               "RelativeDocumentMoniker": "HAOSQL\\dataType.h",
@@ -294,7 +320,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 15,
               "Title": "semantic.cpp",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\semantic.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\semantic.cpp",
@@ -306,7 +332,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 16,
               "Title": "lexer.h",
               "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\lexer.h",
               "RelativeDocumentMoniker": "HAOSQL\\lexer.h",
@@ -315,30 +341,6 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-09-09T05:12:36.04Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "parser.cpp",
-              "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp",
-              "RelativeDocumentMoniker": "HAOSQL\\parser.cpp",
-              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.cpp",
-              "RelativeToolTip": "HAOSQL\\parser.cpp",
-              "ViewState": "AgIAAFgEAAAAAAAAAAAqwHUEAAADAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-08T07:46:41.411Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "parser.h",
-              "DocumentMoniker": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h",
-              "RelativeDocumentMoniker": "HAOSQL\\parser.h",
-              "ToolTip": "D:\\Learning\\2025-2026(1)\\DBMS\\haosql\\HAOSQL\\parser.h",
-              "RelativeToolTip": "HAOSQL\\parser.h",
-              "ViewState": "AgIAACcAAAAAAAAAAAAqwG4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-09-08T08:24:42.869Z"
             },
             {
               "$type": "Document",
