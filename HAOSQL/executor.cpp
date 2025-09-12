@@ -1,4 +1,4 @@
-#include "executor.h"
+/*#include "executor.h"
 
 using namespace std;
 
@@ -155,23 +155,15 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 
         // ====== 插入 ======
         else if (q.op == "INSERT") {
-            Table* table = &t;   // 假设 t 对应目标表
-            Row row = parseRow(q.arg1); // 自己实现 parseRow 把 arg1 转成 Row
-            symbolTables[q.result] = new Insert(table, row);
         }
         // ====== SET ======
         else if (q.op == "SET") {
-            Operator* setOp = new SetOp(symbolTables[q.arg2]); // q.arg2 = FROM temp
-            symbolTables[q.result] = setOp;
         }
         else if (q.op == "UPDATE") {
         }
 
         // ====== 删除 ======
         else if (q.op == "DELETE") {
-            Operator* child = symbolTables[q.arg1]; // 被删除的行
-            Table* table = &t;
-            symbolTables[q.result] = new Delete(child, table);
         }
 
         // ====== 输出结果 ======
@@ -197,4 +189,4 @@ vector<Row> IndexScan::execute() {
 		//output.push_back(table->getRow(rid));  // 根据 RID 获取行
 	}
 	return output;
-}
+}*/

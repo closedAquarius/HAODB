@@ -1,16 +1,13 @@
 #include "page.h"
 using namespace std;
 
-Page::Page(PageType type) {
-    memset(data, 0, PAGE_SIZE);
-    header()->type = type;
-    header()->page_id = 0;
-    header()->free_offset = sizeof(PageHeader);
-    header()->slot_count = 0;
-
-    id = -1;
-    dirty = false;
-    pin_count = 0;
+Page::Page(PageType t, uint32_t id) : id(id), dirty(false), pin_count(0) {
+    std::memset(data, 0, PAGE_SIZE);
+    PageHeader* ph = reinterpret_cast<PageHeader*>(data);
+    ph->type = t;
+    ph->page_id = id;
+    ph->free_offset = sizeof(PageHeader);
+    ph->slot_count = 0;
 }
 
 // 页空间固定，手动控制页头

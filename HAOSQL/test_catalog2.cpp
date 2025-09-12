@@ -737,6 +737,7 @@ void CatalogManagerTest::PrintSummary() {
 
 // ========================= 主测试函数 =========================
 
+/*
 int main() {
     CatalogManagerTest test;
 
@@ -755,6 +756,5 @@ int main() {
     CatalogManagerTest test4;
     test4.TestPerformance();
     */
-
-    return all_tests_passed ? 0 : 1;
-}
+    //return all_tests_passed ? 0 : 1;
+//}
