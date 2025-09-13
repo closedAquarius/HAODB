@@ -140,6 +140,8 @@
     <ClCompile Include="HAOSQL.cpp" />
     <ClCompile Include="index_manager.cpp" />
     <ClCompile Include="lexer.cpp" />
+    <ClCompile Include="logger.cpp" />
+    <ClCompile Include="logger_integration.cpp" />
     <ClCompile Include="login.cpp" />
     <ClCompile Include="metadata_structures.cpp" />
     <ClCompile Include="page.cpp" />
@@ -165,6 +167,8 @@
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="index_manager.h" />
     <ClInclude Include="lexer.h" />
+    <ClInclude Include="logger.h" />
+    <ClInclude Include="logger_integration.h" />
     <ClInclude Include="login.h" />
     <ClInclude Include="metadata_structures.h" />
     <ClInclude Include="page.h" />
