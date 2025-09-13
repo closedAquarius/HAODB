@@ -849,8 +849,7 @@ std::unique_ptr<DatabaseLogger> LoggerFactory::CreateLogger(
     LogConfigInfo config;
     if (catalog) {
         // 从catalog获取配置
-        config = catalog->GetLogConfig(DBName);
-        // config = GetDefaultConfig(); // 暂时使用默认配置
+        config = catalog->GetLogConfig(db_name);
     }
     else {
         config = GetDefaultConfig();

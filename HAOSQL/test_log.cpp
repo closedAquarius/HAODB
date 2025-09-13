@@ -69,15 +69,19 @@ int test_log() {
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
 
         // ========== 第一部分：基础功能演示 ==========
-        std::cout << "\n🔧 第一部分：基础功能演示" << std::endl;
+        std::cout << "\n第一部分：基础功能演示" << std::endl;
 
         // 1. 初始化日志系统
-        INIT_LOGGER("DemoDB", nullptr);
-        std::cout << "✓ 日志系统初始化完成" << std::endl;
+        CatalogManager catalog("TEST_HAODB");
+        catalog.Initialize();
+        catalog.ShowDatabaseList();
+
+        INIT_LOGGER("TestDB", &catalog);
+        std::cout << "日志系统初始化完成" << std::endl;
 
         // 2. 使用简化接口
         std::cout << "\n--- SimpleLogger 演示 ---" << std::endl;
-        SimpleLogger simple_logger("DemoDB");
+        SimpleLogger simple_logger("TestDB");
         simple_logger.BeginTransaction();
 
         // 记录各种类型的操作
@@ -93,11 +97,11 @@ int test_log() {
         simple_logger.LogDelete("students", "id = 1002");
 
         simple_logger.CommitTransaction();
-        std::cout << "✓ SimpleLogger 操作完成" << std::endl;
+        std::cout << "SimpleLogger 操作完成" << std::endl;
 
         // 3. 使用增强执行器
         std::cout << "\n--- EnhancedExecutor 演示 ---" << std::endl;
-        EnhancedExecutor enhanced_executor("DemoDB", "demo_session", "demo_user");
+        EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
         enhanced_executor.InsertRecord("products", {
@@ -117,7 +121,7 @@ int test_log() {
         // ========== 第二部分：日志查看和分析 ==========
         std::cout << "\n📊 第二部分：日志查看和分析" << std::endl;
 
-        LogViewer log_viewer("DemoDB");
+        LogViewer log_viewer("TestDB");
 
         // 显示各种类型的日志
         log_viewer.PrintRecentOperations(15);
