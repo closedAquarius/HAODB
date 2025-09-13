@@ -10,8 +10,11 @@
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
+int generateDBFile();
+
 int main()
 {
+
     std::cout << "Hello World!\n";
     string sql;
     while (true)
@@ -19,6 +22,16 @@ int main()
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
+
+        if (sql == "exit;") break;
+        if (sql == "gen;") {
+            generateDBFile();
+            continue;
+        }
+        if (sql.empty()) {
+            continue;
+        }
+
         vector<Quadruple> quadruple = sql_compiler(sql);
         
 
@@ -102,28 +115,28 @@ vector<Quadruple> sql_compiler(string sql)
 //
 //using namespace std;
 //
-//int main() {
-//    DiskManager dm("database.db");
-//    Page p(DATA_PAGE);
-//
-//    // 假设这些是你的Students表数据
-//    vector<string> records = {
-//        "id:1,name:Alice,age:21,grade:A",
-//        "id:2,name:Bob,age:18,grade:B",
-//        "id:3,name:Charlie,age:22,grade:A",
-//        "id:4,name:John,age:19,grade:A"
-//    };
-//
-//    // 插入记录到页中
-//    for (const auto& rec : records) {
-//        p.insertRecord(rec.c_str(), rec.length());
-//    }
-//
-//    // 将页写回磁盘
-//    dm.writePage(0, p);
-//
-//    return 0;
-//}
+int generateDBFile() {
+    DiskManager dm("database.db");
+    Page p(DATA_PAGE);
+
+    // 假设这些是你的Students表数据
+    vector<string> records = {
+        "id:1,name:Alice,age:21,grade:A",
+        "id:2,name:Bob,age:18,grade:B",
+        "id:3,name:Charlie,age:22,grade:A",
+        "id:4,name:John,age:19,grade:A"
+    };
+
+    // 插入记录到页中
+    for (const auto& rec : records) {
+        p.insertRecord(rec.c_str(), rec.length());
+    }
+
+    // 将页写回磁盘
+    dm.writePage(0, p);
+
+    return 0;
+}
 
 //int main() {
 //    int pageId = 0;

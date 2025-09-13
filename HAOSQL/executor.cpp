@@ -78,9 +78,41 @@ vector<Row> Project::execute() {
 	return output;
 }
 
+// Values 算子实现
+Values::Values(const std::string& v, const std::string& c) {
+	// 解析值列表，例如 "(1,"test",19,"B")"
+	// 去掉括号，并按逗号分割
+	string trimmed_v = v.substr(1, v.length() - 2);
+	split(trimmed_v, ",", this->values);
+
+	// 解析列名列表，例如 "(id,name,age,grade)"
+	string trimmed_c = c.substr(1, c.length() - 2);
+	split(trimmed_c, ",", this->columns);
+
+	if (this->values.size() != this->columns.size()) {
+		throw std::runtime_error("Values and columns count mismatch.");
+	}
+}
+vector<Row> Values::execute() {
+	Row newRow;
+	for (size_t i = 0; i < values.size(); ++i) {
+		// 去掉值的引号，如果存在的话
+		string val = values[i];
+		if (val.front() == '"' && val.back() == '"') {
+			val = val.substr(1, val.length() - 2);
+		}
+		newRow[columns[i]] = val;
+	}
+	return { newRow };
+}
+
+// Insert 算子实现
 Insert::Insert(Operator* c, BufferPoolManager* b, const string& tName) : child(c), bpm(b), tableName(tName) {}
+
 vector<Row> Insert::execute() {
+	// 从子节点（VALUES 算子）获取要插入的数据行
 	vector<Row> input = child->execute();
+
 	// TODO: 从元数据中获得tableName的页地址
 	// 假设Students表位于 PageId 0
 	PageId pageId = 0;
@@ -103,6 +135,9 @@ vector<Row> Insert::execute() {
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
+	// 手动写回
+	bpm->flushPage(pageId);
+
 	return {}; // INSERT不返回数据
 }
 
@@ -309,12 +344,29 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			symbolTables[q.result] = new Aggregate(child, groupCol, aggCol, aggFunc);
 		}
 
+		// ====== VALUES ======
+		else if (q.op == "VALUES") {
+			// arg1 是值列表字符串，arg2 是列名列表字符串
+			// 创建 VALUES 算子，并将它存入符号表
+			symbolTables[q.result] = new Values(q.arg1, q.arg2);
+		}
+
 		// ====== 插入 ======
 		else if (q.op == "INSERT") {
-			// arg1 是 Value 算子的符号，arg2 是表名
-			Operator* child = symbolTables[q.arg1];
-			root = new Insert(child, bpm, q.arg2);
+			// arg1 是 FROM 的符号（表名），arg2 是 VALUES 的符号
+			Operator* fromChild = symbolTables[q.arg1];
+			Operator* valuesChild = symbolTables[q.arg2];
+
+			// 从 FROM 算子中提取表名
+			Scan* scanOp = dynamic_cast<Scan*>(fromChild);
+			if (scanOp == nullptr) {
+				throw runtime_error("INSERT's FROM child is not a Scan operator.");
+			}
+			string tableName = scanOp->tableName;
+
+			root = new Insert(valuesChild, bpm, tableName);
 		}
+
 		// ====== SET ======
 		else if (q.op == "SET") {
 			// 假设 SET 四元式的格式为 (SET, 列名, 值, 符号)

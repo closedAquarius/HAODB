@@ -219,39 +219,50 @@ vector<Quadruple> SemanticAnalyzer::handleSelect() {
 // INSERT
 // =====================
 vector<Quadruple> SemanticAnalyzer::handleInsert() {
-    vector<Quadruple> out;
-    expectKeyword("INSERT"); expectKeyword("INTO");
-    string table = expectIdent();
+    vector<Quadruple> quads;
+    string table_name;
+    string values_str;
+    string columns_str;
 
-    expectDelim('(');
-    string cols = "";
-    while (true) {
-        string col = expectIdent();
-        if (!cols.empty()) cols += ",";
-        cols += col;
-        if (matchDelim(')')) break;
-        expectDelim(',');
+    // 1. 匹配 INSERT INTO 关键字
+    expectKeyword("INSERT");
+    expectKeyword("INTO");
+
+    // 2. 获取表名
+    table_name = expectIdentOrConst();
+
+    // 3. 匹配可选的列名列表
+    if (matchDelim('(')) {
+        columns_str = parseColumnList();
     }
 
+    // 4. 匹配 VALUES 关键字
     expectKeyword("VALUES");
-    expectDelim('(');
-    string vals = "";
-    while (true) {
-        string val = expectConstOrString();
-        if (!vals.empty()) vals += ",";
-        vals += val;
-        if (matchDelim(')')) break;
-        expectDelim(',');
+
+    // 5. 获取值列表
+    if (matchDelim('(')) {
+        values_str = parseValueList();
     }
 
-    string valuesTemp = newTemp();
-    out.push_back({ "VALUES", cols, vals, valuesTemp });
+    // 6. 生成四元式
+    // (FROM, students, -, T1)
+    string from_temp = newTemp();
+    quads.push_back({ "FROM", table_name, "-", from_temp });
 
-    string insertTemp = newTemp();
-    out.push_back({ "INSERT", table, valuesTemp, insertTemp });
+    // (VALUES, (1,"test",19,"B"),(id,name,age,grade),T2)
+    string values_temp = newTemp();
+    // 假设 parseValueList 和 parseColumnList 返回的字符串是 "(...)" 格式
+    // 我们将它们作为四元式的 arg1 和 arg2
+    quads.push_back({ "VALUES", columns_str, values_str, values_temp });
 
-    out.push_back({ "RESULT", insertTemp, "-", "-" });
-    return out;
+    // (INSERT, T1, T2, T3)
+    string insert_temp = newTemp();
+    quads.push_back({ "INSERT", from_temp, values_temp, insert_temp });
+
+    // (RESULT, T3, -, -)
+    quads.push_back({ "RESULT", insert_temp, "-", "-" });
+
+    return quads;
 }
 
 // =====================
@@ -493,4 +504,41 @@ string SemanticAnalyzer::parseExpression(vector<Quadruple>& out) {
         left = temp;
     }
     return left;
+}
+
+// =====================
+// 工具函数
+// =====================
+// 解析列名列表，例如 (id,name,age)
+string SemanticAnalyzer::parseColumnList() {
+    stringstream ss;
+    ss << "(";
+    //bool first = true;
+    while (!matchDelim(')')) {
+        //if (!first) {
+        //    expectDelim(',');
+        //}
+        string col = expectIdentOrConst();
+        ss << col;
+        //first = false;
+    }
+    ss << ")";
+    return ss.str();
+}
+
+// 解析值列表，例如 (1,"test",19)
+string SemanticAnalyzer::parseValueList() {
+    stringstream ss;
+    ss << "(";
+    //bool first = true;
+    while (!matchDelim(')')) {
+        //if (!first) {
+        //    expectDelim(',');
+        //}
+        string val = expectIdentOrConst(); // 假设expectIdentOrConst能处理字符串和数字
+        ss << val;
+        //first = false;
+    }
+    ss << ")";
+    return ss.str();
 }

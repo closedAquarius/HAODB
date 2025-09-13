@@ -66,8 +66,8 @@ class Scan : public Operator {				// …®√Ë
 private:
 	Table table;
 	BufferPoolManager* bpm;
-	string tableName;
 public:
+	string tableName;
 	Scan(BufferPoolManager* bpm, const string& tName);
 	vector<Row> execute();
 };
@@ -90,14 +90,23 @@ public:
 	vector<Row> execute();
 };
 
+class Values : public Operator {
+private:
+	std::vector<std::string> values;
+	std::vector<std::string> columns;
+public:
+	Values(const std::string& v, const std::string& c);
+	std::vector<Row> execute() override;
+};
+
 class Insert : public Operator {			   // ≤Â»Î
 private:
 	Operator* child;
 	BufferPoolManager* bpm;
-	string tableName;
+	std::string tableName;
 public:
-	Insert(Operator* c, BufferPoolManager* b, const string& tName);
-	vector<Row> execute();
+	Insert(Operator* c, BufferPoolManager* b, const std::string& tName);
+	std::vector<Row> execute() override;
 };
 
 class Set :public Operator {

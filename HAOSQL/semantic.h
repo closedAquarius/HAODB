@@ -39,6 +39,8 @@ private:
     string parsePrimary(vector<Quadruple>& out);
     string parseExpression(vector<Quadruple>& out); // 声明 parseExpression
     string expectIdentOrConst(); // 声明 expectIdentOrConst
+    string parseColumnList();
+    string parseValueList();
 
     string parseWhereCondition(vector<Quadruple>& out, const string& sourceTemp);
 
