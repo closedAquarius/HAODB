@@ -9,19 +9,6 @@
 namespace fs = std::filesystem;
 
 // ========== 结构体构造函数实现 ==========
-//LogConfigInfo::LogConfigInfo() {
-//    log_level_name = "INFO";
-//    log_level_code = 2;
-//    log_file_size_mb = 50;
-//    log_file_count = 5;
-//    enable_wal = true;
-//    wal_buffer_size_mb = 8;
-//    sync_mode_name = "同步";
-//    sync_mode_code = 1;
-//    wal_checkpoint_size_mb = 64;
-//    enable_log_rotation = true;
-//}
-
 WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
 
 WALLogRecord::DataChange::DataChange() : page_id(0), slot_id(0), before_length(0), after_length(0) {}

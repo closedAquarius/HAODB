@@ -699,6 +699,252 @@ LogViewer::LogStats LogViewer::GetLogStatistics() {
     return stats;
 }
 
+// 打印最近的操作日志
+void LogViewer::PrintRecentOperations(int max_lines) {
+    std::cout << "\n" << std::string(80, '=') << std::endl;
+    std::cout << "           RECENT OPERATION LOGS (Last " << max_lines << " lines)" << std::endl;
+    std::cout << std::string(80, '=') << std::endl;
+
+    try {
+        auto operations = GetRecentOperations(max_lines);
+
+        if (operations.empty()) {
+            std::cout << "  [INFO] No operation logs found." << std::endl;
+            std::cout << "  Tip: Execute some database operations first to generate logs." << std::endl;
+            std::cout << std::string(80, '=') << std::endl;
+            return;
+        }
+
+        std::cout << " Line | Level | Content" << std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+
+        int line_num = 1;
+        for (const auto& op : operations) {
+            // 格式化输出每一行
+            std::cout << std::setw(5) << line_num << " | ";
+
+            // 根据内容判断操作类型并添加标识
+            if (op.find("INSERT") != std::string::npos) {
+                std::cout << "ADD  | ";
+            }
+            else if (op.find("DELETE") != std::string::npos) {
+                std::cout << "DEL  | ";
+            }
+            else if (op.find("UPDATE") != std::string::npos) {
+                std::cout << "UPD  | ";
+            }
+            else if (op.find("SELECT") != std::string::npos) {
+                std::cout << "SEL  | ";
+            }
+            else if (op.find("CREATE") != std::string::npos) {
+                std::cout << "CRT  | ";
+            }
+            else {
+                std::cout << "OTH  | ";
+            }
+
+            // 截断过长的日志行以便显示
+            if (op.length() > 65) {
+                std::cout << op.substr(0, 62) << "..." << std::endl;
+            }
+            else {
+                std::cout << op << std::endl;
+            }
+
+            line_num++;
+        }
+
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "  Total operations displayed: " << operations.size() << " / " << max_lines << std::endl;
+        std::cout << std::string(80, '=') << std::endl;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "  [ERROR] Failed to read operation logs: " << e.what() << std::endl;
+        std::cout << std::string(80, '=') << std::endl;
+    }
+}
+
+// 打印最近的错误日志
+void LogViewer::PrintRecentErrors(int max_lines) {
+    std::cout << "\n" << std::string(80, '!') << std::endl;
+    std::cout << "             RECENT ERROR LOGS (Last " << max_lines << " lines)" << std::endl;
+    std::cout << std::string(80, '!') << std::endl;
+
+    try {
+        auto errors = GetRecentErrors(max_lines);
+
+        if (errors.empty()) {
+            std::cout << "  [INFO] No error logs found. System appears to be running smoothly!" << std::endl;
+            std::cout << std::string(80, '!') << std::endl;
+            return;
+        }
+
+        std::cout << " Line | Severity | Error Message" << std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+
+        int line_num = 1;
+        for (const auto& error : errors) {
+            std::cout << std::setw(5) << line_num << " | ";
+
+            // 根据错误内容判断严重程度
+            if (error.find("CRITICAL") != std::string::npos ||
+                error.find("FATAL") != std::string::npos) {
+                std::cout << "CRIT   | ";
+            }
+            else if (error.find("ERROR") != std::string::npos) {
+                std::cout << "ERROR  | ";
+            }
+            else if (error.find("WARN") != std::string::npos) {
+                std::cout << "WARN   | ";
+            }
+            else {
+                std::cout << "INFO   | ";
+            }
+
+            // 处理长错误消息
+            if (error.length() > 62) {
+                std::cout << error.substr(0, 59) << "..." << std::endl;
+            }
+            else {
+                std::cout << error << std::endl;
+            }
+
+            line_num++;
+        }
+
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "  Total errors displayed: " << errors.size() << " / " << max_lines << std::endl;
+
+        // 错误严重程度提示
+        if (errors.size() > 0) {
+            std::cout << "  [WARNING] Found " << errors.size() << " error entries. Please review!" << std::endl;
+        }
+
+        std::cout << std::string(80, '!') << std::endl;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "  [ERROR] Failed to read error logs: " << e.what() << std::endl;
+        std::cout << std::string(80, '!') << std::endl;
+    }
+}
+
+// 打印所有类型的日志
+void LogViewer::PrintAllLogs(int max_lines) {
+    std::cout << "\n" << std::string(90, '#') << std::endl;
+    std::cout << "                    COMPLETE LOG OVERVIEW (Last " << max_lines << " entries)" << std::endl;
+    std::cout << std::string(90, '#') << std::endl;
+
+    try {
+        // 分配行数：2/3给操作日志，1/3给错误日志
+        int ops_lines = (max_lines * 2) / 3;
+        int err_lines = max_lines - ops_lines;
+
+        // 获取日志统计信息
+        auto stats = GetLogStatistics();
+
+        std::cout << "\n[LOG SUMMARY]" << std::endl;
+        std::cout << "  Database: " << db_name << std::endl;
+        std::cout << "  Total Operations: " << stats.total_operations << std::endl;
+        std::cout << "  Total Errors: " << stats.total_errors << std::endl;
+        std::cout << "  Log File Size: " << stats.total_log_size_mb << " MB" << std::endl;
+        std::cout << "  Date Range: " << stats.oldest_log_date << " ~ " << stats.newest_log_date << std::endl;
+
+        // 打印操作日志部分
+        std::cout << "\n[OPERATION LOGS SECTION - " << ops_lines << " lines]" << std::endl;
+        PrintRecentOperations(ops_lines);
+
+        // 打印错误日志部分  
+        std::cout << "\n[ERROR LOGS SECTION - " << err_lines << " lines]" << std::endl;
+        PrintRecentErrors(err_lines);
+
+        // 总结信息
+        std::cout << "\n[ANALYSIS SUMMARY]" << std::endl;
+        if (stats.total_errors == 0) {
+            std::cout << "  Status: HEALTHY - No errors detected" << std::endl;
+        }
+        else if (stats.total_errors < stats.total_operations / 10) {
+            std::cout << "  Status: GOOD - Low error rate ("
+                << (stats.total_operations > 0 ? (stats.total_errors * 100 / stats.total_operations) : 0)
+                << "%)" << std::endl;
+        }
+        else {
+            std::cout << "  Status: ATTENTION NEEDED - High error rate!" << std::endl;
+        }
+
+        std::cout << "  Recommendation: ";
+        if (stats.total_operations == 0) {
+            std::cout << "Generate some test operations to populate logs" << std::endl;
+        }
+        else if (stats.total_errors > stats.total_operations / 5) {
+            std::cout << "Review error logs and fix underlying issues" << std::endl;
+        }
+        else {
+            std::cout << "System appears to be functioning normally" << std::endl;
+        }
+
+        std::cout << std::string(90, '#') << std::endl;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "  [ERROR] Failed to generate complete log overview: " << e.what() << std::endl;
+        std::cout << std::string(90, '#') << std::endl;
+    }
+}
+
+// 按类型打印日志
+void LogViewer::PrintLogsByType(const std::string& log_type, int max_lines) {
+    std::cout << "\n" << std::string(70, '*') << std::endl;
+    std::cout << "           LOG VIEWER BY TYPE: '" << log_type << "'" << std::endl;
+    std::cout << std::string(70, '*') << std::endl;
+
+    try {
+        // 转换为小写以便比较
+        std::string type_lower = log_type;
+        std::transform(type_lower.begin(), type_lower.end(), type_lower.begin(), ::tolower);
+
+        if (type_lower == "operation" || type_lower == "ops" || type_lower == "op") {
+            std::cout << "  Showing OPERATION logs..." << std::endl;
+            PrintRecentOperations(max_lines);
+
+        }
+        else if (type_lower == "error" || type_lower == "err" || type_lower == "errors") {
+            std::cout << "  Showing ERROR logs..." << std::endl;
+            PrintRecentErrors(max_lines);
+
+        }
+        else if (type_lower == "all" || type_lower == "both" || type_lower == "complete") {
+            std::cout << "  Showing ALL LOG TYPES..." << std::endl;
+            PrintAllLogs(max_lines);
+
+        }
+        else {
+            // 处理无效类型
+            std::cout << "  [ERROR] Unknown log type: '" << log_type << "'" << std::endl;
+            std::cout << "\n  Available log types:" << std::endl;
+            std::cout << "    OPERATION types:" << std::endl;
+            std::cout << "      - 'operation', 'ops', 'op'" << std::endl;
+            std::cout << "    ERROR types:" << std::endl;
+            std::cout << "      - 'error', 'err', 'errors'" << std::endl;
+            std::cout << "    ALL types:" << std::endl;
+            std::cout << "      - 'all', 'both', 'complete'" << std::endl;
+
+            std::cout << "\n  Usage examples:" << std::endl;
+            std::cout << "    viewer.PrintLogsByType(\"operation\", 20);" << std::endl;
+            std::cout << "    viewer.PrintLogsByType(\"error\", 10);" << std::endl;
+            std::cout << "    viewer.PrintLogsByType(\"all\", 50);" << std::endl;
+        }
+
+        std::cout << std::string(70, '*') << std::endl;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "  [ERROR] Failed to print logs by type: " << e.what() << std::endl;
+        std::cout << std::string(70, '*') << std::endl;
+    }
+}
+
 // ========== EnhancedExecutor 实现 ==========
 EnhancedExecutor::EnhancedExecutor(const std::string& db_name, const std::string& session, const std::string& user)
     : db_name(db_name), session_id(session), user_name(user) {

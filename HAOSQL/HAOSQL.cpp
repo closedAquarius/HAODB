@@ -14,10 +14,6 @@ using namespace std;
 vector<Quadruple> sql_compiler(string sql);
 int main()
 {
-    CatalogManager catalog("TEST_HAODB");
-    catalog.Initialize();
-    catalog.ShowLogConfig("TestDB");
-    
     std::cout << "Hello World!\n";
     string sql;
     string account, password;

@@ -151,6 +151,7 @@
     <ClCompile Include="test_catalog.cpp" />
     <ClCompile Include="test_catalog2.cpp" />
     <ClCompile Include="test_DDLexcutor.cpp" />
+    <ClCompile Include="test_log.cpp" />
     <ClCompile Include="test_storage.cpp" />
   </ItemGroup>
   <ItemGroup>
