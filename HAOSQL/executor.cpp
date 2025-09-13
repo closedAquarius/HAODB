@@ -4,6 +4,7 @@ using namespace std;
 
 Scan::Scan(BufferPoolManager* bpm, const string& tName) : bpm(bpm), tableName(tName) {}
 vector<Row> Scan::execute() {
+	// TODO: 从元数据中获得tableName的页地址
 	// 假设Students表位于 PageId 0
 	PageId pageId = 0;
 	vector<Row> output;
@@ -34,7 +35,7 @@ vector<Row> Scan::execute() {
 
 		output.push_back(row);
 	}
-	
+
 	// 使用完毕后解除 pin
 	bpm->unpinPage(pageId, false);
 
@@ -52,6 +53,7 @@ vector<Row> Filter::execute() {
 	vector<Row> input = child->execute();
 	vector<Row> output;
 	for (auto& row : input) {
+		if (row.empty()) continue;
 		if (predicate(row)) {
 			output.push_back(row);
 		}
@@ -65,6 +67,7 @@ vector<Row> Project::execute() {
 	vector<Row> input = child->execute();
 	vector<Row> output;
 	for (auto& row : input) {
+		if(row.empty()) continue;
 		Row newRow;
 		for (auto& col : columns) {
 			newRow[col] = row.at(col);
@@ -75,6 +78,156 @@ vector<Row> Project::execute() {
 	return output;
 }
 
+Insert::Insert(Operator* c, BufferPoolManager* b, const string& tName) : child(c), bpm(b), tableName(tName) {}
+vector<Row> Insert::execute() {
+	vector<Row> input = child->execute();
+	// TODO: 从元数据中获得tableName的页地址
+	// 假设Students表位于 PageId 0
+	PageId pageId = 0;
+
+	Page* page = bpm->fetchPage(pageId);
+	if (!page) {
+		throw runtime_error("Failed to fetch page for insert.");
+	}
+
+	// 将每一行数据插入到页中
+	for (auto& row : input) {
+		string record_str = "";
+		bool first = true;
+		for (const auto& pair : row) {
+			if (!first) record_str += ",";
+			record_str += pair.first + ":" + pair.second;
+			first = false;
+		}
+		page->insertRecord(record_str.c_str(), record_str.length());
+	}
+
+	bpm->unpinPage(pageId, true); // 标记为脏页
+	return {}; // INSERT不返回数据
+}
+
+Set::Set(const string& c, const string& ch) : cols(c), change(ch) {}
+vector<Row> Set::execute() {
+	vector<Row> output;
+	vector<string> keys, values;
+	Row updateData;
+	split(cols, ",", keys);
+	split(change, ",", values);
+
+	if (!keys.empty()) {
+		updateData[keys[0]] = values[0];
+		output.push_back(updateData);
+	}
+
+	return output;
+}
+
+Update::Update(Operator* c, Operator* d, BufferPoolManager* b) :child(c), data(d), bpm(b) {}
+vector<Row> Update::execute() {
+	// 获取子节点（通常是 Filter）返回的行
+	vector<Row> rowsToUpdate = child->execute();
+	vector<Row> updateData = data->execute();
+	vector<Row> output;
+
+	Row updateValues = updateData.front();
+	// TODO
+	// 假设在 Scan 或 Filter 阶段已经将物理地址（例如：PageId 和 SlotId）存储在 Row 对象中
+	// 实际系统中，Row 对象会包含 `rid`（Record ID），用来定位记录
+	// 简化，直接从 child 获得 Row，然后假设可以定位并更新
+
+	for (auto& row : rowsToUpdate) {
+		// 伪代码：从 Row 获取其物理地址 (pageId, slotId)
+		// PageId pageId = row.getPageId();
+		// SlotId slotId = row.getSlotId();
+
+		// 假设通过某种机制可以获取到页号，这里我们假设为 0
+		PageId pageId = 0; // 这是一个简化！
+
+		// 锁定并获取页面
+		Page* page = bpm->fetchPage(pageId);
+		if (!page) {
+			throw runtime_error("Failed to fetch page for update.");
+		}
+
+		// 修改行中的值
+		for (const auto& kv : updateValues) {
+			row[kv.first] = kv.second;
+		}
+
+		// 将修改后的行重新编码为字符串
+		string updatedRecordStr = "";
+
+		for (auto& [k, v] : row) {
+			updatedRecordStr += (k + ":" + v + ",");
+		}
+
+		// 将新记录写入页面的槽中
+		page->getSlot(0)->length = 0;
+		page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
+
+		// 将页面标记为脏，以便后续写回磁盘
+		bpm->unpinPage(pageId, true); // true 表示该页是脏页
+
+		// 手动写回
+		bpm->flushPage(pageId);
+
+		output.push_back(row);
+	}
+
+	return output;
+}
+
+Delete::Delete(Operator* c, BufferPoolManager* b, const string& tName) : child(c), bpm(b), tableName(tName) {}
+vector<Row> Delete::execute() {
+	// child 算子树执行后，返回需要删除的行。
+	vector<Row> inputRows = child->execute();
+	if (inputRows.empty()) {
+		cout << "No rows found to delete.\n";
+		return {};
+	}
+
+	// TODO: 找到 tableName 对应的页，这里简化为 PageId 0
+	PageId pageId = 0;
+	Page* page = bpm->fetchPage(pageId);
+	if (!page) {
+		throw runtime_error("Failed to fetch page for delete.");
+	}
+
+	// 遍历所有需要删除的行
+	for (auto& row : inputRows) {
+		// 找到这行在页中的位置，并进行逻辑删除
+		// 同样，这里采用低效的遍历查找方式。
+		string key_col = "id";
+		string key_val = row.at(key_col);
+
+		int targetSlot = -1;
+		for (int i = 0; i < page->header()->slot_count; ++i) {
+			string record_str = page->readRecord(i);
+			if (record_str.find(key_col + ":" + key_val) != string::npos) {
+				targetSlot = i;
+				break;
+			}
+		}
+
+		if (targetSlot != -1) {
+			page->deleteRecord(targetSlot);
+			cout << "Deleted row with " << key_col << " = " << key_val << endl;
+		}
+		else {
+			cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
+		}
+	}
+
+	bpm->unpinPage(pageId, true); // 标记为脏页
+	return {}; // DELETE 不返回数据
+}
+
+
+bool isNumber(const string& str) {
+	stringstream ss(str);
+	double num;
+	return (ss >> num) && ss.eof();
+}
 
 void split(const string& str, const string& splits, vector<string>& result) {
 	if (str == "") return;
@@ -97,59 +250,10 @@ void getColumns(vector<string>& cols, string s) {
 	split(s, ",", cols);
 }
 
-// ========== DDL工具函数 ==========
-
-vector<string> parseColumnList(const string& str) {
-    vector<string> result;
-    if (str.empty()) return result;
-
-    size_t start = 0;
-    size_t pos = 0;
-
-    while (pos != string::npos) {
-        pos = str.find(',', start);
-        string token = str.substr(start, pos - start);
-
-        // 去除空格
-        size_t first = token.find_first_not_of(" \t");
-        size_t last = token.find_last_not_of(" \t");
-        if (first != string::npos) {
-            result.push_back(token.substr(first, last - first + 1));
-        }
-
-        if (pos != string::npos) {
-            start = pos + 1;
-        }
-    }
-
-    return result;
-}
-
-vector<vector<string>> buildColumnSpecs(const vector<string>& names,
-    const vector<string>& types,
-    const vector<string>& lengths) {
-    vector<vector<string>> specs;
-
-    if (names.size() != types.size() || names.size() != lengths.size()) {
-        throw runtime_error("Column names, types, and lengths must have the same size");
-    }
-
-    for (size_t i = 0; i < names.size(); ++i) {
-        vector<string> spec = { names[i], types[i], lengths[i] };
-        specs.push_back(spec);
-    }
-
-    return specs;
-}
-
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm, CatalogManager* catalog) {
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm) {
 	Operator* root = nullptr;
 	map<string, Operator*> symbolTables;
 	map<string, Condition> condTable;
-
-    // DDL构建状态
-    DDLBuildState ddl_state;
-    // string db_name = DBName;
 
 	for (auto& q : quads) {
 		// ========== 基本表扫描 ==========
@@ -157,327 +261,82 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			symbolTables[q.result] = new Scan(bpm, q.arg1);
 		}
 
-        // ====== 条件选择 ======
-        else if (q.op == ">" || q.op == "=") {
-            condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
-        }
-        else if (q.op == "AND") {
-            condTable[q.result] = Condition::And(condTable[q.arg1], condTable[q.arg2]);
-        }
-        else if (q.op == "OR") {
-            condTable[q.result] = Condition::Or(condTable[q.arg1], condTable[q.arg2]);
-        }
-        else if (q.op == "NOT") {
-            condTable[q.result] = Condition::Not(condTable[q.arg1]);
-        }
-        // ====== 条件选择 ======
-        else if (q.op == "WHERE") {
-            // 动态获取 FROM 节点，而不是写死 "T1"
-            Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
-            Condition cond = condTable[q.arg2];      // arg2 是条件符号
-            symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
-        }
+		// ====== 条件选择 ======
+		else if (q.op == ">" || q.op == "=") {
+			condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
+		}
+		else if (q.op == "AND") {
+			condTable[q.result] = Condition::And(condTable[q.arg1], condTable[q.arg2]);
+		}
+		else if (q.op == "OR") {
+			condTable[q.result] = Condition::Or(condTable[q.arg1], condTable[q.arg2]);
+		}
+		else if (q.op == "NOT") {
+			condTable[q.result] = Condition::Not(condTable[q.arg1]);
+		}
+		// ====== 条件选择 ======
+		else if (q.op == "WHERE") {
+			// 动态获取 FROM 节点，而不是写死 "T1"
+			Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
+			Condition cond = condTable[q.arg2];      // arg2 是条件符号
+			symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
+		}
 
-        // ====== 投影 ======
-        else if (q.op == "SELECT") {
-            getColumns(columns, q.arg1);
-            Operator* child = symbolTables[q.arg2];
-            root = new Project(child, columns);
-        }
+		// ====== 投影 ======
+		else if (q.op == "SELECT") {
+			getColumns(columns, q.arg1);
+			Operator* child = symbolTables[q.arg2];
+			root = new Project(child, columns);
+		}
 
-        // ====== 排序 ======
-        else if (q.op == "ORDERBY") {
-            Operator* child = symbolTables[q.arg1];
-            vector<string> sortCols;
-            getColumns(sortCols, q.arg1);  // q.arg1 为列名列表
-            symbolTables[q.result] = new Sort(child, sortCols);
-        }
+		// ====== 排序 ======
+		else if (q.op == "ORDERBY") {
+			Operator* child = symbolTables[q.arg1];
+			vector<string> sortCols;
+			getColumns(sortCols, q.arg1);  // q.arg1 为列名列表
+			symbolTables[q.result] = new Sort(child, sortCols);
+		}
 
-        // ====== 分组聚合 ======
-        else if (q.op == "GROUPBY") {
-            Operator* child = symbolTables[q.arg1];
-            string groupCol = q.arg1;
-            string aggCol = q.arg2;
-            string aggFunc = q.result; // SUM, COUNT, AVG
-            symbolTables[q.result] = new Aggregate(child, groupCol, aggCol, aggFunc);
-        }
+		// ====== 分组聚合 ======
+		else if (q.op == "GROUPBY") {
+			Operator* child = symbolTables[q.arg1];
+			string groupCol = q.arg1;
+			string aggCol = q.arg2;
+			string aggFunc = q.result; // SUM, COUNT, AVG
+			symbolTables[q.result] = new Aggregate(child, groupCol, aggCol, aggFunc);
+		}
 
-        // ====== 插入 ======
-        else if (q.op == "INSERT") {
-        }
-        // ====== SET ======
-        else if (q.op == "SET") {
-        }
-        else if (q.op == "UPDATE") {
-        }
+		// ====== 插入 ======
+		else if (q.op == "INSERT") {
+			// arg1 是 Value 算子的符号，arg2 是表名
+			Operator* child = symbolTables[q.arg1];
+			root = new Insert(child, bpm, q.arg2);
+		}
+		// ====== SET ======
+		else if (q.op == "SET") {
+			// 假设 SET 四元式的格式为 (SET, 列名, 值, 符号)
+			symbolTables[q.result] = new Set(q.arg1, q.arg2);
+		}
+		// ====== 更新 ======
+		else if (q.op == "UPDATE") {
+			Operator* child = symbolTables[q.arg1];
+			Operator* data = symbolTables[q.arg2];
+			root = new Update(child, data, bpm);
+		}
 
-        // ====== 删除 ======
-        else if (q.op == "DELETE") {
-        }
+		// ====== 删除 ======
+		else if (q.op == "DELETE") {
+			// arg1 是 FROM 或 WHERE 算子的符号，用于定位要删除的行
+			// q.result 是表名
+			Operator* child = symbolTables[q.arg1]; // 获取 FROM/WHERE 算子
+			root = new Delete(child, bpm, q.result);
+		}
 
-        // ========== DDL操作 ==========
+		// ====== 输出结果 ======
+		else if (q.op == "RESULT") {
+			return root;
+		}
+	}
 
-        // ====== 创建表相关 ======
-        else if (q.op == "COLUMN_NAME") {
-            // (COLUMN_NAME, id,name,age,phone, -, T1)
-            ddl_state.column_names = parseColumnList(q.arg1);
-        }
-        else if (q.op == "COLUMN_TYPE") {
-            // (COLUMN_TYPE, VARCHAR,VARCHAR,INT,VARCHAR, 10,10,-1,15, T2)
-            ddl_state.column_types = parseColumnList(q.arg1);
-            ddl_state.column_lengths = parseColumnList(q.arg2);
-
-            // 处理-1的情况（INT类型默认长度）
-            for (auto& length : ddl_state.column_lengths) {
-                if (length == "-1") {
-                    length = "4"; // INT默认4字节
-                }
-            }
-        }
-        else if (q.op == "COLUMNS") {
-            // (COLUMNS, T1, T2, T3) - 合并列信息
-            try {
-                ddl_state.column_specs = buildColumnSpecs(ddl_state.column_names,
-                    ddl_state.column_types,
-                    ddl_state.column_lengths);
-            }
-            catch (const exception& e) {
-                throw runtime_error("Failed to build column specifications: " + string(e.what()));
-            }
-        }
-        else if (q.op == "CREATE_TABLE") {
-            // (CREATE_TABLE, student, T3, T4)
-            if (!catalog) {
-                throw runtime_error("CatalogManager is required for CREATE_TABLE operation");
-            }
-
-            ddl_state.table_name = q.arg1;
-            CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs);
-            symbolTables[q.result] = create_op;
-            root = create_op;
-        }
-        else if (q.op == "PRIMARY") {
-            // (PRIMARY, student, id,name, T5)
-            ddl_state.primary_keys = parseColumnList(q.arg2);
-
-            // 如果已有CreateTable算子，设置主键
-            if (symbolTables.find("T4") != symbolTables.end()) { // 假设T4是CREATE_TABLE的结果
-                CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
-                if (create_op) {
-                    create_op->setPrimaryKeys(ddl_state.primary_keys);
-                }
-            }
-        }
-        else if (q.op == "NOT_NULL") {
-            // (NOT_NULL, student, name,age, T6)
-            ddl_state.not_null_columns = parseColumnList(q.arg2);
-
-            // 根据上下文确定是CREATE_TABLE还是ADD_COLUMN
-            if (symbolTables.find("T4") != symbolTables.end()) { // CREATE_TABLE场景
-                CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
-                if (create_op) {
-                    create_op->setNotNullColumns(ddl_state.not_null_columns);
-                }
-            }
-            else { // ADD_COLUMN场景，需要查找最近的AddColumn算子
-                for (auto it = symbolTables.rbegin(); it != symbolTables.rend(); ++it) {
-                    AddColumn* add_op = dynamic_cast<AddColumn*>(it->second);
-                    if (add_op) {
-                        add_op->setNotNullColumns(ddl_state.not_null_columns);
-                        break;
-                    }
-                }
-            }
-        }
-        else if (q.op == "UNIQUE") {
-            // (UNIQUE, student, id,phone, T7)
-            ddl_state.unique_columns = parseColumnList(q.arg2);
-
-            // 根据上下文确定是CREATE_TABLE还是ADD_COLUMN
-            if (symbolTables.find("T4") != symbolTables.end()) { // CREATE_TABLE场景
-                CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
-                if (create_op) {
-                    create_op->setUniqueColumns(ddl_state.unique_columns);
-                }
-            }
-            else { // ADD_COLUMN场景
-                for (auto it = symbolTables.rbegin(); it != symbolTables.rend(); ++it) {
-                    AddColumn* add_op = dynamic_cast<AddColumn*>(it->second);
-                    if (add_op) {
-                        add_op->setUniqueColumns(ddl_state.unique_columns);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // ====== 删除表相关 ======
-        else if (q.op == "CHECK_TABLE") {
-            // (CHECK_TABLE, "employees", _, T1)
-            // 这里可以进行表存在性检查，但通常在DropTable算子中处理
-        }
-        else if (q.op == "DROP_TABLE") {
-            // (DROP_TABLE, "employees", _, T2)
-            if (!catalog) {
-                throw runtime_error("CatalogManager is required for DROP_TABLE operation");
-            }
-
-            string table_name = q.arg1;
-            bool if_exists = true; // 假设有CHECK_TABLE就是IF EXISTS
-            DropTable* drop_op = new DropTable(catalog, table_name, if_exists);
-            symbolTables[q.result] = drop_op;
-            root = drop_op; // DDL操作通常是根节点
-        }
-
-        // ====== 添加列相关 ======
-        else if (q.op == "ADD_COLUMN") {
-            // (ADD_COLUMN, "students", T3, T4)
-            if (!catalog) {
-                throw runtime_error("CatalogManager is required for ADD_COLUMN operation");
-            }
-
-            string table_name = q.arg1;
-            AddColumn* add_op = new AddColumn(catalog, table_name, ddl_state.column_specs);
-            symbolTables[q.result] = add_op;
-            root = add_op; // DDL操作通常是根节点
-        }
-
-        // ====== 删除列相关 ======
-        else if (q.op == "DROP_COLUMN") {
-            // (DROP_COLUMN, "students", "sex", T1)
-            if (!catalog) {
-                throw runtime_error("CatalogManager is required for DROP_COLUMN operation");
-            }
-
-            string table_name = q.arg1;
-            vector<string> columns_to_drop = parseColumnList(q.arg2);
-            DropColumn* drop_op = new DropColumn(catalog, table_name, columns_to_drop);
-            symbolTables[q.result] = drop_op;
-            root = drop_op; // DDL操作通常是根节点
-        }
-
-        // ====== 输出结果 ======
-        else if (q.op == "RESULT") {
-            return root;
-        }
-    }
-
-    return root;
-}
-
-
-Executor::Executor(IndexManager* idxMgr, const std::string& tableName, DiskManager* disk, int bufferSize)
-    : indexMgr_(idxMgr), tableName_(tableName), diskManager_(disk) {
-    bufferPool_ = std::make_unique<BufferPoolManager>(bufferSize, diskManager_);
-}
-
-// ---------------- Select ----------------
-std::vector<Row> Executor::select(const std::string& column, int value) {
-    std::vector<Row> output;
-
-    auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { column });
-    if (indexes.empty()) {
-        // 没有索引，直接返回空
-        return output;
-    }
-
-    const std::string indexName = indexes[0].index_name;
-    auto rids = indexMgr_->Search(indexName, value);
-
-    for (auto& rid : rids) {
-        Page* page = bufferPool_->fetchPage(rid.page_id);
-        if (!page) continue;
-
-        std::string record = page->readRecord(rid.slot_id);
-        Row row = parseRecord(record);
-        output.push_back(row);
-
-        bufferPool_->unpinPage(rid.page_id, false);
-    }
-
-    return output;
-}
-
-// ---------------- Insert ----------------
-bool Executor::insertRow(const Row& newRow, const RID& rid) {
-    //assert(indexMgr_ != nullptr);
-
-    for (const auto& col : newRow) {
-        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
-        for (const auto& idxInfo : indexes) {
-            int key = std::stoi(col.second);
-            if (!indexMgr_->InsertEntry(idxInfo.index_name, key, rid)) {
-                std::cerr << "[InsertIndex] Failed to insert key " << key
-                    << " into index " << idxInfo.index_name << std::endl;
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-// ---------------- Delete ----------------
-bool Executor::deleteRow(const Row& oldRow, const RID& rid) {
-    //assert(indexMgr_ != nullptr);
-
-    for (const auto& col : oldRow) {
-        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
-        for (const auto& idxInfo : indexes) {
-            int key = std::stoi(col.second);
-            if (!indexMgr_->DeleteEntry(idxInfo.index_name, key, rid)) {
-                std::cerr << "[DeleteIndex] Failed to delete key " << key
-                    << " from index " << idxInfo.index_name << std::endl;
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-// ---------------- Update ----------------
-bool Executor::updateRow(const Row& oldRow, const Row& newRow, const RID& rid) {
-    //assert(indexMgr_ != nullptr);
-
-    for (const auto& col : newRow) {
-        auto indexes = indexMgr_->FindIndexesWithColumns(tableName_, { col.first });
-        for (const auto& idxInfo : indexes) {
-            int oldKey = std::stoi(oldRow.at(col.first));
-            int newKey = std::stoi(newRow.at(col.first));
-
-            if (oldKey != newKey) {
-                if (!indexMgr_->DeleteEntry(idxInfo.index_name, oldKey, rid)) {
-                    std::cerr << "[UpdateIndex] Failed to delete old key " << oldKey
-                        << " from index " << idxInfo.index_name << std::endl;
-                    return false;
-                }
-                if (!indexMgr_->InsertEntry(idxInfo.index_name, newKey, rid)) {
-                    std::cerr << "[UpdateIndex] Failed to insert new key " << newKey
-                        << " into index " << idxInfo.index_name << std::endl;
-                    return false;
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-// ---------------- parseRecord ----------------
-Row Executor::parseRecord(const std::string& record) {
-    Row row;
-    // 简单假设每条记录用逗号分隔，键值用冒号，如 "id:1,name:Alice,score:95"
-    size_t start = 0;
-    while (start < record.size()) {
-        size_t commaPos = record.find(',', start);
-        std::string token = record.substr(start, commaPos - start);
-        size_t colonPos = token.find(':');
-        if (colonPos != std::string::npos) {
-            std::string key = token.substr(0, colonPos);
-            std::string value = token.substr(colonPos + 1);
-            row[key] = value;
-        }
-        if (commaPos == std::string::npos) break;
-        start = commaPos + 1;
-    }
-    return row;
+	return root;
 }

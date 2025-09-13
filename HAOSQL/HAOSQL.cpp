@@ -16,14 +16,13 @@ int main()
     string sql;
     while (true)
     {
-        
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
         
 
-        /*// 创建 DiskManager
+        // 创建 DiskManager
         DiskManager dm("database.db");
         // 创建 BufferPoolManager
         // 缓冲池大小 10
@@ -34,21 +33,19 @@ int main()
         Operator* root = buildPlan(quadruple, columns, &bpm);
         vector<Row> result = root->execute();
 
-            if (!result.empty()) {
-                cout << "主函数打印" << endl;
-                // 输出结果
-                cout << endl;
-                for (auto& row : result) {
-                    for (auto& col : columns) {
-                        cout << row.at(col) << "\t|";
-                    }
-                    cout << endl;
+        if (!result.empty()) {
+            cout << "主函数打印" << endl;
+            // 输出结果
+            cout << endl;
+            for (auto& row : result) {
+                for (auto& col : columns) {
+                    cout << row.at(col) << "\t|";
                 }
+                cout << endl;
             }
-        }*/
-
-        
+        }
     }
+
 }
 
 vector<Quadruple> sql_compiler(string sql)
@@ -111,10 +108,10 @@ vector<Quadruple> sql_compiler(string sql)
 //
 //    // 假设这些是你的Students表数据
 //    vector<string> records = {
-//        "id:1,name:Alice,age:23,grade:A",
-//        "id:2,name:Bob,age:19,grade:B",
-//        "id:3,name:Charlie,age:25,grade:A",
-//        "id:4,name:John,age:18,grade:A"
+//        "id:1,name:Alice,age:21,grade:A",
+//        "id:2,name:Bob,age:18,grade:B",
+//        "id:3,name:Charlie,age:22,grade:A",
+//        "id:4,name:John,age:19,grade:A"
 //    };
 //
 //    // 插入记录到页中
@@ -125,7 +122,18 @@ vector<Quadruple> sql_compiler(string sql)
 //    // 将页写回磁盘
 //    dm.writePage(0, p);
 //
-//    cout << "Successfully created database.db with Students table data on page 0." << endl;
-//
 //    return 0;
+//}
+
+//int main() {
+//    int pageId = 0;
+//
+//    DiskManager dm("database.db");
+//    BufferPoolManager bpm(3, &dm);
+//    Page* p = bpm.fetchPage(pageId);
+//
+//    int slotId = p->insertRecord("AAAAAAAAA", 10);
+//    cout << slotId << endl;
+//
+//    dm.writePage(pageId, *p);
 //}

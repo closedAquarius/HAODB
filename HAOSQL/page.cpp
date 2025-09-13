@@ -1,13 +1,12 @@
 #include "page.h"
 using namespace std;
 
-Page::Page(PageType t, uint32_t id) : id(id), dirty(false), pin_count(0) {
+Page::Page(PageType t, uint32_t id) : id(-1), dirty(false), pin_count(0) {
     std::memset(data, 0, PAGE_SIZE);
-    PageHeader* ph = reinterpret_cast<PageHeader*>(data);
-    ph->type = t;
-    ph->page_id = id;
-    ph->free_offset = sizeof(PageHeader);
-    ph->slot_count = 0;
+    header()->type = t;
+    header()->page_id = id;
+    header()->free_offset = sizeof(PageHeader);
+    header()->slot_count = 0;
 }
 
 // 页空间固定，手动控制页头
@@ -140,13 +139,27 @@ DiskManager* DiskManager::readPage(int pageId, Page& pageData) {
 }
 
 DiskManager* DiskManager::writePage(int pageId, Page& pageData) {
-    std::ofstream f(diskName, std::ios::out | std::ios::binary);
-    
+    // 使用 in|out 模式，防止文件被截断
+    std::fstream f(diskName, std::ios::in | std::ios::out | std::ios::binary);
+
+    if (!f.is_open()) {
+        // 如果文件不存在，则创建并打开
+        std::ofstream create_f(diskName, std::ios::out | std::ios::binary);
+        create_f.close();
+        f.open(diskName, std::ios::in | std::ios::out | std::ios::binary);
+    }
+
+    if (!f.is_open()) {
+        std::cerr << "[ERROR] Disk " << diskName << " open failed for write.\n";
+        return this;
+    }
+
     std::streampos pos = static_cast<std::streampos>(pageId) * PAGE_SIZE;
     f.seekp(pos, std::ios::beg);
 
     f.write(pageData.rawData(), PAGE_SIZE);
     f.flush();
+    f.close();
 
     if (!f.good()) {
         throw std::runtime_error("DiskManager::writePage failed at pageId=" + pageId);

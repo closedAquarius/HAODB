@@ -59,7 +59,7 @@ Page* BufferPoolManager::fetchPage(PageId id) {
         replacer.access(id);
         frames[frame_id].pin_count++;
 
-        cout << "Page " << id << "in frame " << frame_id << " (hit,  pin_count= " << frames[frame_id].pin_count << ")\n";
+        cout << "Ò³ " << id << " Î»ÓÚÖ¡ " << frame_id << " ÖÐ (hit,  pin_count= " << frames[frame_id].pin_count << ")\n";
         return &frames[frame_id];
     }
 
@@ -81,7 +81,7 @@ Page* BufferPoolManager::fetchPage(PageId id) {
         if (frames[frame_id].dirty) {
             // Ð´»Ø´ÅÅÌ
             disk->writePage(frame_id, frames[frame_id]);
-            cout << "Flush dirty page " << victim_id << " to disk.\n";
+            cout << "½«ÔàÒ³ " << victim_id << " Ð´»Ø´ÅÅÌ.\n";
         }
         page_table.erase(victim_id);
     }
@@ -118,7 +118,7 @@ void BufferPoolManager::unpinPage(PageId id, bool is_dirty) {
     if (page.pin_count > 0) page.pin_count--;
     if (is_dirty) page.dirty = true;
 
-    cout << "Unpin page " << id << "(pin_count=" << page.pin_count << ")\n";
+    cout << "½â³ýÒ³ " << id << " (pin_count=" << page.pin_count << ")\n";
 
     if (page.pin_count == 0) {
         replacer.push(id);
@@ -133,9 +133,8 @@ void BufferPoolManager::flushPage(PageId id) {
     Page& page = frames[frame_id];
 
     if (page.dirty) {
-        // TODO: Ð´»Ø´ÅÅÌ
         disk->writePage(id, page);
-        cout << "Flush page " << id << " to disk.\n";
+        cout << "½«ÔàÒ³ " << id << " Ð´»Ø´ÅÅÌ.\n";
         page.dirty = false;
     }
 }
