@@ -177,7 +177,7 @@ vector<Row> Update::execute() {
 	return output;
 }
 
-Delete::Delete(Operator* c, BufferPoolManager* b, const string& tName) : child(c), bpm(b), tableName(tName) {}
+Delete::Delete(Operator* c, BufferPoolManager* b) : child(c), bpm(b) {}
 vector<Row> Delete::execute() {
 	// child 算子树执行后，返回需要删除的行。
 	vector<Row> inputRows = child->execute();
@@ -219,6 +219,9 @@ vector<Row> Delete::execute() {
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
+
+	// 手动写回
+	bpm->flushPage(pageId);
 	return {}; // DELETE 不返回数据
 }
 
@@ -328,8 +331,8 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		else if (q.op == "DELETE") {
 			// arg1 是 FROM 或 WHERE 算子的符号，用于定位要删除的行
 			// q.result 是表名
-			Operator* child = symbolTables[q.arg1]; // 获取 FROM/WHERE 算子
-			root = new Delete(child, bpm, q.result);
+			Operator* child = symbolTables[q.arg2]; // 获取 FROM/WHERE 算子
+			root = new Delete(child, bpm);
 		}
 
 		// ====== 输出结果 ======

@@ -125,7 +125,7 @@ private:
 	BufferPoolManager* bpm;
 	string tableName;
 public:
-	Delete(Operator* c, BufferPoolManager* b, const string& tName);
+	Delete(Operator* c, BufferPoolManager* b);
 	vector<Row> execute();
 };
 
