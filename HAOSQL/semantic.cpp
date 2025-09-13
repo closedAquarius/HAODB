@@ -85,6 +85,30 @@ vector<Quadruple> SemanticAnalyzer::analyze(const vector<Token>& tokens) {
     pos = 0;
     tempId = 1;
 
+    if (tokens.size() >= 4 && upper(tokens[0].value) == "CREATE" && upper(tokens[1].value) == "USER") {
+        string username = tokens[2].value;
+
+        // 格式要求：CREATE USER name IDENTIFIED BY 'password'
+        if (tokens.size() < 6 || upper(tokens[3].value) != "IDENTIFIED" || upper(tokens[4].value) != "BY") {
+            throw SemanticError("Syntax error in CREATE USER statement",
+                tokens[0].line, tokens[0].column);
+        }
+        string password = tokens[5].value;
+
+        // 调用 LoginManager 注册
+        FileManager fm("HAODB");
+        LoginManager lm(fm, "HAODB");
+        if (lm.registerUser(username, password)) {
+            cout << "User " << username << " created successfully." << endl;
+        }
+        else {
+            cout << "Failed to create user " << username << " (already exists?)." << endl;
+        }
+
+        // CREATE USER 不需要生成四元式
+        return {};
+    }
+
     if (isKeyword("CREATE")) {
         if (peek(1).value == "TABLE") return handleCreateTable();
         else return handleCreateDatabase();

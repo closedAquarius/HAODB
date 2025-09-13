@@ -8,7 +8,8 @@ Lexer::Lexer(string src) : input(src), pos(0), line(1), column(1) {
         "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES",
         "UPDATE", "SET", "DELETE", "CREATE", "TABLE", "DROP",
         "ALTER", "ADD", "PRIMARY", "KEY", "NOT", "NULL",
-        "AND", "OR", "AS", "INT", "VARCHAR", "CHAR", "FLOAT", "DOUBLE","UNIQUE","IF","EXISTS"
+        "AND", "OR", "AS", "INT", "VARCHAR", "CHAR", "FLOAT", "DOUBLE","UNIQUE","IF","EXISTS","IDENTIFIED",
+        "USER","BY"
     };
 
     operators = { '+', '-', '*', '/', '%', '=', '<', '>' };

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <sstream>
 #include "dataType.h"
+#include "login.h"
 using namespace std;
 
 struct SemanticError : public runtime_error {
