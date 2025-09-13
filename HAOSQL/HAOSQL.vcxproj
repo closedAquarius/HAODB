@@ -134,7 +134,6 @@
     <ClCompile Include="B+tree.cpp" />
     <ClCompile Include="buffer_pool.cpp" />
     <ClCompile Include="dbname_setter.cpp" />
-    <ClCompile Include="dataType.cpp" />
     <ClCompile Include="executor.cpp" />
     <ClCompile Include="executor.h" />
     <ClCompile Include="file_manager.cpp" />
