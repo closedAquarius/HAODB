@@ -60,21 +60,6 @@
     <ClCompile Include="buffer_pool.cpp">
       <Filter>源文件\storage</Filter>
     </ClCompile>
-    <ClCompile Include="catalog_manager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="database_metadata_manager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="database_registry_Manager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="metadata_structures.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="system_config_manager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="test_catalog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -90,11 +75,26 @@
     <ClCompile Include="index_manager.cpp">
       <Filter>源文件\index</Filter>
     </ClCompile>
-    <ClCompile Include="dataType.cpp">
+    <ClCompile Include="test_DDLexcutor.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="login.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="catalog_manager.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="database_metadata_manager.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="database_registry_Manager.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="metadata_structures.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="system_config_manager.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="dbname_setter.cpp">
+      <Filter>源文件\engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
