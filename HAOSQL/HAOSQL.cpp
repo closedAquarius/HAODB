@@ -6,14 +6,33 @@
 #include "semantic.h"
 #include "executor.h"
 #include "buffer_pool.h"
+#include "login.h"
 
 using namespace std;
+
 
 vector<Quadruple> sql_compiler(string sql);
 int main()
 {
     std::cout << "Hello World!\n";
     string sql;
+    string account, password;
+    while (true)
+    {
+        cout << "请输入账号" << endl;
+        cin >> account;
+        cout << "请输入密码" << endl;
+        cin >> password;
+        FileManager fm("HAODB");
+        LoginManager lm(fm, "HAODB");
+        if (lm.loginUser(account, password)) {
+            cout << "欢迎您" << current_username << endl;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            break;
+        }
+    }
+    
+
     while (true)
     {
         cout << "请输入 SQL 语句: ";
@@ -21,7 +40,8 @@ int main()
         cout << sql << endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
 
-        /*// 创建 DiskManager
+        /*
+        // 创建 DiskManager
         DiskManager dm("database.db");
         // 创建 BufferPoolManager
         // 缓冲池大小 10
@@ -44,7 +64,7 @@ int main()
                 }
             }
         }*/
-    }
+   }
 }
 
 vector<Quadruple> sql_compiler(string sql)

@@ -277,20 +277,27 @@ vector<Quadruple> SemanticAnalyzer::handleUpdate() {
             string val = expectIdentOrConst();
             exprStr = op + val;
         }
-        else exprStr = expectIdentOrConst();
+        else {
+            exprStr = expectIdentOrConst();
+        }
         setList.push_back({ col, exprStr });
         if (!matchDelim(',')) break;
     }
 
+    // 保存 WHERE 过滤结果
+    string whereTemp = source;
     if (matchKeyword("WHERE")) {
-        string left = expectIdent(); expectOp("="); string right = expectConstOrString();
+        string left = expectIdent();
+        expectOp("=");
+        string right = expectConstOrString();
         string condTemp = newTemp();
         out.push_back({ "=", left, right, condTemp });
-        string whereTemp = newTemp();
+        whereTemp = newTemp();
         out.push_back({ "WHERE", source, condTemp, whereTemp });
         source = whereTemp;
     }
 
+    // 对 WHERE 结果做 SET 操作
     for (auto& item : setList) {
         string selectTemp = newTemp();
         out.push_back({ "SELECT", item.col, source, selectTemp });
@@ -299,11 +306,13 @@ vector<Quadruple> SemanticAnalyzer::handleUpdate() {
         source = setTemp;
     }
 
+    // 注意：UPDATE 应该作用于 WHERE 的结果 (whereTemp)，而不是最后一个 setTemp
     string updateTemp = newTemp();
-    out.push_back({ "UPDATE", source, source, updateTemp });
+    out.push_back({ "UPDATE", whereTemp, source, updateTemp });
     out.push_back({ "RESULT", updateTemp, "-", "-" });
     return out;
 }
+
 
 // =====================
 // DELETE

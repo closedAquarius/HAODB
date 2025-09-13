@@ -133,12 +133,14 @@
     <ClCompile Include="database_registry_Manager.cpp" />
     <ClCompile Include="B+tree.cpp" />
     <ClCompile Include="buffer_pool.cpp" />
+    <ClCompile Include="dataType.cpp" />
     <ClCompile Include="executor.cpp" />
     <ClCompile Include="executor.h" />
     <ClCompile Include="file_manager.cpp" />
     <ClCompile Include="HAOSQL.cpp" />
     <ClCompile Include="index_manager.cpp" />
     <ClCompile Include="lexer.cpp" />
+    <ClCompile Include="login.cpp" />
     <ClCompile Include="metadata_structures.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="parser.cpp" />
@@ -162,6 +164,7 @@
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="index_manager.h" />
     <ClInclude Include="lexer.h" />
+    <ClInclude Include="login.h" />
     <ClInclude Include="metadata_structures.h" />
     <ClInclude Include="page.h" />
     <ClInclude Include="parser.h" />

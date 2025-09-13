@@ -38,4 +38,4 @@ struct RID {
 };
 
 // 全局变量：存储数据库名称
-extern string DBName = "TestDB";
+extern std::string DBName;  // 只是声明，不要加 = "TestDB"
