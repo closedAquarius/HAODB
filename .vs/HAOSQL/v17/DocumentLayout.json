@@ -7,6 +7,18 @@
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\HAOSQL.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\semantic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\semantic.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\login.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -35,10 +47,6 @@
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\file_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\semantic.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\dataType.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\dataType.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -65,10 +73,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\index_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\index_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|solutionrelative:HAOSQL\\lexer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{910002A4-6E0D-4737-B64C-BA8A308C4B61}|HAOSQL\\HAOSQL.vcxproj|D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\buffer_pool.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -130,24 +134,25 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 15,
+          "SelectedChildIndex": 14,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 1,
               "Title": "lexer.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\lexer.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\lexer.cpp",
               "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\lexer.cpp",
               "RelativeToolTip": "HAOSQL\\lexer.cpp",
-              "ViewState": "AQIAAJIAAAAAAAAAAAAgwKcAAAAbAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAsAAAATAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-09-08T13:51:08.011Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "page.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\page.h",
               "RelativeDocumentMoniker": "HAOSQL\\page.h",
@@ -161,7 +166,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "index_manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\index_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\index_manager.cpp",
@@ -171,6 +176,19 @@
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-09-12T01:04:31.238Z",
               "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "semantic.h",
+              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.h",
+              "RelativeDocumentMoniker": "HAOSQL\\semantic.h",
+              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.h",
+              "RelativeToolTip": "HAOSQL\\semantic.h",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAoAAAARAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-09-13T02:45:27.597Z",
               "EditorCaption": ""
             },
             {
@@ -211,32 +229,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "login.cpp",
-              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.cpp",
-              "RelativeDocumentMoniker": "HAOSQL\\login.cpp",
-              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.cpp",
-              "RelativeToolTip": "HAOSQL\\login.cpp",
-              "ViewState": "AQIAAIEAAAAAAAAAAAAAAAQAAAAdAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-13T02:09:20.583Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "executor.cpp",
-              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\executor.cpp",
-              "RelativeDocumentMoniker": "HAOSQL\\executor.cpp",
-              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\executor.cpp",
-              "RelativeToolTip": "HAOSQL\\executor.cpp",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAVAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-12T00:10:28.826Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "page.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\page.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\page.cpp",
@@ -255,14 +248,14 @@
               "RelativeDocumentMoniker": "HAOSQL\\HAOSQL.cpp",
               "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\HAOSQL.cpp",
               "RelativeToolTip": "HAOSQL\\HAOSQL.cpp",
-              "ViewState": "AQIAAA8AAAAAAAAAAAAYwB0AAABAAAAA",
+              "ViewState": "AQIAAA8AAAAAAAAAAAAAABwAAAA2AAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-09-08T08:17:03.468Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 9,
               "Title": "file_manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\file_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\file_manager.cpp",
@@ -275,7 +268,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "login.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.h",
               "RelativeDocumentMoniker": "HAOSQL\\login.h",
@@ -288,7 +281,45 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 2,
+              "Title": "semantic.cpp",
+              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp",
+              "RelativeDocumentMoniker": "HAOSQL\\semantic.cpp",
+              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp",
+              "RelativeToolTip": "HAOSQL\\semantic.cpp",
+              "ViewState": "AQIAAFQAAAAAAAAAAAAAAFkAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-09-12T13:53:32.55Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "executor.cpp",
+              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\executor.cpp",
+              "RelativeDocumentMoniker": "HAOSQL\\executor.cpp",
+              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\executor.cpp",
+              "RelativeToolTip": "HAOSQL\\executor.cpp",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAVAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-09-12T00:10:28.826Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "login.cpp",
+              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.cpp",
+              "RelativeDocumentMoniker": "HAOSQL\\login.cpp",
+              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\login.cpp",
+              "RelativeToolTip": "HAOSQL\\login.cpp",
+              "ViewState": "AQIAAIEAAAAAAAAAAAAAAAQAAAAdAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-09-13T02:09:20.583Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "file_manager.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\file_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\file_manager.h",
@@ -301,7 +332,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 13,
               "Title": "B\u002Btree.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\B\u002Btree.h",
               "RelativeDocumentMoniker": "HAOSQL\\B\u002Btree.h",
@@ -313,7 +344,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 14,
               "Title": "B\u002Btree.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\B\u002Btree.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\B\u002Btree.cpp",
@@ -325,7 +356,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "dataType.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\dataType.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\dataType.cpp",
@@ -337,7 +368,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "dataType.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\dataType.h",
               "RelativeDocumentMoniker": "HAOSQL\\dataType.h",
@@ -349,19 +380,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "semantic.cpp",
-              "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp",
-              "RelativeDocumentMoniker": "HAOSQL\\semantic.cpp",
-              "ToolTip": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\semantic.cpp",
-              "RelativeToolTip": "HAOSQL\\semantic.cpp",
-              "ViewState": "AQIAAPcAAAAAAAAAAAAYwPwAAAAvAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-12T13:53:32.55Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 17,
               "Title": "index_manager.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\index_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\index_manager.h",
@@ -373,7 +392,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "buffer_pool.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\buffer_pool.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\buffer_pool.cpp",
@@ -385,7 +404,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "parser.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\parser.h",
               "RelativeDocumentMoniker": "HAOSQL\\parser.h",
@@ -397,7 +416,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 16,
               "Title": "executor.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\executor.h",
               "RelativeDocumentMoniker": "HAOSQL\\executor.h",
@@ -409,7 +428,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "catalog_manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\catalog_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\catalog_manager.cpp",
@@ -421,7 +440,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 21,
               "Title": "catalog_manager.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\catalog_manager.h",
               "RelativeDocumentMoniker": "HAOSQL\\catalog_manager.h",
@@ -433,7 +452,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "test_catalog2.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\test_catalog2.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\test_catalog2.cpp",
@@ -445,7 +464,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 26,
               "Title": "database_metadata_manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\database_metadata_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\database_metadata_manager.cpp",
@@ -457,7 +476,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 25,
               "Title": "database_registry_Manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\database_registry_Manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\database_registry_Manager.cpp",
@@ -469,7 +488,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 24,
               "Title": "metadata_structures.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\metadata_structures.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\metadata_structures.cpp",
@@ -481,7 +500,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "system_config_manager.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\system_config_manager.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\system_config_manager.cpp",
@@ -493,7 +512,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 28,
               "Title": "lexer.h",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\lexer.h",
               "RelativeDocumentMoniker": "HAOSQL\\lexer.h",
@@ -505,7 +524,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 27,
               "Title": "parser.cpp",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\parser.cpp",
               "RelativeDocumentMoniker": "HAOSQL\\parser.cpp",
@@ -517,7 +536,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 29,
               "Title": "sql_grammar.txt",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\sql_grammar.txt",
               "RelativeDocumentMoniker": "HAOSQL\\sql_grammar.txt",
@@ -529,7 +548,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 30,
               "Title": "test.txt",
               "DocumentMoniker": "D:\\programstudy\\C\u002B\u002B\\haosql\\HAOSQL\\test.txt",
               "RelativeDocumentMoniker": "HAOSQL\\test.txt",
