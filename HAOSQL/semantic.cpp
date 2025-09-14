@@ -624,3 +624,44 @@ std::vector<Quadruple> generateUndoQuadruples(const LogEntry & log) {
 
     return quads;
 }
+ 
+int test() {
+    LogEntry log1;
+    log1.op = "INSERT";
+    log1.table = "students";
+    log1.row = { {"id","5"}, {"name","Daisy"}, {"age","20"}, {"grade","B"} };
+
+    auto quads = generateUndoQuadruples(log1);
+    std::cout << "四元式结果：" << std::endl;
+    for (auto& q : quads) {
+        std::cout << "(" << q.op << ", " << q.arg1 << ", "
+            << q.arg2 << ", " << q.result << ")" << std::endl;
+    }
+    
+    LogEntry log2;
+    log2.op = "DELETE";
+    log2.table = "students";
+    log2.row = { {"id","5"}, {"name","Daisy"}, {"age","20"}, {"grade","B"} };
+
+    quads = generateUndoQuadruples(log2);
+    std::cout << "四元式结果：" << std::endl;
+    for (auto& q : quads) {
+        std::cout << "(" << q.op << ", " << q.arg1 << ", "
+            << q.arg2 << ", " << q.result << ")" << std::endl;
+    }
+
+    LogEntry log3;
+    log3.op = "UPDATE";
+    log3.table = "students";
+    log3.row = { {"id","5"} };
+    log3.changes = {
+        {"age", {"20", "22"}}
+    };
+
+    quads = generateUndoQuadruples(log3);
+    std::cout << "四元式结果：" << std::endl;
+    for (auto& q : quads) {
+        std::cout << "(" << q.op << ", " << q.arg1 << ", "
+            << q.arg2 << ", " << q.result << ")" << std::endl;
+    }
+}
