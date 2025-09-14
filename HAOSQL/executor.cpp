@@ -309,10 +309,58 @@ void getColumns(vector<string>& cols, string s) {
 	split(s, ",", cols);
 }
 
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm) {
+// ========== DDL工具函数 ==========
+
+vector<string> parseColumnList(const string& str) {
+	vector<string> result;
+	if (str.empty()) return result;
+
+	size_t start = 0;
+	size_t pos = 0;
+
+	while (pos != string::npos) {
+		pos = str.find(',', start);
+		string token = str.substr(start, pos - start);
+
+		// 去除空格
+		size_t first = token.find_first_not_of(" \t");
+		size_t last = token.find_last_not_of(" \t");
+		if (first != string::npos) {
+			result.push_back(token.substr(first, last - first + 1));
+		}
+
+		if (pos != string::npos) {
+			start = pos + 1;
+		}
+	}
+
+	return result;
+}
+
+vector<vector<string>> buildColumnSpecs(const vector<string>& names,
+	const vector<string>& types,
+	const vector<string>& lengths) {
+	vector<vector<string>> specs;
+
+	if (names.size() != types.size() || names.size() != lengths.size()) {
+		throw runtime_error("Column names, types, and lengths must have the same size");
+	}
+
+	for (size_t i = 0; i < names.size(); ++i) {
+		vector<string> spec = { names[i], types[i], lengths[i] };
+		specs.push_back(spec);
+	}
+
+	return specs;
+}
+
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm, CatalogManager* catalog = nullptr) {
 	Operator* root = nullptr;
 	map<string, Operator*> symbolTables;
 	map<string, Condition> condTable;
+
+	// DDL构建状态
+	DDLBuildState ddl_state;
 
 	for (auto& q : quads) {
 		// ========== 基本表扫描 ==========
@@ -406,6 +454,147 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			// q.result 是表名
 			Operator* child = symbolTables[q.arg2]; // 获取 FROM/WHERE 算子
 			root = new Delete(child, bpm);
+		}
+
+		// ========== DDL操作 ==========
+
+		// ====== 创建表相关 ======
+		else if (q.op == "COLUMN_NAME") {
+			// (COLUMN_NAME, id,name,age,phone, -, T1)
+			ddl_state.column_names = parseColumnList(q.arg1);
+		}
+		else if (q.op == "COLUMN_TYPE") {
+			// (COLUMN_TYPE, VARCHAR,VARCHAR,INT,VARCHAR, 10,10,-1,15, T2)
+			ddl_state.column_types = parseColumnList(q.arg1);
+			ddl_state.column_lengths = parseColumnList(q.arg2);
+
+			// 处理-1的情况（INT类型默认长度）
+			for (auto& length : ddl_state.column_lengths) {
+				if (length == "-1") {
+					length = "4"; // INT默认4字节
+				}
+			}
+		}
+		else if (q.op == "COLUMNS") {
+			// (COLUMNS, T1, T2, T3) - 合并列信息
+			try {
+				ddl_state.column_specs = buildColumnSpecs(ddl_state.column_names,
+					ddl_state.column_types,
+					ddl_state.column_lengths);
+			}
+			catch (const exception& e) {
+				throw runtime_error("Failed to build column specifications: " + string(e.what()));
+			}
+		}
+		else if (q.op == "CREATE_TABLE") {
+			// (CREATE_TABLE, student, T3, T4)
+			if (!catalog) {
+				throw runtime_error("CatalogManager is required for CREATE_TABLE operation");
+			}
+
+			ddl_state.table_name = q.arg1;
+			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs);
+			symbolTables[q.result] = create_op;
+			root = create_op;
+		}
+		else if (q.op == "PRIMARY") {
+			// (PRIMARY, student, id,name, T5)
+			ddl_state.primary_keys = parseColumnList(q.arg2);
+
+			// 如果已有CreateTable算子，设置主键
+			if (symbolTables.find("T4") != symbolTables.end()) { // 假设T4是CREATE_TABLE的结果
+				CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
+				if (create_op) {
+					create_op->setPrimaryKeys(ddl_state.primary_keys);
+				}
+			}
+		}
+		else if (q.op == "NOT_NULL") {
+			// (NOT_NULL, student, name,age, T6)
+			ddl_state.not_null_columns = parseColumnList(q.arg2);
+
+			// 根据上下文确定是CREATE_TABLE还是ADD_COLUMN
+			if (symbolTables.find("T4") != symbolTables.end()) { // CREATE_TABLE场景
+				CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
+				if (create_op) {
+					create_op->setNotNullColumns(ddl_state.not_null_columns);
+				}
+			}
+			else { // ADD_COLUMN场景，需要查找最近的AddColumn算子
+				for (auto it = symbolTables.rbegin(); it != symbolTables.rend(); ++it) {
+					AddColumn* add_op = dynamic_cast<AddColumn*>(it->second);
+					if (add_op) {
+						add_op->setNotNullColumns(ddl_state.not_null_columns);
+						break;
+					}
+				}
+			}
+		}
+		else if (q.op == "UNIQUE") {
+			// (UNIQUE, student, id,phone, T7)
+			ddl_state.unique_columns = parseColumnList(q.arg2);
+
+			// 根据上下文确定是CREATE_TABLE还是ADD_COLUMN
+			if (symbolTables.find("T4") != symbolTables.end()) { // CREATE_TABLE场景
+				CreateTable* create_op = dynamic_cast<CreateTable*>(symbolTables["T4"]);
+				if (create_op) {
+					create_op->setUniqueColumns(ddl_state.unique_columns);
+				}
+			}
+			else { // ADD_COLUMN场景
+				for (auto it = symbolTables.rbegin(); it != symbolTables.rend(); ++it) {
+					AddColumn* add_op = dynamic_cast<AddColumn*>(it->second);
+					if (add_op) {
+						add_op->setUniqueColumns(ddl_state.unique_columns);
+						break;
+					}
+				}
+			}
+		}
+
+		// ====== 删除表相关 ======
+		else if (q.op == "CHECK_TABLE") {
+			// (CHECK_TABLE, "employees", _, T1)
+			// 这里可以进行表存在性检查，但通常在DropTable算子中处理
+		}
+		else if (q.op == "DROP_TABLE") {
+			// (DROP_TABLE, "employees", _, T2)
+			if (!catalog) {
+				throw runtime_error("CatalogManager is required for DROP_TABLE operation");
+			}
+
+			string table_name = q.arg1;
+			bool if_exists = true; // 假设有CHECK_TABLE就是IF EXISTS
+			DropTable* drop_op = new DropTable(catalog, table_name, if_exists);
+			symbolTables[q.result] = drop_op;
+			root = drop_op; // DDL操作通常是根节点
+		}
+
+		// ====== 添加列相关 ======
+		else if (q.op == "ADD_COLUMN") {
+			// (ADD_COLUMN, "students", T3, T4)
+			if (!catalog) {
+				throw runtime_error("CatalogManager is required for ADD_COLUMN operation");
+			}
+
+			string table_name = q.arg1;
+			AddColumn* add_op = new AddColumn(catalog, table_name, ddl_state.column_specs);
+			symbolTables[q.result] = add_op;
+			root = add_op; // DDL操作通常是根节点
+		}
+
+		// ====== 删除列相关 ======
+		else if (q.op == "DROP_COLUMN") {
+			// (DROP_COLUMN, "students", "sex", T1)
+			if (!catalog) {
+				throw runtime_error("CatalogManager is required for DROP_COLUMN operation");
+			}
+
+			string table_name = q.arg1;
+			vector<string> columns_to_drop = parseColumnList(q.arg2);
+			DropColumn* drop_op = new DropColumn(catalog, table_name, columns_to_drop);
+			symbolTables[q.result] = drop_op;
+			root = drop_op; // DDL操作通常是根节点
 		}
 
 		// ====== 输出结果 ======
