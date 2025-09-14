@@ -90,12 +90,6 @@
     <ClCompile Include="login.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="logger.cpp">
-      <Filter>源文件\engine</Filter>
-    </ClCompile>
-    <ClCompile Include="logger_integration.cpp">
-      <Filter>源文件\engine</Filter>
-    </ClCompile>
     <ClCompile Include="test_catalog.cpp">
       <Filter>源文件\tests</Filter>
     </ClCompile>
@@ -105,11 +99,11 @@
     <ClCompile Include="test_DDLexcutor.cpp">
       <Filter>源文件\tests</Filter>
     </ClCompile>
-    <ClCompile Include="test_log.cpp">
-      <Filter>源文件\tests</Filter>
-    </ClCompile>
     <ClCompile Include="test_storage.cpp">
       <Filter>源文件\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="LockManager.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -164,16 +158,8 @@
     <ClInclude Include="login.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="logger.h">
+    <ClInclude Include="LockManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="logger_integration.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="database.db">
-      <Filter>资源文件</Filter>
-    </None>
   </ItemGroup>
 </Project>

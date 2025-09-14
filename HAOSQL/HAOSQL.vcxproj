@@ -174,9 +174,6 @@
     <ClInclude Include="semantic.h" />
     <ClInclude Include="system_config_manager.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="database.db" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

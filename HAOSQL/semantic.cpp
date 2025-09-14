@@ -277,7 +277,7 @@ vector<Quadruple> SemanticAnalyzer::handleInsert() {
     string values_temp = newTemp();
     // 假设 parseValueList 和 parseColumnList 返回的字符串是 "(...)" 格式
     // 我们将它们作为四元式的 arg1 和 arg2
-    quads.push_back({ "VALUES", columns_str, values_str, values_temp });
+    quads.push_back({ "VALUES",  values_str,columns_str, values_temp });
 
     // (INSERT, T1, T2, T3)
     string insert_temp = newTemp();

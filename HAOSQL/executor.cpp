@@ -196,8 +196,29 @@ vector<Row> Update::execute() {
 			updatedRecordStr += (k + ":" + v + ",");
 		}
 
+		// 找到这行在页中的位置，并进行逻辑删除
+		// 同样，这里采用低效的遍历查找方式。
+		string key_col = "id";
+		string key_val = row.at(key_col);
+
+		int targetSlot = -1;
+		for (int i = 0; i < page->header()->slot_count; ++i) {
+			string record_str = page->readRecord(i);
+			if (record_str.find(key_col + ":" + key_val) != string::npos) {
+				targetSlot = i;
+				break;
+			}
+		}
+
+		if (targetSlot != -1) {
+			page->deleteRecord(targetSlot);
+			cout << "Deleted row with " << key_col << " = " << key_val << endl;
+		}
+		else {
+			cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
+		}
+
 		// 将新记录写入页面的槽中
-		page->getSlot(0)->length = 0;
 		page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
 
 		// 将页面标记为脏，以便后续写回磁盘
