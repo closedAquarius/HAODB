@@ -31,6 +31,9 @@
     <Filter Include="源文件\index">
       <UniqueIdentifier>{e3168409-d09e-4b77-bb0e-bfe76dbf3b57}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\tests">
+      <UniqueIdentifier>{3a6fb1f6-6a7b-4f6b-b29b-8925d81aea86}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HAOSQL.cpp">
@@ -60,23 +63,11 @@
     <ClCompile Include="buffer_pool.cpp">
       <Filter>源文件\storage</Filter>
     </ClCompile>
-    <ClCompile Include="test_catalog.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="test_catalog2.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="test_storage.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="B+tree.cpp">
       <Filter>源文件\index</Filter>
     </ClCompile>
     <ClCompile Include="index_manager.cpp">
       <Filter>源文件\index</Filter>
-    </ClCompile>
-    <ClCompile Include="test_DDLexcutor.cpp">
-      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="catalog_manager.cpp">
       <Filter>源文件\engine</Filter>
@@ -95,6 +86,30 @@
     </ClCompile>
     <ClCompile Include="dbname_setter.cpp">
       <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="login.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="logger.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="logger_integration.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="test_catalog.cpp">
+      <Filter>源文件\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="test_catalog2.cpp">
+      <Filter>源文件\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="test_DDLexcutor.cpp">
+      <Filter>源文件\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="test_log.cpp">
+      <Filter>源文件\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="test_storage.cpp">
+      <Filter>源文件\tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +162,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="login.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="logger_integration.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
