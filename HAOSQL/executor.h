@@ -250,7 +250,7 @@ public:
 				throw runtime_error("Failed to create table: " + table_name_);
 			}
 
-			// 2. 设置主键约束
+			/*// 2. 设置主键约束
 			if (!primary_keys_.empty()) {
 				for (auto& primary_key : primary_keys_)
 				{
@@ -258,8 +258,13 @@ public:
 					if (!success) {
 						throw runtime_error("Failed to set primary key for table: " + table_name_);
 					}
+					std::string pk_index_name = table_name_ + primary_key + "_pk";
+					indexManager->CreateIndex(table_name_, pk_index_name, intKeys);
+						std::cout << "Primary key index created on table "
+							<< table_name_ << " (" << pk_index_name << ")\n";
 				}
-			}
+			}*/
+
 
 			// 3. 设置非空约束
 			if (!not_null_columns_.empty()) {
@@ -458,3 +463,20 @@ vector<string> parseColumnList(const string& str);
 vector<vector<string>> buildColumnSpecs(const vector<string>& names,
 	const vector<string>& types,
 	const vector<string>& lengths);
+};
+
+extern IndexManager* indexManager;
+
+class IndexScan : public Operator {
+private:
+	BufferPoolManager* bpm;
+	string tableName;
+	string column;   // 索引列（目前只支持单列索引）
+	int value;       // 等值查询值（int 类型）
+
+public:
+	IndexScan(BufferPoolManager* bpm, const string& tName, const string& col, int val)
+		: bpm(bpm), tableName(tName), column(col), value(val) {}
+
+	vector<Row> execute() override;
+};

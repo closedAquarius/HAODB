@@ -10,11 +10,15 @@ using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
 int generateDBFile();
+void initIndexManager();
+
+IndexManager* indexManager = nullptr;
 
 int main()
 {
 
     std::cout << "Hello World!\n";
+    initIndexManager();
     string sql;
     while (true)
     {
@@ -65,6 +69,15 @@ int main()
     return 0;
 }
 
+void initIndexManager() {
+    // 假设你有 FileManager 和 CatalogManager
+    FileManager fm("./HAODB/"+DBName+"/index/");
+    CatalogManager catalog;
+    IndexManager globalIndexManager(fm, catalog, DBName);
+
+    // 给全局指针赋值
+    indexManager = &globalIndexManager;
+}
 
 vector<Quadruple> sql_compiler(string sql)
 {

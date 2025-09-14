@@ -122,6 +122,10 @@ vector<Row> Insert::execute() {
 		throw runtime_error("Failed to fetch page for insert.");
 	}
 
+	/*// 获取该表的所有索引信息
+	// IndexManager* indexManager; // 假设全局可用
+	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);*/
+
 	// 将每一行数据插入到页中
 	for (auto& row : input) {
 		string record_str = "";
@@ -131,15 +135,45 @@ vector<Row> Insert::execute() {
 			record_str += pair.first + ":" + pair.second;
 			first = false;
 		}
-		page->insertRecord(record_str.c_str(), record_str.length());
+
+		// 插入页并获得 RID
+		int slotId = page->insertRecord(record_str.c_str(), record_str.length());
+		RID rid{ pageId, slotId };
+
+		/*// 插入所有索引
+		for (auto& idx : tableIndexes) {
+			int keyInt = 0;
+
+			if (idx.column_names.size() == 1) {
+				// 单列索引：直接转 int
+				const string& col = idx.column_names[0];
+				keyInt = std::stoi(row.at(col));
+			}
+			else {
+				// 多列索引：拼接字符串后 hash 成 int
+				string combinedKey;
+				bool firstKey = true;
+				for (auto& col : idx.column_names) {
+					if (!firstKey) combinedKey += "|";  // 分隔符
+					combinedKey += row.at(col);
+					combinedKey += row.at(col);
+					firstKey = false;
+				}
+				std::hash<std::string> hasher;
+				keyInt = static_cast<int>(hasher(combinedKey));
+			}
+
+			// 插入索引（传 int key）
+			indexManager->InsertEntry(tableName, idx.column_names, keyInt, rid);
+		}*/
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
-	// 手动写回
-	bpm->flushPage(pageId);
+	bpm->flushPage(pageId);       // 手动写回
 
-	return {}; // INSERT不返回数据
+	return {}; // INSERT 不返回数据
 }
+
 
 Set::Set(const string& c, const string& ch) : cols(c), change(ch) {}
 vector<Row> Set::execute() {
@@ -235,7 +269,7 @@ vector<Row> Update::execute() {
 
 Delete::Delete(Operator* c, BufferPoolManager* b) : child(c), bpm(b) {}
 vector<Row> Delete::execute() {
-	// child 算子树执行后，返回需要删除的行。
+	// child 算子树执行后，返回需要删除的行
 	vector<Row> inputRows = child->execute();
 	if (inputRows.empty()) {
 		cout << "No rows found to delete.\n";
@@ -249,11 +283,13 @@ vector<Row> Delete::execute() {
 		throw runtime_error("Failed to fetch page for delete.");
 	}
 
+	/*// IndexManager* indexManager;
+	// 获取该表的所有索引信息
+	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);*/
+
 	// 遍历所有需要删除的行
 	for (auto& row : inputRows) {
-		// 找到这行在页中的位置，并进行逻辑删除
-		// 同样，这里采用低效的遍历查找方式。
-		string key_col = "id";
+		string key_col = "id"; // 假设主键是 id
 		string key_val = row.at(key_col);
 
 		int targetSlot = -1;
@@ -265,19 +301,48 @@ vector<Row> Delete::execute() {
 			}
 		}
 
-		if (targetSlot != -1) {
+		/*if (targetSlot != -1) {
+			// 构造 RID
+			RID rid{ pageId, static_cast<uint16_t>(targetSlot) };
+
+			// 删除所有相关索引
+			for (auto& idx : tableIndexes) {
+				int keyInt = 0;
+
+				if (idx.column_names.size() == 1) {
+					// 单列索引
+					const string& col = idx.column_names[0];
+					keyInt = std::stoi(row.at(col));
+				}
+				else {
+					// 多列索引 → 组合成字符串再 hash
+					string combinedKey;
+					bool first = true;
+					for (auto& col : idx.column_names) {
+						if (!first) combinedKey += "|";
+						combinedKey += row.at(col);
+						first = false;
+					}
+					std::hash<std::string> hasher;
+					keyInt = static_cast<int>(hasher(combinedKey));
+				}
+
+				// 调用 IndexManager 删除索引条目
+				indexManager->DeleteEntry(tableName, idx.column_names, keyInt, rid);
+			}
+
+			// 删除物理记录
 			page->deleteRecord(targetSlot);
 			cout << "Deleted row with " << key_col << " = " << key_val << endl;
 		}
 		else {
 			cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
-		}
+		}*/
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
+	bpm->flushPage(pageId);       // 手动写回
 
-	// 手动写回
-	bpm->flushPage(pageId);
 	return {}; // DELETE 不返回数据
 }
 
@@ -387,6 +452,40 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
 			Condition cond = condTable[q.arg2];      // arg2 是条件符号
 			symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
+			/*Operator* child = symbolTables[q.arg1];
+			Condition cond = condTable[q.arg2];
+
+			// 提取条件信息（目前只支持 = 且单列索引）
+			string colName = cond.leftCol;
+			string colValue = cond.rightVal;
+			string op = cond.op;
+
+			// 从 FROM 节点里拿表名
+			Scan* scanOp = dynamic_cast<Scan*>(child);
+			if (!scanOp) {
+				throw runtime_error("WHERE's child is not a Scan operator.");
+			}
+			string tableName = scanOp->tableName;
+
+			extern IndexManager* indexManager;
+			// 查找该表的索引
+			vector<IndexInfo> indexes = indexManager->FindIndexesByTable(tableName);
+
+			bool useIndex = false;
+			for (auto& idx : indexes) {
+				if (idx.column_names.size() == 1 && idx.column_names[0] == colName && op == "=") {
+					// 命中索引
+					int keyVal = stoi(colValue);
+					symbolTables[q.result] = new IndexScan(bpm, tableName, colName, keyVal);
+					useIndex = true;
+					break;
+				}
+			}
+
+			if (!useIndex) {
+				// 回退到 Filter+Scan
+				symbolTables[q.result] = new Filter(child, cond.get());
+			}*/
 		}
 
 		// ====== 投影 ======
@@ -604,4 +703,38 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 	}
 
 	return root;
+}
+
+vector<Row> IndexScan::execute() {
+	vector<Row> output;
+
+	// 查索引（目前只支持单列索引）
+	vector<string> cols = { column };
+	vector<RID> results = indexManager->Search(tableName, cols, value);
+
+	// 根据 RID 定位记录
+	for (auto& rid : results) {
+		Page* page = bpm->fetchPage(rid.page_id);
+		if (!page) continue;
+
+		string record_str = page->readRecord(rid.slot_id);
+		if (record_str.empty()) continue;
+
+		Row row;
+		vector<string> parts;
+		split(record_str, ",", parts);
+		for (const auto& p : parts) {
+			size_t colon_pos = p.find(":");
+			if (colon_pos != string::npos) {
+				string key = p.substr(0, colon_pos);
+				string val = p.substr(colon_pos + 1);
+				row[key] = val;
+			}
+		}
+
+		output.push_back(row);
+		bpm->unpinPage(rid.page_id, false);
+	}
+
+	return output;
 }
