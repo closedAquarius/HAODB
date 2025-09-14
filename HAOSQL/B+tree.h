@@ -41,6 +41,7 @@ public:
     void setRootPid(int rootid);
     int getRootPid();
 
+
     // ´òÓ¡Ê÷
     void printTree();
 

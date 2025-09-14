@@ -278,6 +278,8 @@ void BPlusTree::insert(int key, const RID& rid) {
 
 // ================== 递归插入 ==================
 bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey, int& newChildPid) {
+    cout << "insertRecursive nodePid=" << nodePid
+        << " key=" << key << endl;
     Page page(DATA_PAGE, nodePid);
     fm.readPage(file_id, nodePid, page);
     BPlusTreeNode node = deserializeNode(page);
@@ -339,6 +341,7 @@ bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey
 
         int childPid = node.children[i];
         int childUpKey = -1, childNewPid = -1;
+        cout << "Recursing to childPid=" << childPid << endl;
         bool childSplit = insertRecursive(childPid, key, rid, childUpKey, childNewPid);
 
         if (!childSplit) {
@@ -776,7 +779,7 @@ int BPlusTree::getRootPid() {
     return 0;
 }*/
 
-int test() {
+/*int main() {
     std::string indexFileName = "students";
 
     // ---------------- 创建文件管理器 ----------------
@@ -836,5 +839,5 @@ int test() {
     std::cout << "Index destroyed.\n";
 
     return 0;
-}
+}*/
 
