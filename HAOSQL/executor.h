@@ -250,7 +250,7 @@ public:
 				throw runtime_error("Failed to create table: " + table_name_);
 			}
 
-			// 2. 设置主键约束
+			/*// 2. 设置主键约束
 			if (!primary_keys_.empty()) {
 				for (auto& primary_key : primary_keys_)
 				{
@@ -258,8 +258,13 @@ public:
 					if (!success) {
 						throw runtime_error("Failed to set primary key for table: " + table_name_);
 					}
+					std::string pk_index_name = table_name_ + primary_key + "_pk";
+					indexManager->CreateIndex(table_name_, pk_index_name, intKeys);
+						std::cout << "Primary key index created on table "
+							<< table_name_ << " (" << pk_index_name << ")\n";
 				}
-			}
+			}*/
+
 
 			// 3. 设置非空约束
 			if (!not_null_columns_.empty()) {
