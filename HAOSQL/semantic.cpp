@@ -567,3 +567,60 @@ string SemanticAnalyzer::parseValueList() {
     ss << ")";
     return ss.str();
 }
+
+std::vector<Quadruple> generateUndoQuadruples(const LogEntry & log) {
+    std::vector<Quadruple> quads;
+
+    if (log.op == "INSERT") {
+        // 逆操作是 DELETE
+        quads.push_back({ "FROM", log.table, "-", "T1" });
+        quads.push_back({ "=", "id", log.row.at("id"), "T2" });
+        quads.push_back({ "WHERE", "T1", "T2", "T3" });
+        quads.push_back({ "DELETE", "-", "T3", "T4" });
+        quads.push_back({ "RESULT", "T4", "-", "-" });
+    }
+    else if (log.op == "DELETE") {
+        // 逆操作是 INSERT
+        quads.push_back({ "FROM", log.table, "-", "T1" });
+
+        // 构造 VALUES
+        std::string values = "(";
+        std::string cols = "(";
+        bool first = true;
+        for (auto& kv : log.row) {
+            if (!first) { values += ","; cols += ","; }
+            values += kv.second;
+            cols += kv.first;
+            first = false;
+        }
+        values += ")";
+        cols += ")";
+
+        quads.push_back({ "VALUES", values, cols, "T2" });
+        quads.push_back({ "INSERT", "T1", "T2", "T3" });
+        quads.push_back({ "RESULT", "T3", "-", "-" });
+    }
+    else if (log.op == "UPDATE") {
+        // 逆操作是 UPDATE old values
+        quads.push_back({ "FROM", log.table, "-", "T1" });
+        quads.push_back({ "=", "id", log.row.at("id"), "T2" });
+        quads.push_back({ "WHERE", "T1", "T2", "T3" });
+
+        // 对每个字段恢复 old value
+        int temp = 4;
+        std::string last = "T3";
+        for (auto& kv : log.changes) {
+            std::string col = kv.first;
+            std::string oldVal = kv.second.first;
+            std::string tempName = "T" + std::to_string(temp++);
+            quads.push_back({ "SET", col, oldVal, tempName });
+            std::string updateRes = "T" + std::to_string(temp++);
+            quads.push_back({ "UPDATE", last, tempName, updateRes });
+            last = updateRes;
+        }
+
+        quads.push_back({ "RESULT", last, "-", "-" });
+    }
+
+    return quads;
+}

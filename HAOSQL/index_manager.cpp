@@ -265,3 +265,8 @@ bool IndexManager::_updateRootIfNeeded(IndexInstance* inst)
     }
     return true;
 }
+
+
+std::vector<IndexInfo> IndexManager::FindIndexesByTable(const std::string& table_name) {
+    return catalog_.ListIndexes(DBName,table_name);
+}

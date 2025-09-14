@@ -9,6 +9,7 @@
 
 #include "dataType.h"
 #include "buffer_pool.h"
+#include "index_manager.h"
 
 using namespace std;
 
@@ -214,4 +215,20 @@ public:
 
 		return output;
 	}
+};
+
+extern IndexManager* indexManager;
+
+class IndexScan : public Operator {
+private:
+	BufferPoolManager* bpm;
+	string tableName;
+	string column;   // 索引列（目前只支持单列索引）
+	int value;       // 等值查询值（int 类型）
+
+public:
+	IndexScan(BufferPoolManager* bpm, const string& tName, const string& col, int val)
+		: bpm(bpm), tableName(tName), column(col), value(val) {}
+
+	vector<Row> execute() override;
 };

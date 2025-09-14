@@ -7,9 +7,17 @@
 #include <cctype>
 #include <algorithm>
 #include <sstream>
+#include <map>
 #include "dataType.h"
 #include "login.h"
 using namespace std;
+struct LogEntry {
+    std::string op;                // "INSERT", "DELETE", "UPDATE"
+    std::string table;             // 表名
+    std::map<std::string, std::string> row; // 整行数据（主键、列、值）
+    std::map<std::string, std::pair<std::string, std::string>> changes;
+    // 对于 UPDATE: key=列名, value=(old, new)
+};
 
 struct SemanticError : public runtime_error {
     int line, col;

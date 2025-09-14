@@ -62,6 +62,10 @@ public:
     std::vector<IndexInfo> FindIndexesWithColumns(const std::string& table_name,
         const std::vector<std::string>& column_names);
 
+    // 新增：根据表名查找该表所有索引
+    std::vector<IndexInfo> FindIndexesByTable(const std::string& table_name);
+
+
 private:
     FileManager& fm_;
     CatalogManager& catalog_;
