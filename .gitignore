@@ -1,0 +1,27 @@
+# Visual Studio
+.vs/
+*.suo
+*.VC.db
+*.VC.opendb
+*.opendb
+*.vscode/
+*.user
+*.userosscache
+*.pdb
+*.ipch
+*.cache
+*.tmp
+*.log
+*.ilk
+
+# 构建产物
+Debug/
+Release/
+x64/
+*.obj
+*.o
+*.exe
+
+# 你项目里的生成目录
+HAOSQL/x64/
+haosql_client/x64/
