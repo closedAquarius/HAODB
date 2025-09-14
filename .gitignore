@@ -2,13 +2,11 @@
 .vs/
 *.VC.db
 *.opendb
-*.VC.opendb
 *.vc.db*
 *.suo
 *.user
 *.userosscache
 *.sdf
-*.ipch
 ipch/
 *.pdb
 
