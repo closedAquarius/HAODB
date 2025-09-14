@@ -147,8 +147,7 @@
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAsAAAATAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-09-08T13:51:08.011Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Document",
@@ -222,8 +221,7 @@
               "RelativeToolTip": "HAOSQL\\LockManager.cpp",
               "ViewState": "AQIAADMAAAAAAAAAAAAYwEMAAAAjAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-13T05:37:31.759Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-13T05:37:31.759Z"
             },
             {
               "$type": "Document",
@@ -235,8 +233,7 @@
               "RelativeToolTip": "HAOSQL\\LockManager.h",
               "ViewState": "AQIAABYAAAAAAAAAAAAYwCwAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-09-13T05:35:29.101Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-13T05:35:29.101Z"
             },
             {
               "$type": "Document",
@@ -248,8 +245,7 @@
               "RelativeToolTip": "HAOSQL\\B\u002Btree.cpp",
               "ViewState": "AQIAAOYCAAAAAAAAAAAIwPECAAAZAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-10T14:55:38.659Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-10T14:55:38.659Z"
             },
             {
               "$type": "Document",
@@ -261,8 +257,7 @@
               "RelativeToolTip": "HAOSQL\\B\u002Btree.h",
               "ViewState": "AQIAADkAAAAAAAAAAAAAAAQAAAAYAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-09-10T07:16:18.443Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-10T07:16:18.443Z"
             },
             {
               "$type": "Document",
@@ -287,8 +282,7 @@
               "RelativeToolTip": "HAOSQL\\database_metadata_manager.cpp",
               "ViewState": "AQIAAAAAAAAAAAAAAADwvwAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-11T13:56:21.895Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-11T13:56:21.895Z"
             },
             {
               "$type": "Document",
@@ -300,8 +294,7 @@
               "RelativeToolTip": "HAOSQL\\catalog_manager.cpp",
               "ViewState": "AQIAAOUCAAAAAAAAAAAQwAIDAAAbAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-11T07:33:05.473Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-11T07:33:05.473Z"
             },
             {
               "$type": "Document",
@@ -313,8 +306,7 @@
               "RelativeToolTip": "HAOSQL\\system_config_manager.cpp",
               "ViewState": "AQIAAHgAAAAAAAAAAAAAAIAAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-11T13:56:34.78Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-11T13:56:34.78Z"
             },
             {
               "$type": "Document",
@@ -326,8 +318,7 @@
               "RelativeToolTip": "HAOSQL\\login.cpp",
               "ViewState": "AQIAAIEAAAAAAAAAAAAAAAQAAAAdAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-13T02:09:20.583Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-13T02:09:20.583Z"
             },
             {
               "$type": "Document",
@@ -339,8 +330,7 @@
               "RelativeToolTip": "HAOSQL\\executor.cpp",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAA0AAABAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-12T00:10:28.826Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-12T00:10:28.826Z"
             },
             {
               "$type": "Document",
@@ -352,8 +342,7 @@
               "RelativeToolTip": "HAOSQL\\metadata_structures.cpp",
               "ViewState": "AQIAAEsAAAAAAAAAAAAAAHEAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-09-11T13:56:29.274Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-11T13:56:29.274Z"
             },
             {
               "$type": "Document",
