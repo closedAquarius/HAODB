@@ -19,6 +19,8 @@
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
+int generateDBFile();
+string handleSQL(const string& sql);
 
 // 工具函数：封装发送，自动加 >>END
 void sendWithEnd(SOCKET sock, const string& msg) {
@@ -70,56 +72,66 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
     // SQL 循环
     while (true) {
-        sendWithEnd(clientSock, "请输入 SQL 语句:");
-
-        memset(buffer, 0, sizeof(buffer));
-        int bytes = recv(clientSock, buffer, sizeof(buffer) - 1, 0);
-        if (bytes <= 0) {
-            break;
-        }
-
-        string sql = buffer;
-        if (sql == "exit" || sql == "quit") {
-            sendWithEnd(clientSock, "再见!");
-            break;
-        }
-
-int generateDBFile();
-
-int main()
-{
-
-    std::cout << "Hello World!\n";
-    string sql;
-    while (true)
-    {
         cout << "请输入 SQL 语句: ";
+        string sql;
         getline(cin, sql);
-        cout << sql << endl;
 
-        if (sql == "exit;") break;
-        if (sql == "gen;") {
-            generateDBFile();
-            continue;
+        string result = handleSQL(sql);
+
+        if (result == "EXIT") break;
+        if (!result.empty()) {
+            cout << result << endl;
         }
-        if (sql.empty()) {
-            continue;
+    }
+
+    closesocket(clientSock);
+}
+
+// 通用 SQL 处理函数
+string handleSQL(const string& sql) {
+    if (sql == "exit;" || sql == "exit" || sql == "quit") {
+        return "EXIT";
+    }
+    if (sql == "gen;" || sql == "gen") {
+        generateDBFile();
+        return "已生成数据库文件\n";
+    }
+    if (sql.empty()) {
+        return "";
+    }
+
+    vector<Quadruple> quadruple = sql_compiler(sql);
+
+    // 创建 DiskManager 和 BufferPoolManager
+    DiskManager dm("database.db");
+    BufferPoolManager bpm(10, &dm);
+
+    // 构建并执行计划
+    vector<string> columns;
+    Operator* root = buildPlan(quadruple, columns, &bpm);
+    vector<Row> result = root->execute();
+
+    string response;
+    if (!result.empty()) {
+        response += "执行结果:\n";
+        for (auto& row : result) {
+            for (auto& col : columns) {
+                response += row.at(col) + "\t|";
+            }
+            response += "\n";
         }
-
-        vector<Quadruple> quadruple = sql_compiler(sql);
-
-        string response = "SQL 已解析，共 " + to_string(quadruple.size()) + " 条四元式\n";
+    }
+    else {
+        response = "SQL 已解析，共 " + to_string(quadruple.size()) + " 条四元式\n";
         for (auto& q : quadruple) {
             response += "(" + q.op + ", " + q.arg1 + ", " + q.arg2 + ", " + q.result + ")\n";
         }
-        sendWithEnd(clientSock, response);
     }
 
-        // 创建 DiskManager
-        DiskManager dm("database.db");
-        // 创建 BufferPoolManager
-        // 缓冲池大小 10
-        BufferPoolManager bpm(10, &dm);
+    return response;
+}
+
+
 
 // 启动服务器
 int main() {
