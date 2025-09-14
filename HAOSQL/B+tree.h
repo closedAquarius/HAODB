@@ -68,6 +68,7 @@ private:
     int minKeysLeaf() const;
     int minKeysInternal() const;
     int findChildIndex(const BPlusTreeNode& parent, int childPid) const;
+    Page initialPage(PageType type, int pid);
 
 
     // === 删除相关（不使用 parentMap，通过递归传 parent 信息）===
