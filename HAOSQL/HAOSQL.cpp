@@ -11,7 +11,7 @@ using namespace std;
 vector<Quadruple> sql_compiler(string sql);
 int generateDBFile();
 
-int main()
+int notmain()
 {
 
     std::cout << "Hello World!\n";
@@ -62,6 +62,7 @@ int main()
         }
     }
 
+    return 0;
 }
 
 

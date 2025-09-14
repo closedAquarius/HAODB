@@ -141,6 +141,8 @@
     <ClCompile Include="index_manager.cpp" />
     <ClCompile Include="lexer.cpp" />
     <ClCompile Include="LockManager.cpp" />
+    <ClCompile Include="logger.cpp" />
+    <ClCompile Include="logger_integration.cpp" />
     <ClCompile Include="login.cpp" />
     <ClCompile Include="metadata_structures.cpp" />
     <ClCompile Include="page.cpp" />
@@ -150,6 +152,7 @@
     <ClCompile Include="test_catalog.cpp" />
     <ClCompile Include="test_catalog2.cpp" />
     <ClCompile Include="test_DDLexcutor.cpp" />
+    <ClCompile Include="test_log.cpp" />
     <ClCompile Include="test_storage.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -167,6 +170,8 @@
     <ClInclude Include="index_manager.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="LockManager.h" />
+    <ClInclude Include="logger.h" />
+    <ClInclude Include="logger_integration.h" />
     <ClInclude Include="login.h" />
     <ClInclude Include="metadata_structures.h" />
     <ClInclude Include="page.h" />
