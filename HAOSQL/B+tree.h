@@ -2,6 +2,7 @@
 #include "dataType.h"
 #include "page.h"
 #include "file_manager.h"
+#include "LockManager.h"
 
 using namespace std;
 
@@ -48,6 +49,7 @@ private:
     int file_id;
     int degree;
     int root_pid;  // 根节点 page id
+    std::mutex treeMutex;  // 树全局锁
 
     // 序列化/反序列化
     void serializeNode(const BPlusTreeNode& node, Page& page);

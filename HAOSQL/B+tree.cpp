@@ -236,6 +236,8 @@ int BPlusTree::findChildIndex(const BPlusTreeNode& parent, int childPid) const {
 // ================= 插入 =================
 // ================== 插入入口 ==================
 void BPlusTree::insert(int key, const RID& rid) {
+    std::lock_guard<std::mutex> lock(treeMutex);
+
     if (fm.getPageCount(file_id) == 0) {
         BPlusTreeNode root;
         root.isLeaf = true;
@@ -386,6 +388,8 @@ bool BPlusTree::insertRecursive(int nodePid, int key, const RID& rid, int& upKey
 
 // === 删除入口 ===
 void BPlusTree::remove(int key, const RID& rid) {
+    std::lock_guard<std::mutex> lock(treeMutex);
+
     if (root_pid == -1) return; // 空树
 
     deleteEntry(root_pid, -1, -1, key, rid);
@@ -693,6 +697,8 @@ void BPlusTree::printNode(const BPlusTreeNode& node, int level) {
 }
 
 int BPlusTree::createIndex(FileManager& fm, int fileId) {
+    std::lock_guard<std::mutex> lock(treeMutex);
+
     // 分配根节点页
     int rootPid = fm.allocatePage(fileId, INDEX_PAGE);
 
@@ -716,6 +722,8 @@ int BPlusTree::createIndex(FileManager& fm, int fileId) {
 
 // B+树索引销毁（释放所有占用页）
 void BPlusTree::destroyIndex(FileManager& fm, int root_pid, int file_id) {
+    std::lock_guard<std::mutex> lock(treeMutex);
+
     if (root_pid < 0) return;
 
     Page page(DATA_PAGE, root_pid);

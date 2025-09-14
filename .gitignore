@@ -2,6 +2,7 @@
 .vs/
 *.VC.db
 *.opendb
+*.VC.opendb
 *.vc.db*
 *.suo
 *.user
