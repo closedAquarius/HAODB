@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int test_log() {
+int main() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -115,11 +115,11 @@ int test_log() {
         enhanced_executor.DeleteRecord("products", "id = P002");
 
         // 演示撤销功能
-        enhanced_executor.UndoLastDelete();
-        std::cout << "✓ EnhancedExecutor 操作完成（包含撤销）" << std::endl;
+        enhanced_executor.UndoLastOperation();
+        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;
 
         // ========== 第二部分：日志查看和分析 ==========
-        std::cout << "\n📊 第二部分：日志查看和分析" << std::endl;
+        std::cout << "\n第二部分：日志查看和分析" << std::endl;
 
         LogViewer log_viewer("TestDB");
 
@@ -140,7 +140,7 @@ int test_log() {
         std::cout << "日志大小: " << stats.total_log_size_mb << " MB" << std::endl;
 
         // ========== 第三部分：性能监控演示 ==========
-        std::cout << "\n⚡ 第三部分：性能监控演示" << std::endl;
+        std::cout << "\n第三部分：性能监控演示" << std::endl;
 
         LogPerformanceMonitor perf_monitor;
 
@@ -159,7 +159,7 @@ int test_log() {
         perf_monitor.PrintAllStats();
 
         // ========== 第四部分：配置管理演示 ==========
-        std::cout << "\n⚙️ 第四部分：配置管理演示" << std::endl;
+        std::cout << "\n第四部分：配置管理演示" << std::endl;
 
         // 显示当前配置
         enhanced_executor.ShowLoggerStatus();
@@ -169,7 +169,7 @@ int test_log() {
         // LogConfigManager::UpdateSyncMode("DemoDB", 2); // 全同步模式
 
         // ========== 第五部分：高级功能演示 ==========
-        std::cout << "\n🚀 第五部分：高级功能演示" << std::endl;
+        std::cout << "\n第五部分：高级功能演示" << std::endl;
 
         // 使用组合模式的带日志算子
         Table test_table;
@@ -183,16 +183,16 @@ int test_log() {
         logged_insert->execute();
         CURRENT_LOGGER->CommitTransaction(txn_id);
 
-        std::cout << "✓ 组合模式算子执行完成，表中记录数: " << test_table.size() << std::endl;
+        std::cout << "组合模式算子执行完成，表中记录数: " << test_table.size() << std::endl;
 
         // 导出日志
         bool export_result = log_viewer.ExportLogs("demo_logs_export.txt");
         if (export_result) {
-            std::cout << "✓ 日志导出完成: demo_logs_export.txt" << std::endl;
+            std::cout << "日志导出完成: demo_logs_export.txt" << std::endl;
         }
 
         // ========== 第六部分：运行完整测试套件 ==========
-        std::cout << "\n🧪 第六部分：运行完整测试套件" << std::endl;
+        std::cout << "\n第六部分：运行完整测试套件" << std::endl;
 
         // LoggerTestSuite test_suite("TestDB");
         // test_suite.RunAllTests();
@@ -215,11 +215,11 @@ int test_log() {
 
     }
     catch (const std::exception& e) {
-        std::cerr << "\n❌ 演示过程中发生错误: " << e.what() << std::endl;
+        std::cerr << "\n演示过程中发生错误: " << e.what() << std::endl;
         return 1;
     }
     catch (...) {
-        std::cerr << "\n❌ 发生未知错误" << std::endl;
+        std::cerr << "\n发生未知错误" << std::endl;
         return 2;
     }
 }
@@ -293,7 +293,7 @@ void RunIndependentTests() {
             t.join();
         }
 
-        std::cout << "✓ 并发测试完成，成功线程数: " << success_count.load() << "/3" << std::endl;
+        std::cout << "并发测试完成，成功线程数: " << success_count.load() << "/3" << std::endl;
 
     }
     catch (const std::exception& e) {

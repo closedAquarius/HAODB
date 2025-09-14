@@ -197,7 +197,7 @@ void SimpleLogger::CommitTransaction() {
     if (current_transaction_id == 0) {
         throw std::runtime_error("No active transaction");
     }
-    logger->CommitTransaction(current_transaction_id);
+    // logger->CommitTransaction(current_transaction_id);
     current_transaction_id = 0;
 }
 
@@ -219,7 +219,7 @@ void SimpleLogger::LogSQL(const std::string& sql, const std::vector<OperationLog
 
     if (current_transaction_id == 0) {
         if (success) {
-            logger->CommitTransaction(txn_id);
+            // logger->CommitTransaction(txn_id);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -295,7 +295,8 @@ void SimpleLogger::LogInfo(const std::string& info_msg) {
 
 bool SimpleLogger::UndoLastOperation() {
     RecoveryManager* recovery = logger->GetRecoveryManager();
-    return recovery->UndoDelete(1);
+    // return recovery->UndoDelete(1);
+    return true;
 }
 
 bool SimpleLogger::RecoverFromCrash() {
@@ -966,7 +967,7 @@ bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<Oper
         bool success = true;
 
         if (success) {
-            logger->CommitTransaction(txn_id);
+            // logger->CommitTransaction(txn_id);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -994,7 +995,7 @@ bool EnhancedExecutor::InsertRecord(const std::string& table_name, const std::ma
         bool success = true;
 
         if (success) {
-            logger->CommitTransaction(txn_id);
+            // logger->CommitTransaction(txn_id, (int)WALLogRecord::INSERT_OP);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -1008,6 +1009,7 @@ bool EnhancedExecutor::InsertRecord(const std::string& table_name, const std::ma
     }
 }
 
+// const std::string& table_name, const std::string& condition
 bool EnhancedExecutor::DeleteRecord(const std::string& table_name, const std::string& condition) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
@@ -1022,7 +1024,12 @@ bool EnhancedExecutor::DeleteRecord(const std::string& table_name, const std::st
         bool success = true;
 
         if (success) {
-            logger->CommitTransaction(txn_id);
+            WALLogRecord record;
+            record.transaction_id = txn_id;
+            record.record_type = (int)WALLogRecord::DELETE_OP;
+            record.withdraw = 0;
+
+            logger->CommitTransaction(txn_id, record);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -1050,7 +1057,7 @@ bool EnhancedExecutor::UpdateRecord(const std::string& table_name, const std::st
         bool success = true;
 
         if (success) {
-            logger->CommitTransaction(txn_id);
+            // logger->CommitTransaction(txn_id, (int)WALLogRecord::UPDATE_OP);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -1067,7 +1074,8 @@ bool EnhancedExecutor::UpdateRecord(const std::string& table_name, const std::st
 bool EnhancedExecutor::UndoLastDelete() {
     RecoveryManager* recovery = logger->GetRecoveryManager();
     uint64_t last_log_id = GetLastLogId();
-    return recovery->UndoDelete(last_log_id);
+    // return recovery->UndoDelete(last_log_id);
+    return true;
 }
 
 bool EnhancedExecutor::UndoLastUpdate() {
@@ -1080,6 +1088,35 @@ bool EnhancedExecutor::UndoLastInsert() {
     RecoveryManager* recovery = logger->GetRecoveryManager();
     uint64_t last_log_id = GetLastLogId();
     return recovery->UndoInsert(last_log_id);
+}
+
+bool EnhancedExecutor::UndoLastOperation(){
+    // 获取最近一条操作
+    RecoveryManager* recovery = logger->GetRecoveryManager();
+    auto record = recovery->FindLatestWALRecord();
+
+    cout << record.transaction_id << endl;
+    cout << record.timestamp << endl;
+    cout << record.record_type << endl;
+
+    // 根据类型确定撤销操作
+    switch (record.record_type)
+    {
+    case (int)WALLogRecord::INSERT_OP:
+        recovery->UndoInsert(record.transaction_id);
+        break;
+    case (int)WALLogRecord::DELETE_OP:
+        recovery->UndoDelete(record);
+        break;
+    case (int)WALLogRecord::UPDATE_OP:
+        recovery->UndoUpdate(record.transaction_id);
+        break;
+    default:
+        cout << "无法识别的操作" << endl;
+        return false;
+    }
+
+    return true;
 }
 
 bool EnhancedExecutor::PerformCrashRecovery() {

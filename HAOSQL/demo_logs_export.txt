@@ -1,11 +1,11 @@
 === HAODB Log Export ===
 Database: TestDB
-Export time: 20250913_205214
+Export time: 20250914_212404
 
 === Operation Logs ===
-[1757767933938] [2] [TXN:1] [User:] [Session:] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: FAILED | Rows: 0 | Time: 0ms
-[1757767933938] [2] [TXN:2] [User:] [Session:] SQL: INSERT INTO students VALUES (22, 1001, 张三) | Quads: (INSERT,students,values,T1) | Result: FAILED | Rows: 0 | Time: 0ms
-[1757767933939] [2] [TXN:3] [User:] [Session:] SQL: UPDATE students SET age = 23 WHERE id = 1001 | Quads: (UPDATE,students,id = 1001,T1) | Result: FAILED | Rows: 0 | Time: 0ms
-[1757767933939] [2] [TXN:4] [User:] [Session:] SQL: DELETE FROM students WHERE id = 1002 | Quads: (DELETE,students,id = 1002,T1) | Result: FAILED | Rows: 0 | Time: 0ms
+[1757856244537] [2] [TXN:1] [User:] [Session:] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: FAILED | Rows: 0 | Time: 0ms
+[1757856244538] [2] [TXN:2] [User:] [Session:] SQL: INSERT INTO students VALUES (22, 1001, 张三) | Quads: (INSERT,students,values,T1) | Result: FAILED | Rows: 0 | Time: 0ms
+[1757856244538] [2] [TXN:3] [User:] [Session:] SQL: UPDATE students SET age = 23 WHERE id = 1001 | Quads: (UPDATE,students,id = 1001,T1) | Result: FAILED | Rows: 0 | Time: 0ms
+[1757856244538] [2] [TXN:4] [User:] [Session:] SQL: DELETE FROM students WHERE id = 1002 | Quads: (DELETE,students,id = 1002,T1) | Result: FAILED | Rows: 0 | Time: 0ms
 
 === Error Logs ===

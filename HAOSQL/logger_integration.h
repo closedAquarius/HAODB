@@ -257,9 +257,6 @@ public:
     void PrintRecentErrors(int max_lines = 10);
     void PrintAllLogs(int max_lines = 50);
     void PrintLogsByType(const std::string& log_type, int max_lines = 20);
-    void PrintFormattedLog(const std::string& log_line, int line_number);
-    void PrintLogHeader(const std::string& title, int max_lines);
-    void PrintLogFooter(int actual_lines);
 };
 
 // ========== 增强的执行引擎 ==========
@@ -288,6 +285,7 @@ public:
     bool UndoLastUpdate();
     bool UndoLastInsert();
     bool PerformCrashRecovery();
+    bool UndoLastOperation();
 
     // 日志状态查看
     void ShowLoggerStatus();

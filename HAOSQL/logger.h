@@ -22,9 +22,10 @@ struct WALLogRecord {
     uint64_t lsn;                    // 日志序列号
     uint32_t transaction_id;         // 事务ID
     uint64_t timestamp;              // 时间戳
-    uint8_t record_type;             // 记录类型
+    int record_type;             // 记录类型
     uint32_t record_size;            // 记录总大小
     uint32_t checksum;               // 校验和
+    int withdraw = 0;
 
     // 四元式信息
     struct QuadrupleInfo {
@@ -128,8 +129,15 @@ public:
     void Clear();
 
 private:
-    std::vector<char> SerializeRecord(const WALLogRecord& record);
+    inline bool read_exact(std::istream& in, void* buf, std::size_t n);
+    template<typename T> inline bool read_pod(std::istream& in, T& v);
+    bool read_len_prefixed_string(std::istream& in, std::string& s, std::vector<char>& payload);
+    bool read_bytes_exact(std::istream& in, std::vector<char>& out, uint32_t n, std::vector<char>& payload);
     uint32_t CalculateChecksum(const std::vector<char>& data);
+
+public:
+    std::vector<char> SerializeRecord(const WALLogRecord& record);
+    bool DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec);
 };
 
 // ========== 日志文件管理器 ==========
@@ -195,13 +203,16 @@ public:
     bool PerformCrashRecovery();
 
     // 操作恢复
-    bool UndoDelete(uint64_t log_id);
+    bool UndoDelete(WALLogRecord record);
     bool UndoUpdate(uint64_t log_id);
     bool UndoInsert(uint64_t log_id);
 
     // 事务恢复
     bool UndoTransaction(uint32_t transaction_id);
     bool RedoTransaction(uint32_t transaction_id);
+
+    // 获取最新WAL操作
+    WALLogRecord FindLatestWALRecord();
 
 private:
     std::vector<WALLogRecord> ReadWALLog();
@@ -250,7 +261,8 @@ public:
 
     // 事务管理
     uint32_t BeginTransaction();
-    void CommitTransaction(uint32_t txn_id);
+    // void CommitTransaction(uint32_t txn_id, int type = WALLogRecord::TXN_COMMIT);
+    void CommitTransaction(uint32_t txn_id, WALLogRecord& record);
     void AbortTransaction(uint32_t txn_id);
 
     // 主要日志接口
@@ -293,7 +305,7 @@ private:
     uint64_t GenerateLogId();
     uint64_t GetCurrentTimestamp();
 
-    // 序列化/反序列化
+    // 序列化
     std::string SerializeOperationLog(const OperationLogRecord& record);
 };
 
