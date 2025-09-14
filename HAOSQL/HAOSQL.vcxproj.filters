@@ -105,6 +105,15 @@
     <ClCompile Include="LockManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="logger.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="logger_integration.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="test_log.cpp">
+      <Filter>源文件\tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
@@ -159,6 +168,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="LockManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="logger_integration.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,4 +1,4 @@
-/*#include "executor.h"
+#include "executor.h"
 #include <iostream>
 
 using namespace std;
@@ -111,4 +111,4 @@ int testDDL() {
     cout << endl << "=== All DDL operations completed ===" << endl;
 
     return 0;
-}*/
+}

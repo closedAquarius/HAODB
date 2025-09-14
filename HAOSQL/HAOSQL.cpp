@@ -14,7 +14,7 @@ void initIndexManager();
 
 IndexManager* indexManager = nullptr;
 
-int main()
+int notmain()
 {
 
     std::cout << "Hello World!\n";
@@ -37,6 +37,10 @@ int main()
 
         vector<Quadruple> quadruple = sql_compiler(sql);
 
+        // 加载元数据
+        CatalogManager catalog("HAODB");
+        catalog.Initialize();
+        setDBName("Students");
 
         // 创建 DiskManager
         DiskManager dm("database.db");
@@ -46,7 +50,7 @@ int main()
 
         // 构建并执行计划
         vector<string> columns;
-        Operator* root = buildPlan(quadruple, columns, &bpm);
+        Operator* root = buildPlan(quadruple, columns, &bpm, &catalog);
         vector<Row> result = root->execute();
 
         if (!result.empty()) {
@@ -62,6 +66,7 @@ int main()
         }
     }
 
+    return 0;
 }
 
 void initIndexManager() {
