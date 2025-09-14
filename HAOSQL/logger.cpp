@@ -9,9 +9,9 @@
 namespace fs = std::filesystem;
 
 // ========== 结构体构造函数实现 ==========
-WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
+// WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
 
-WALLogRecord::DataChange::DataChange() : page_id(0), slot_id(0), before_length(0), after_length(0) {}
+WALLogRecord::DataChange::DataChange() : before_page_id(0), before_slot_id(0), after_page_id(0), after_slot_id(0), before_length(0), after_length(0) {}
 
 WALLogRecord::WALLogRecord() : lsn(0), transaction_id(0), timestamp(0), record_type(0), record_size(0), checksum(0) {}
 
@@ -137,13 +137,13 @@ bool WALBuffer::DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec) {
     if (!read_pod(in, rec.record_size))    return false; append_pod_to_payload(rec.record_size);
 
     // 四元式信息
-    if (!read_pod(in, rec.quad_info.op_code)) return false; append_pod_to_payload(rec.quad_info.op_code);
+    /*if (!read_pod(in, rec.quad_info.op_code)) return false; append_pod_to_payload(rec.quad_info.op_code);
 
     if (!read_len_prefixed_string(in, rec.quad_info.table_name, payload))   return false;
     if (!read_len_prefixed_string(in, rec.quad_info.condition, payload))  return false;
     if (!read_len_prefixed_string(in, rec.quad_info.original_sql, payload)) return false;
 
-    if (!read_pod(in, rec.quad_info.affected_rows)) return false; append_pod_to_payload(rec.quad_info.affected_rows);
+    if (!read_pod(in, rec.quad_info.affected_rows)) return false; append_pod_to_payload(rec.quad_info.affected_rows);*/
 
     // changes数组（先个数，再每条的字段 + 两段 image 原始字节）
     uint32_t changes_count = 0;
@@ -157,13 +157,12 @@ bool WALBuffer::DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec) {
     for (uint32_t i = 0; i < changes_count; ++i) {
         WALLogRecord::DataChange c{};
 
-        if (!read_pod(in, c.page_id))       return false; append_pod_to_payload(c.page_id);
-        if (!read_pod(in, c.slot_id))       return false; append_pod_to_payload(c.slot_id);
+        if (!read_pod(in, c.before_page_id))       return false; append_pod_to_payload(c.before_page_id);
+        if (!read_pod(in, c.before_slot_id))       return false; append_pod_to_payload(c.before_slot_id);
+        if (!read_pod(in, c.after_page_id))       return false; append_pod_to_payload(c.after_page_id);
+        if (!read_pod(in, c.after_slot_id))       return false; append_pod_to_payload(c.after_slot_id);
         if (!read_pod(in, c.before_length)) return false; append_pod_to_payload(c.before_length);
         if (!read_pod(in, c.after_length))  return false; append_pod_to_payload(c.after_length);
-
-        if (!read_bytes_exact(in, c.before_image, c.before_length, payload)) return false;
-        if (!read_bytes_exact(in, c.after_image, c.after_length, payload)) return false;
 
         rec.changes.emplace_back(std::move(c));
     }
@@ -211,11 +210,11 @@ std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
     }
 
     // 四元式信息
-    append_pod(record.quad_info.op_code);
+    /*append_pod(record.quad_info.op_code);
     append_str_with_len(record.quad_info.table_name);
     append_str_with_len(record.quad_info.condition);
     append_str_with_len(record.quad_info.original_sql);
-    append_pod(record.quad_info.affected_rows);
+    append_pod(record.quad_info.affected_rows);*/
 
     // 数据变更信息
     {
@@ -223,14 +222,12 @@ std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
         append_pod(changes_count);
 
         for (const auto& change : record.changes) {
-            append_pod(change.page_id);
-            append_pod(change.slot_id);
+            append_pod(change.before_page_id);
+            append_pod(change.before_slot_id);
+            append_pod(change.after_page_id);
+            append_pod(change.after_slot_id);
             append_pod(change.before_length);
             append_pod(change.after_length);
-
-            // 直接写image的原始字节，不再重复写长度
-            data.insert(data.end(), change.before_image.begin(), change.before_image.end());
-            data.insert(data.end(), change.after_image.begin(), change.after_image.end());
         }
     }
 
@@ -473,15 +470,14 @@ bool RecoveryManager::PerformCrashRecovery() {
                 if (record.record_type == WALLogRecord::INSERT_OP ||
                     record.record_type == WALLogRecord::UPDATE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.after_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::DELETE_OP) {
                     for (const auto& change : record.changes) {
-                        DeleteRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id);
+                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
             }
@@ -493,22 +489,20 @@ bool RecoveryManager::PerformCrashRecovery() {
             if (status_it != transaction_status.end() && !status_it->second) {
                 if (record.record_type == WALLogRecord::INSERT_OP) {
                     for (const auto& change : record.changes) {
-                        DeleteRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id);
+                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::DELETE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.before_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::UPDATE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.before_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
             }
@@ -546,21 +540,22 @@ bool RecoveryManager::UndoDelete(WALLogRecord record) {
 
     cout << "撤销删除" << endl;
     cout << "删除前内容" << endl;
-    for (auto& change : record.changes)
+    cout << record.changes[0].before_page_id << record.changes[0].before_slot_id << record.changes[0].before_length << endl;
+    /*for (auto& change : record.changes)
     {
         for (auto& before : change.before_image)
         {
             cout << before;
         }
         cout << endl;
-    }
+    }*/
     return true;
 }
 
 bool RecoveryManager::UndoUpdate(uint64_t log_id) {
     auto records = FindWALRecordsByLogId(log_id);
 
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
+    /*for (auto it = records.rbegin(); it != records.rend(); ++it) {
         const auto& record = *it;
         if (record.record_type == WALLogRecord::UPDATE_OP) {
             for (const auto& change : record.changes) {
@@ -572,7 +567,7 @@ bool RecoveryManager::UndoUpdate(uint64_t log_id) {
             }
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -580,7 +575,7 @@ bool RecoveryManager::UndoUpdate(uint64_t log_id) {
 bool RecoveryManager::UndoInsert(uint64_t log_id) {
     auto records = FindWALRecordsByLogId(log_id);
 
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
+    /*for (auto it = records.rbegin(); it != records.rend(); ++it) {
         const auto& record = *it;
         if (record.record_type == WALLogRecord::INSERT_OP) {
             for (const auto& change : record.changes) {
@@ -589,7 +584,7 @@ bool RecoveryManager::UndoInsert(uint64_t log_id) {
             }
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -706,16 +701,15 @@ WALLogRecord RecoveryManager::DeserializeWALRecord(const std::vector<char>& data
     return record;
 }
 
-bool RecoveryManager::RestoreRecord(const std::string& table_name, uint32_t page_id,
-    uint32_t slot_id, const std::vector<char>& data) {
-    std::cout << "Restoring record in table " << table_name
-        << " at page " << page_id << " slot " << slot_id << std::endl;
+bool RecoveryManager::RestoreRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+    std::cout << "Restoring record in table at page " << before_page_id << " slot " << before_slot_id << std::endl;
     return true;
 }
 
-bool RecoveryManager::DeleteRecord(const std::string& table_name, uint32_t page_id, uint32_t slot_id) {
-    std::cout << "Deleting record in table " << table_name
-        << " at page " << page_id << " slot " << slot_id << std::endl;
+bool RecoveryManager::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+    std::cout << "Deleting record in table at page " << before_page_id << " slot " << before_slot_id << std::endl;
     return true;
 }
 
@@ -824,8 +818,6 @@ void DatabaseLogger::CommitTransaction(uint32_t txn_id, WALLogRecord& record) {
         // record.record_type = record.record_type;
         // record.withdraw = 0;
 
-
-
         WriteWALLog(record);
         FlushWALBuffer();
     }
@@ -871,11 +863,12 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
 void DatabaseLogger::LogDataChange(
     uint32_t transaction_id,
     uint8_t operation_type,
-    const std::string& table_name,
-    uint32_t page_id,
-    uint32_t slot_id,
-    const std::vector<char>& before_data,
-    const std::vector<char>& after_data) {
+    uint32_t before_page_id,
+    uint32_t before_slot_id,
+    uint32_t after_page_id,
+    uint32_t after_slot_id,
+    uint32_t before_length,
+    uint32_t after_length) {
 
     if (!config.enable_wal) return;
 
@@ -885,17 +878,13 @@ void DatabaseLogger::LogDataChange(
     record.timestamp = GetCurrentTimestamp();
     record.record_type = operation_type;
 
-    record.quad_info.op_code = operation_type;
-    record.quad_info.table_name = table_name;
-    record.quad_info.affected_rows = 1;
-
     WALLogRecord::DataChange change;
-    change.page_id = page_id;
-    change.slot_id = slot_id;
-    change.before_length = before_data.size();
-    change.after_length = after_data.size();
-    change.before_image = before_data;
-    change.after_image = after_data;
+    change.before_page_id = before_page_id;
+    change.before_slot_id = before_slot_id;
+    change.after_page_id = after_page_id;
+    change.after_slot_id = after_slot_id;
+    change.before_length = before_length;
+    change.after_length = after_length;
 
     record.changes.push_back(change);
 

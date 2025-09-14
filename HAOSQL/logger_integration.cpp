@@ -315,8 +315,7 @@ std::vector<Row> LoggedInsertComposition::execute() {
         if (logger) {
             std::vector<char> serialized_row = SerializeRow(row_data);
             std::vector<char> empty_before;
-            logger->LogDataChange(transaction_id, WALLogRecord::INSERT_OP,
-                table_name, 0, 0, empty_before, serialized_row);
+            // logger->LogDataChange(transaction_id, WALLogRecord::INSERT_OP, 0, 0, empty_before, serialized_row);
         }
 
         table->push_back(row_data);
@@ -360,8 +359,7 @@ std::vector<Row> LoggedDeleteComposition::execute() {
                 if (logger) {
                     std::vector<char> serialized_row = SerializeRow(row_copy);
                     std::vector<char> empty_after;
-                    logger->LogDataChange(transaction_id, WALLogRecord::DELETE_OP,
-                        table_name, 0, 0, serialized_row, empty_after);
+                    // logger->LogDataChange(transaction_id, WALLogRecord::DELETE_OP, table_name, 0, 0, serialized_row, empty_after);
                 }
 
                 it = table->erase(it);
@@ -413,8 +411,7 @@ std::vector<Row> LoggedUpdateComposition::execute() {
                     std::vector<char> before_data = SerializeRow(before);
                     std::vector<char> after_data = SerializeRow(after);
 
-                    logger->LogDataChange(transaction_id, WALLogRecord::UPDATE_OP,
-                        table_name, 0, 0, before_data, after_data);
+                    // logger->LogDataChange(transaction_id, WALLogRecord::UPDATE_OP, table_name, 0, 0, before_data, after_data);
                 }
             }
         }
@@ -981,15 +978,13 @@ bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<Oper
     }
 }
 
-bool EnhancedExecutor::InsertRecord(const std::string& table_name, const std::map<std::string, std::string>& row_data) {
+bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        std::vector<char> serialized_data = SerializeRowData(row_data);
-        std::vector<char> empty_before;
-
-        logger->LogDataChange(txn_id, WALLogRecord::INSERT_OP, table_name,
-            0, 0, empty_before, serialized_data);
+        logger->LogDataChange(txn_id, WALLogRecord::INSERT_OP, before_page_id,
+            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
 
         // 这里应该实际执行插入操作
         bool success = true;
@@ -1010,16 +1005,13 @@ bool EnhancedExecutor::InsertRecord(const std::string& table_name, const std::ma
 }
 
 // const std::string& table_name, const std::string& condition
-bool EnhancedExecutor::DeleteRecord(const std::string& table_name, const std::string& condition) {
+bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        // 简化：假设我们知道要删除的数据
-        std::vector<char> old_data = { 'd', 'u', 'm', 'm', 'y' };
-        std::vector<char> empty_after;
-
-        logger->LogDataChange(txn_id, WALLogRecord::DELETE_OP, table_name,
-            0, 0, old_data, empty_after);
+        logger->LogDataChange(txn_id, WALLogRecord::DELETE_OP, before_page_id,
+            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
 
         bool success = true;
 
@@ -1028,6 +1020,14 @@ bool EnhancedExecutor::DeleteRecord(const std::string& table_name, const std::st
             record.transaction_id = txn_id;
             record.record_type = (int)WALLogRecord::DELETE_OP;
             record.withdraw = 0;
+            WALLogRecord::DataChange datachange;
+            datachange.before_length = before_length;
+            datachange.before_page_id = before_page_id;
+            datachange.before_slot_id = before_slot_id;
+            datachange.after_length = after_length;
+            datachange.after_page_id = after_page_id;
+            datachange.after_slot_id = after_slot_id;
+            record.changes.push_back(datachange);
 
             logger->CommitTransaction(txn_id, record);
         }
@@ -1043,16 +1043,13 @@ bool EnhancedExecutor::DeleteRecord(const std::string& table_name, const std::st
     }
 }
 
-bool EnhancedExecutor::UpdateRecord(const std::string& table_name, const std::string& condition,
-    const std::map<std::string, std::string>& new_data) {
+bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        std::vector<char> old_data = { 'o', 'l', 'd' };
-        std::vector<char> new_serialized_data = SerializeRowData(new_data);
-
-        logger->LogDataChange(txn_id, WALLogRecord::UPDATE_OP, table_name,
-            0, 0, old_data, new_serialized_data);
+        logger->LogDataChange(txn_id, WALLogRecord::UPDATE_OP, before_page_id,
+            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
 
         bool success = true;
 

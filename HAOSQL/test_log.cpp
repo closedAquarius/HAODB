@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int main() {
+int notmain() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -104,6 +104,7 @@ int main() {
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
+        /*
         enhanced_executor.InsertRecord("products", {
             {"id", "P001"}, {"name", "笔记本电脑"}, {"price", "5999"}
             });
@@ -112,7 +113,8 @@ int main() {
             });
 
         enhanced_executor.UpdateRecord("products", "id = P001", { {"price", "5799"} });
-        enhanced_executor.DeleteRecord("products", "id = P002");
+        */
+        enhanced_executor.DeleteRecord(1,2,3,4,5,6);
 
         // 演示撤销功能
         enhanced_executor.UndoLastOperation();
@@ -146,6 +148,7 @@ int main() {
 
         // 模拟批量操作性能测试
         perf_monitor.StartOperation("BATCH_INSERT");
+        /*
         for (int i = 0; i < 100; ++i) {
             enhanced_executor.InsertRecord("performance_test", {
                 {"id", std::to_string(i)},
@@ -153,6 +156,7 @@ int main() {
                 {"timestamp", std::to_string(time(nullptr))}
                 });
         }
+        */
         perf_monitor.EndOperation("BATCH_INSERT");
 
         // 显示性能统计
@@ -181,7 +185,7 @@ int main() {
             &test_table, test_row, "test_table", CURRENT_LOGGER, txn_id);
 
         logged_insert->execute();
-        CURRENT_LOGGER->CommitTransaction(txn_id);
+        // CURRENT_LOGGER->CommitTransaction(txn_id);
 
         std::cout << "组合模式算子执行完成，表中记录数: " << test_table.size() << std::endl;
 

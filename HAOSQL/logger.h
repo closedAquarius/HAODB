@@ -28,24 +28,26 @@ struct WALLogRecord {
     int withdraw = 0;
 
     // 四元式信息
-    struct QuadrupleInfo {
-        uint8_t op_code;             // 操作码
-        std::string table_name;      // 表名
-        std::string condition;       // 条件表达式
-        uint32_t affected_rows;      // 影响行数
-        std::string original_sql;    // 原始SQL
+    //struct QuadrupleInfo {
+    //    uint8_t op_code;             // 操作码
+    //    std::string table_name;      // 表名
+    //    std::string condition;       // 条件表达式
+    //    uint32_t affected_rows;      // 影响行数
+    //    std::string original_sql;    // 原始SQL
 
-        QuadrupleInfo();
-    } quad_info;
+    //    QuadrupleInfo();
+    //} quad_info;
 
     // 数据变更信息
     struct DataChange {
-        uint32_t page_id;            // 页面ID
-        uint32_t slot_id;            // 槽位ID
+        uint32_t before_page_id;            // 页面ID
+        uint32_t before_slot_id;            // 槽位ID
+        uint32_t after_page_id;            // 页面ID
+        uint32_t after_slot_id;            // 槽位ID
         uint32_t before_length;      // 修改前数据长度
         uint32_t after_length;       // 修改后数据长度
-        std::vector<char> before_image; // 修改前的完整记录
-        std::vector<char> after_image;  // 修改后的完整记录
+        // std::vector<char> before_image; // 修改前的完整记录
+        // std::vector<char> after_image;  // 修改后的完整记录
 
         DataChange();
     };
@@ -221,9 +223,10 @@ private:
     WALLogRecord DeserializeWALRecord(const std::vector<char>& data);
 
     // 物理恢复操作
-    bool RestoreRecord(const std::string& table_name, uint32_t page_id,
-        uint32_t slot_id, const std::vector<char>& data);
-    bool DeleteRecord(const std::string& table_name, uint32_t page_id, uint32_t slot_id);
+    bool RestoreRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+        uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length);
+    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+        uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length);
 };
 
 // ========== 数据库日志管理器（主类）==========
@@ -276,11 +279,12 @@ public:
     void LogDataChange(
         uint32_t transaction_id,
         uint8_t operation_type,
-        const std::string& table_name,
-        uint32_t page_id,
-        uint32_t slot_id,
-        const std::vector<char>& before_data,
-        const std::vector<char>& after_data);
+        uint32_t before_page_id,
+        uint32_t before_slot_id,
+        uint32_t after_page_id,
+        uint32_t after_slot_id,
+        uint32_t before_length,
+        uint32_t after_length);
 
     void LogError(const std::string& error_message,
         const std::string& context = "");

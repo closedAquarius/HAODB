@@ -275,10 +275,12 @@ public:
     bool ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads);
 
     // 数据变更操作（带WAL日志）
-    bool InsertRecord(const std::string& table_name, const std::map<std::string, std::string>& row_data);
-    bool DeleteRecord(const std::string& table_name, const std::string& condition);
-    bool UpdateRecord(const std::string& table_name, const std::string& condition,
-        const std::map<std::string, std::string>& new_data);
+    bool InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
+    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
+    bool UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
 
     // 恢复操作
     bool UndoLastDelete();
