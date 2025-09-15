@@ -7,34 +7,44 @@
 
 using namespace std;
 
+// 工具函数：完整发送
+bool sendAll(SOCKET sock, const string& msg) {
+    const char* data = msg.c_str();
+    int totalSent = 0;
+    int len = static_cast<int>(msg.size());
+
+    while (totalSent < len) {
+        int sent = send(sock, data + totalSent, len - totalSent, 0);
+        if (sent == SOCKET_ERROR) return false;
+        totalSent += sent;
+    }
+    return true;
+}
+
 // 工具函数：接收直到 >>END\n
 string recvUntilEnd(SOCKET sock) {
-    string result;
-    char buffer[4096];
-    while (true) {
-        memset(buffer, 0, sizeof(buffer));
-        int bytesReceived = recv(sock, buffer, sizeof(buffer) - 1, 0);
-        if (bytesReceived <= 0) {
-            throw runtime_error("服务器断开连接");
-        }
-        result.append(buffer, bytesReceived);
+    static string buffer; // 缓存，防止丢包
+    char temp[4096];
 
-        // 检查结束符
-        if (result.size() >= 6 &&
-            result.find(">>END\n") != string::npos) {
-            // 去掉结束标记
-            result.erase(result.find(">>END\n"));
-            break;
+    while (true) {
+        size_t pos = buffer.find(">>END\n");
+        if (pos != string::npos) {
+            string result = buffer.substr(0, pos);
+            buffer.erase(0, pos + 6); // 移除已处理部分
+            return result;
         }
+
+        memset(temp, 0, sizeof(temp));
+        int bytes = recv(sock, temp, sizeof(temp) - 1, 0);
+        if (bytes <= 0) throw runtime_error("服务器断开连接");
+        buffer.append(temp, bytes);
     }
-    return result;
 }
 
 int main() {
     WSADATA wsaData;
-    int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        cerr << "WSAStartup failed: " << iResult << endl;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        cerr << "WSAStartup failed" << endl;
         return 1;
     }
 
@@ -60,28 +70,56 @@ int main() {
     cout << "已连接到服务器 (127.0.0.1:8080)" << endl;
 
     try {
+        // ===== 登录流程 =====
         while (true) {
-            // === 1. 接收服务器消息 ===
-            string serverMsg = recvUntilEnd(sock);
-            cout << serverMsg;
+            // 接收账号提示
+            string msg = recvUntilEnd(sock);
+            cout << msg << endl;
+            string account;
+            getline(cin, account);
+            sendAll(sock, account);
 
-            // === 2. 用户输入 ===
-            string input;
-            getline(cin, input);
+            // 接收密码提示
+            msg = recvUntilEnd(sock);
+            cout << msg << endl;
+            string password;
+            getline(cin, password);
+            sendAll(sock, password);
 
-            send(sock, input.c_str(), static_cast<int>(input.size()), 0);
-
-            if (input == "exit" || input == "quit") {
-                cout << "退出客户端" << endl;
-                break;
+            // 接收登录结果
+            msg = recvUntilEnd(sock);
+            cout << msg << endl;
+            if (msg.find("欢迎") != string::npos) {
+                break; // 登录成功
             }
+            cout << "请重新输入登录信息" << endl;
         }
+
+        // ===== SQL 循环 =====
+        while (true) {
+            // 接收服务器提示
+            string prompt = recvUntilEnd(sock);
+            cout << prompt << endl;
+
+            // 用户输入 SQL
+            string sql;
+            getline(cin, sql);
+            sendAll(sock, sql);
+
+            if (sql == "exit;") break; // 和服务端保持一致
+
+            // 接收执行结果
+            string result = recvUntilEnd(sock);
+            cout << result << endl;
+        }
+
     }
     catch (const exception& e) {
-        cerr << e.what() << endl;
+        cerr << "错误: " << e.what() << endl;
     }
 
     closesocket(sock);
     WSACleanup();
     return 0;
 }
+
