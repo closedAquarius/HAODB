@@ -592,7 +592,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			// ¼ÆËã±íµÄÒ³id
 			int pageId = catalog->GetDatabaseInfo(DBName).table_count;
 
-			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs, pageId);
+			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs, pageId, bpm->getDM());
 			symbolTables[q.result] = create_op;
 			root = create_op;
 		}

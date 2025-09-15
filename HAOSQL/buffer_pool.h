@@ -31,6 +31,7 @@ public:
     void unpinPage(PageId id, bool is_dirty);
     void flushPage(PageId id);
     Page* newPage(PageId id);
+    DiskManager* getDM() { return disk; }
 
     void test();
 };

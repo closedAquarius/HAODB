@@ -226,6 +226,7 @@ public:
 // 创建表算子
 class CreateTable : public Operator {
 private:
+	DiskManager* dm;
 	CatalogManager* catalog_;
 	string table_name_;
 	vector<vector<string>> column_specs_;
@@ -236,8 +237,8 @@ private:
 
 public:
 	CreateTable(CatalogManager* catalog, const string& table_name,
-		const vector<vector<string>>& column_specs, int page_id = 0)
-		: catalog_(catalog), table_name_(table_name), column_specs_(column_specs), page_id_(page_id) {
+		const vector<vector<string>>& column_specs, int page_id = 0, DiskManager* d = nullptr)
+		: catalog_(catalog), table_name_(table_name), column_specs_(column_specs), page_id_(page_id), dm(d) {
 	}
 
 	void setPrimaryKeys(const vector<string>& keys) { primary_keys_ = keys; }
@@ -251,6 +252,10 @@ public:
 			if (!success) {
 				throw runtime_error("Failed to create table: " + table_name_);
 			}
+
+
+			Page p(PageType::DATA_PAGE);
+			dm->writePage(page_id_, p);
 
 			/*// 2. 设置主键约束
 			if (!primary_keys_.empty()) {
