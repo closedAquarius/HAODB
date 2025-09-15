@@ -877,9 +877,12 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
     op_log.original_sql = original_sql;
     op_log.quad_sequence = quads;
 
-    // op_log.result.
+    op_log.result.success = success;
+    op_log.result.error_message = error_message;
+    op_log.result.execution_time_ms = execution_time_ms;
 
-    // WriteOperationLog(op_log);
+
+    WriteOperationLog(op_log);
 
     return op_log.log_id;
 }
@@ -994,7 +997,6 @@ std::string DatabaseLogger::SerializeOperationLog(const OperationLogRecord& reco
         << "[" << (int)record.log_level << "] "
         << "[TXN:" << record.log_id << "] "
         << "[User:" << record.user_name << "] "
-        << "[Session:" << record.session_id << "] "
         << "SQL: " << record.original_sql << " | "
         << "Quads: ";
 
@@ -1007,7 +1009,6 @@ std::string DatabaseLogger::SerializeOperationLog(const OperationLogRecord& reco
     }
 
     ss << " | Result: " << (record.result.success ? "SUCCESS" : "FAILED")
-        << " | Rows: " << record.result.affected_rows
         << " | Time: " << record.result.execution_time_ms << "ms";
 
     if (!record.result.error_message.empty()) {

@@ -94,7 +94,7 @@ int notmain() {
 
         simple_logger.LogInsert("students", { {"id", "1001"}, {"name", "张三"}, {"age", "22"} });
         simple_logger.LogUpdate("students", "id = 1001", { {"age", "23"} });
-        simple_logger.LogDelete("students", "id = 1002");
+        simple_logger.LogDelete("students", "id = 1002");*/
 
         simple_logger.CommitTransaction();
         std::cout << "SimpleLogger 操作完成" << std::endl;
@@ -104,17 +104,23 @@ int notmain() {
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
-        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
-        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
+        std::vector<Quadruple> select_quads = {
+            {"FROM", "students", "-", "T1"},
+            {"WHERE", "age > 20", "-", "T2"},
+            {"SELECT", "id,name,age", "T1", "T3"}
+        };
 
-        enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
+        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        //enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
+
+        //enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
         
-        enhanced_executor.DeleteRecord(1,2,3,4,5,6);
+        //enhanced_executor.DeleteRecord(1,2,3,4,5,6);
         
 
         // 演示撤销功能
         enhanced_executor.UndoLastOperation();
-        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;*/
+        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;
 
         // ========== 第二部分：日志查看和分析 ==========
         std::cout << "\n第二部分：日志查看和分析" << std::endl;
