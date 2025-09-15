@@ -275,7 +275,7 @@ private:
     std::string user_name;
 
 public:
-    EnhancedExecutor(const std::string& db_name, const std::string& session = "", const std::string& user = "");
+    EnhancedExecutor(const std::string& db_name, const std::string& user = "", const std::string& session = "");
     ~EnhancedExecutor();
     bool Initialize();
 

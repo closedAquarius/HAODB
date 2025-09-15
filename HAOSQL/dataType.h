@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 // 词法分析结果
 struct Token {
@@ -36,10 +37,27 @@ struct RID {
     }
 };
 
-// 全局变量：存储数据库名称
-extern std::string DBName;
+// 全局变量
+extern std::string USER_NAME;
+void SET_USER_Name(std::string& name);
+extern std::string DBName;  //数据库名称
 void setDBName(const std::string& name);
-extern std::uint32_t LAST_LSN; 
+extern std::uint32_t LAST_LSN;  //WAL日志lsn序号
 void SET_LSN(uint32_t lsn);
+struct WALDataRecord
+{
+    uint16_t before_page_id;
+    uint16_t before_slot_id;
+    uint16_t before_length;
+    uint16_t after_page_id;
+    uint16_t after_slot_id;
+    uint16_t after_length;
+    std::string sql;
+    std::vector<Quadruple> quas;
+};
+extern WALDataRecord WAL_DATA_RECORD;  //日志记录
+void SET_BEFORE_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len);
+void SET_AFTER_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len);
+void SET_SQL_QUAS(std::string sql, std::vector<Quadruple> quas);
 
 
