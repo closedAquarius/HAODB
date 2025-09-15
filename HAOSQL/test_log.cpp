@@ -85,7 +85,7 @@ int notmain() {
         simple_logger.BeginTransaction();
 
         // 记录各种类型的操作
-        std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
+        /*std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
             {"FROM", "students", "-", "T1"},
             {"WHERE", "age > 20", "-", "T2"},
             {"SELECT", "id,name,age", "T1", "T3"}
@@ -94,7 +94,7 @@ int notmain() {
 
         simple_logger.LogInsert("students", { {"id", "1001"}, {"name", "张三"}, {"age", "22"} });
         simple_logger.LogUpdate("students", "id = 1001", { {"age", "23"} });
-        simple_logger.LogDelete("students", "id = 1002");
+        simple_logger.LogDelete("students", "id = 1002");*/
 
         simple_logger.CommitTransaction();
         std::cout << "SimpleLogger 操作完成" << std::endl;
@@ -104,17 +104,19 @@ int notmain() {
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
-        /*
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P001"}, {"name", "笔记本电脑"}, {"price", "5999"}
-            });
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P002"}, {"name", "无线鼠标"}, {"price", "199"}
-            });
+        std::vector<Quadruple> select_quads = {
+            {"FROM", "students", "-", "T1"},
+            {"WHERE", "age > 20", "-", "T2"},
+            {"SELECT", "id,name,age", "T1", "T3"}
+        };
 
-        enhanced_executor.UpdateRecord("products", "id = P001", { {"price", "5799"} });
-        */
-        enhanced_executor.DeleteRecord(1,2,3,4,5,6);
+        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        //enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
+
+        //enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
+        
+        //enhanced_executor.DeleteRecord(1,2,3,4,5,6);
+        
 
         // 演示撤销功能
         enhanced_executor.UndoLastOperation();
@@ -166,7 +168,7 @@ int notmain() {
         std::cout << "\n第四部分：配置管理演示" << std::endl;
 
         // 显示当前配置
-        enhanced_executor.ShowLoggerStatus();
+        // enhanced_executor.ShowLoggerStatus();
 
         // 动态更新配置
         // LogConfigManager::UpdateLogLevel("DemoDB", 3); // DEBUG级别
@@ -205,15 +207,15 @@ int notmain() {
         std::cout << "\n" << std::string(60, '=') << std::endl;
         std::cout << "              演示完成总结" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
-        std::cout << "✓ 基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
-        std::cout << "✓ WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
-        std::cout << "✓ 日志管理：轮转、查看、搜索、导出" << std::endl;
-        std::cout << "✓ 性能监控：操作统计、时间分析" << std::endl;
-        std::cout << "✓ 配置管理：动态配置、多级日志" << std::endl;
-        std::cout << "✓ 高级功能：组合模式算子、并发安全" << std::endl;
-        std::cout << "✓ 测试套件：全面的单元测试和集成测试" << std::endl;
+        std::cout << "基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
+        std::cout << "WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
+        std::cout << "日志管理：轮转、查看、搜索、导出" << std::endl;
+        std::cout << "性能监控：操作统计、时间分析" << std::endl;
+        std::cout << "配置管理：动态配置、多级日志" << std::endl;
+        std::cout << "高级功能：组合模式算子、并发安全" << std::endl;
+        std::cout << "测试套件：全面的单元测试和集成测试" << std::endl;
 
-        std::cout << "\n🎉 HAODB日志系统演示成功完成！" << std::endl;
+        std::cout << "\ HAODB日志系统演示成功完成！" << std::endl;
 
         return 0;
 
@@ -278,10 +280,10 @@ void RunIndependentTests() {
                     thread_logger.BeginTransaction();
 
                     for (int j = 0; j < 5; ++j) {
-                        thread_logger.LogInsert("concurrent_table", {
+                        /*thread_logger.LogInsert("concurrent_table", {
                             {"thread_id", std::to_string(i)},
                             {"operation", std::to_string(j)}
-                            });
+                            });*/
                     }
 
                     thread_logger.CommitTransaction();

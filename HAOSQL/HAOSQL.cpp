@@ -63,6 +63,20 @@ int main()
 
         vector<Quadruple> quadruple = sql_compiler(sql);
 
+        // 加载元数据
+        CatalogManager catalog("TEST_HAODB");
+        catalog.Initialize();
+        setDBName("HelloDB");
+
+        //vector<TableInfo> tables = catalog.ListTables("HelloDB");
+        //cout << "!!!!!!!!!!!!" << endl;
+        //cout << "表数量" << catalog.GetDatabaseInfo("HelloDB").table_count << endl;
+        //catalog.ShowTableList("HelloDB");
+        //for (auto& table : tables)
+        //{
+        //    cout << table.table_name << " " << table.data_file_offset << endl;
+        //}
+
         // 创建 DiskManager
         DiskManager dm(info.data_file_path) ;
         // 创建 BufferPoolManager

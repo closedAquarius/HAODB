@@ -665,5 +665,5 @@ int test() {
             << q.arg2 << ", " << q.result << ")" << std::endl;
     }
 
-    return 1;
+    return 0;
 }

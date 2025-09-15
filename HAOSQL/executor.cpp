@@ -588,7 +588,13 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			}
 
 			ddl_state.table_name = q.arg1;
-			root = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs);
+
+			// ¼ÆËã±íµÄÒ³id
+			int pageId = catalog->GetDatabaseInfo(DBName).table_count;
+
+			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs, pageId);
+			symbolTables[q.result] = create_op;
+			root = create_op;
 		}
 		else if (q.op == "PRIMARY") {
 			// (PRIMARY, student, id,name, T5)
