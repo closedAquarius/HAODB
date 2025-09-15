@@ -8,12 +8,19 @@
 
 namespace fs = std::filesystem;
 
+// 全局变量
+std::uint32_t LAST_LSN;
+void SET_LSN(uint32_t lsn)
+{
+    LAST_LSN = lsn;
+}
+
 // ========== 结构体构造函数实现 ==========
 // WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
 
-WALLogRecord::DataChange::DataChange() : before_page_id(0), before_slot_id(0), after_page_id(0), after_slot_id(0), before_length(0), after_length(0) {}
+WALLogRecord::DataChange::DataChange() : page_id(0), slot_id(0), length(0), record_type(0) {}
 
-WALLogRecord::WALLogRecord() : lsn(0), transaction_id(0), timestamp(0), record_type(0), record_size(0), checksum(0) {}
+WALLogRecord::WALLogRecord() : lsn(0), transaction_id(0), timestamp(0), record_size(0), checksum(0) {}
 
 //OperationLogRecord::SimpleQuadruple::SimpleQuadruple() {}
 //
@@ -132,7 +139,6 @@ bool WALBuffer::DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec) {
     if (!read_pod(in, rec.lsn))            return false; append_pod_to_payload(rec.lsn);
     if (!read_pod(in, rec.transaction_id)) return false; append_pod_to_payload(rec.transaction_id);
     if (!read_pod(in, rec.timestamp))      return false; append_pod_to_payload(rec.timestamp);
-    if (!read_pod(in, rec.record_type))    return false; append_pod_to_payload(rec.record_type);
     if (!read_pod(in, rec.withdraw))       return false; append_pod_to_payload(rec.withdraw);
     if (!read_pod(in, rec.record_size))    return false; append_pod_to_payload(rec.record_size);
 
@@ -157,12 +163,10 @@ bool WALBuffer::DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec) {
     for (uint32_t i = 0; i < changes_count; ++i) {
         WALLogRecord::DataChange c{};
 
-        if (!read_pod(in, c.before_page_id))       return false; append_pod_to_payload(c.before_page_id);
-        if (!read_pod(in, c.before_slot_id))       return false; append_pod_to_payload(c.before_slot_id);
-        if (!read_pod(in, c.after_page_id))       return false; append_pod_to_payload(c.after_page_id);
-        if (!read_pod(in, c.after_slot_id))       return false; append_pod_to_payload(c.after_slot_id);
-        if (!read_pod(in, c.before_length)) return false; append_pod_to_payload(c.before_length);
-        if (!read_pod(in, c.after_length))  return false; append_pod_to_payload(c.after_length);
+        if (!read_pod(in, c.page_id))       return false; append_pod_to_payload(c.page_id);
+        if (!read_pod(in, c.slot_id))       return false; append_pod_to_payload(c.slot_id);
+        if (!read_pod(in, c.length)) return false; append_pod_to_payload(c.length);
+        if (!read_pod(in, c.record_type))  return false; append_pod_to_payload(c.record_type);
 
         rec.changes.emplace_back(std::move(c));
     }
@@ -198,8 +202,6 @@ std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
     append_pod(record.lsn);
     append_pod(record.transaction_id);
     append_pod(record.timestamp);
-    append_pod(record.record_type);
-    cout << "appen_pod" << record.record_type << endl;
     append_pod(record.withdraw);
 
     // 预留record_size（4字节占位，稍后回填）
@@ -222,12 +224,10 @@ std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
         append_pod(changes_count);
 
         for (const auto& change : record.changes) {
-            append_pod(change.before_page_id);
-            append_pod(change.before_slot_id);
-            append_pod(change.after_page_id);
-            append_pod(change.after_slot_id);
-            append_pod(change.before_length);
-            append_pod(change.after_length);
+            append_pod(change.page_id);
+            append_pod(change.slot_id);
+            append_pod(change.length);
+            append_pod(change.record_type);
         }
     }
 
@@ -444,77 +444,77 @@ RecoveryManager::RecoveryManager(const std::string& db, LogFileManager* fm)
     : db_name(db), file_manager(fm) {
 }
 
-bool RecoveryManager::PerformCrashRecovery() {
-    try {
-        auto wal_records = ReadWALLog();
-
-        std::map<uint32_t, bool> transaction_status;
-
-        for (const auto& record : wal_records) {
-            switch (record.record_type) {
-            case WALLogRecord::TXN_BEGIN:
-                transaction_status[record.transaction_id] = false;
-                break;
-            case WALLogRecord::TXN_COMMIT:
-                transaction_status[record.transaction_id] = true;
-                break;
-            case WALLogRecord::TXN_ABORT:
-                transaction_status.erase(record.transaction_id);
-                break;
-            }
-        }
-
-        for (const auto& record : wal_records) {
-            auto it = transaction_status.find(record.transaction_id);
-            if (it != transaction_status.end() && it->second) {
-                if (record.record_type == WALLogRecord::INSERT_OP ||
-                    record.record_type == WALLogRecord::UPDATE_OP) {
-                    for (const auto& change : record.changes) {
-                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
-                            change.after_page_id, change.after_slot_id, change.after_length);
-                    }
-                }
-                else if (record.record_type == WALLogRecord::DELETE_OP) {
-                    for (const auto& change : record.changes) {
-                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
-                            change.after_page_id, change.after_slot_id, change.after_length);
-                    }
-                }
-            }
-        }
-
-        for (auto it = wal_records.rbegin(); it != wal_records.rend(); ++it) {
-            const auto& record = *it;
-            auto status_it = transaction_status.find(record.transaction_id);
-            if (status_it != transaction_status.end() && !status_it->second) {
-                if (record.record_type == WALLogRecord::INSERT_OP) {
-                    for (const auto& change : record.changes) {
-                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
-                            change.after_page_id, change.after_slot_id, change.after_length);
-                    }
-                }
-                else if (record.record_type == WALLogRecord::DELETE_OP) {
-                    for (const auto& change : record.changes) {
-                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
-                            change.after_page_id, change.after_slot_id, change.after_length);
-                    }
-                }
-                else if (record.record_type == WALLogRecord::UPDATE_OP) {
-                    for (const auto& change : record.changes) {
-                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
-                            change.after_page_id, change.after_slot_id, change.after_length);
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Crash recovery failed: " << e.what() << std::endl;
-        return false;
-    }
-}
+//bool RecoveryManager::PerformCrashRecovery() {
+//    try {
+//        auto wal_records = ReadWALLog();
+//
+//        std::map<uint32_t, bool> transaction_status;
+//
+//        for (const auto& record : wal_records) {
+//            switch (record.record_type) {
+//            case WALLogRecord::TXN_BEGIN:
+//                transaction_status[record.transaction_id] = false;
+//                break;
+//            case WALLogRecord::TXN_COMMIT:
+//                transaction_status[record.transaction_id] = true;
+//                break;
+//            case WALLogRecord::TXN_ABORT:
+//                transaction_status.erase(record.transaction_id);
+//                break;
+//            }
+//        }
+//
+//        for (const auto& record : wal_records) {
+//            auto it = transaction_status.find(record.transaction_id);
+//            if (it != transaction_status.end() && it->second) {
+//                if (record.record_type == WALLogRecord::INSERT_OP ||
+//                    record.record_type == WALLogRecord::UPDATE_OP) {
+//                    for (const auto& change : record.changes) {
+//                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+//                            change.after_page_id, change.after_slot_id, change.after_length);
+//                    }
+//                }
+//                else if (record.record_type == WALLogRecord::DELETE_OP) {
+//                    for (const auto& change : record.changes) {
+//                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+//                            change.after_page_id, change.after_slot_id, change.after_length);
+//                    }
+//                }
+//            }
+//        }
+//
+//        for (auto it = wal_records.rbegin(); it != wal_records.rend(); ++it) {
+//            const auto& record = *it;
+//            auto status_it = transaction_status.find(record.transaction_id);
+//            if (status_it != transaction_status.end() && !status_it->second) {
+//                if (record.record_type == WALLogRecord::INSERT_OP) {
+//                    for (const auto& change : record.changes) {
+//                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+//                            change.after_page_id, change.after_slot_id, change.after_length);
+//                    }
+//                }
+//                else if (record.record_type == WALLogRecord::DELETE_OP) {
+//                    for (const auto& change : record.changes) {
+//                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+//                            change.after_page_id, change.after_slot_id, change.after_length);
+//                    }
+//                }
+//                else if (record.record_type == WALLogRecord::UPDATE_OP) {
+//                    for (const auto& change : record.changes) {
+//                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+//                            change.after_page_id, change.after_slot_id, change.after_length);
+//                    }
+//                }
+//            }
+//        }
+//
+//        return true;
+//    }
+//    catch (const std::exception& e) {
+//        std::cerr << "Crash recovery failed: " << e.what() << std::endl;
+//        return false;
+//    }
+//}
 
 bool RecoveryManager::UndoDelete(WALLogRecord record) {
     
@@ -540,7 +540,7 @@ bool RecoveryManager::UndoDelete(WALLogRecord record) {
 
     cout << "撤销删除" << endl;
     cout << "删除前内容" << endl;
-    cout << record.changes[0].before_page_id << record.changes[0].before_slot_id << record.changes[0].before_length << endl;
+    
     /*for (auto& change : record.changes)
     {
         for (auto& before : change.before_image)
@@ -655,14 +655,6 @@ std::vector<WALLogRecord> RecoveryManager::FindWALRecordsByLogId(uint64_t log_id
 WALLogRecord RecoveryManager::FindLatestWALRecord() {
     auto records = ReadWALLog();
 
-    //for (auto& re : records)
-    //{
-    //    cout << "reid: " << re.lsn << endl;
-    //    cout << "retime: " << re.timestamp << endl;
-    //    cout << "type: " << re.record_type << endl;
-    //    cout << "---------------------------" << endl;
-    //}
-
     // 过滤掉已经撤回，withdraw==true的操作
     std::vector<WALLogRecord> valid;
     std::copy_if(records.begin(), records.end(), std::back_inserter(valid),
@@ -677,10 +669,61 @@ WALLogRecord RecoveryManager::FindLatestWALRecord() {
             //cout << "a,time" << a.timestamp<<endl;
             //cout << "b,time" << b.timestamp << endl;
             return a.lsn < b.lsn;
+            
         });
 
     return *it;
 }
+
+std::vector<WALLogRecord> RecoveryManager::FindFilteredWALRecords() {
+    // 读取所有 WAL 记录
+    auto records = ReadWALLog();
+
+    // 过滤条件(INSERT\DELETE\UPDATE)
+    std::vector<WALLogRecord> valid;
+    std::copy_if(records.begin(), records.end(), std::back_inserter(valid),
+        [](const WALLogRecord& r) {
+            if (r.withdraw) return false;
+            if (r.changes.empty()) return false;
+
+            // changes[0].record_type 在1~4
+            uint8_t type = r.changes[0].record_type;
+            return (type >= 1 && type <= 4);
+        });
+
+    // 按lsn从大到小排序
+    std::sort(valid.begin(), valid.end(),
+        [](const WALLogRecord& a, const WALLogRecord& b) {
+            return a.lsn > b.lsn;  // 降序
+        });
+
+    return valid;
+}
+
+std::vector<WALLogRecord> RecoveryManager::FindAllWALRecords()
+{
+    return ReadWALLog();
+}
+
+uint64_t RecoveryManager::FindMaxLSN() 
+{
+    auto records = ReadWALLog();
+
+    if (records.empty()) {
+        return 0;
+    }
+
+    // 遍历找最大值
+    uint64_t max_lsn = 0;
+    for (const auto& r : records) {
+        if (r.lsn > max_lsn) {
+            max_lsn = r.lsn;
+        }
+    }
+
+    return max_lsn;
+}
+
 
 std::vector<WALLogRecord> RecoveryManager::FindWALRecordsByTransaction(uint32_t txn_id) {
     auto all_records = ReadWALLog();
@@ -795,10 +838,16 @@ uint32_t DatabaseLogger::BeginTransaction() {
 
     if (config.enable_wal) {
         WALLogRecord record;
-        record.lsn = GenerateLSN();
+        record.lsn = LAST_LSN + 1;
+        SET_LSN(record.lsn);
         record.transaction_id = txn_id;
         record.timestamp = GetCurrentTimestamp();
-        record.record_type = WALLogRecord::TXN_BEGIN;
+
+        WALLogRecord::DataChange dataChange;
+        dataChange.record_type = (int)WALLogRecord::TXN_BEGIN;
+        record.changes.push_back(dataChange);
+
+        cout << "record.lsn:" << record.lsn << endl;
 
         WriteWALLog(record);
     }
@@ -806,12 +855,12 @@ uint32_t DatabaseLogger::BeginTransaction() {
     return txn_id;
 }
 
-// uint32_t txn_id, int type
 void DatabaseLogger::CommitTransaction(uint32_t txn_id, WALLogRecord& record) {
     txn_manager->CommitTransaction(txn_id);
 
     if (config.enable_wal) {
-        record.lsn = GenerateLSN();
+        record.lsn = LAST_LSN + 1;
+        SET_LSN(record.lsn);
         record.timestamp = GetCurrentTimestamp();
 
         WriteWALLog(record);
@@ -827,7 +876,10 @@ void DatabaseLogger::AbortTransaction(uint32_t txn_id) {
         record.lsn = GenerateLSN();
         record.transaction_id = txn_id;
         record.timestamp = GetCurrentTimestamp();
-        record.record_type = WALLogRecord::TXN_ABORT;
+        
+        WALLogRecord::DataChange dataChange;
+        dataChange.record_type = (int)WALLogRecord::TXN_ABORT;
+        record.changes.push_back(dataChange);
 
         WriteWALLog(record);
     }
@@ -887,45 +939,42 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
     return op_log.log_id;
 }
 
-void DatabaseLogger::LogDataChange(
-    uint32_t transaction_id,
-    uint8_t operation_type,
-    uint32_t before_page_id,
-    uint32_t before_slot_id,
-    uint32_t after_page_id,
-    uint32_t after_slot_id,
-    uint32_t before_length,
-    uint32_t after_length) {
-
-    if (!config.enable_wal) return;
-
-    WALLogRecord record;
-    record.lsn = GenerateLSN();
-    record.transaction_id = transaction_id;
-    record.timestamp = GetCurrentTimestamp();
-    record.record_type = operation_type;
-
-    WALLogRecord::DataChange change;
-    change.before_page_id = before_page_id;
-    change.before_slot_id = before_slot_id;
-    change.after_page_id = after_page_id;
-    change.after_slot_id = after_slot_id;
-    change.before_length = before_length;
-    change.after_length = after_length;
-
-    record.changes.push_back(change);
-
-    WriteWALLog(record);
-
-    if (config.sync_mode_code == 2) {
-        FlushWALBuffer();
-    }
-    else if (config.sync_mode_code == 1) {
-        if (wal_buffer->ShouldFlush()) {
-            FlushWALBuffer();
-        }
-    }
-}
+//void DatabaseLogger::LogDataChange(
+//    uint32_t transaction_id,
+//    uint8_t operation_type,
+//    uint32_t before_page_id,
+//    uint32_t before_slot_id,
+//    uint32_t after_page_id,
+//    uint32_t after_slot_id,
+//    uint32_t before_length,
+//    uint32_t after_length) {
+//
+//    if (!config.enable_wal) return;
+//
+//    WALLogRecord record;
+//    record.lsn = GenerateLSN();
+//    record.transaction_id = transaction_id;
+//    record.timestamp = GetCurrentTimestamp();
+//
+//    WALLogRecord::DataChange change;
+//    change.page_id = before_page_id;
+//    change.slot_id = before_slot_id;
+//    change.length = before_length;
+//    change.after_length = after_length;
+//
+//    record.changes.push_back(change);
+//
+//    WriteWALLog(record);
+//
+//    if (config.sync_mode_code == 2) {
+//        FlushWALBuffer();
+//    }
+//    else if (config.sync_mode_code == 1) {
+//        if (wal_buffer->ShouldFlush()) {
+//            FlushWALBuffer();
+//        }
+//    }
+//}
 
 void DatabaseLogger::LogError(const std::string& error_message, const std::string& context) {
     std::lock_guard<std::mutex> lock(log_mutex);

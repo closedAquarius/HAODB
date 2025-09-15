@@ -303,7 +303,8 @@ bool SimpleLogger::UndoLastOperation() {
 
 bool SimpleLogger::RecoverFromCrash() {
     RecoveryManager* recovery = logger->GetRecoveryManager();
-    return recovery->PerformCrashRecovery();
+    //return recovery->PerformCrashRecovery();
+    return true;
 }
 
 // ========== 带日志的算子实现（组合模式）==========
@@ -956,6 +957,15 @@ EnhancedExecutor::EnhancedExecutor(const std::string& db_name, const std::string
 
 EnhancedExecutor::~EnhancedExecutor() {}
 
+bool EnhancedExecutor::Initialize()
+{
+    RecoveryManager* recovery = logger->GetRecoveryManager();
+    uint32_t last_lsn = recovery->FindMaxLSN();
+
+    SET_LSN(last_lsn);
+    return true;
+}
+
 //bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads) {
 //    try {
 //        uint32_t txn_id = logger->BeginTransaction();
@@ -980,28 +990,25 @@ EnhancedExecutor::~EnhancedExecutor() {}
 //    }
 //}
 
-bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,uint32_t after_page_id,
-    uint32_t after_slot_id,  uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
+bool EnhancedExecutor::InsertRecord(uint16_t page_id, uint16_t slot_id, uint16_t length, string sql, 
+    vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        logger->LogDataChange(txn_id, WALLogRecord::INSERT_OP, before_page_id,
-            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
+        //logger->LogDataChange(txn_id, WALLogRecord::INSERT_OP, before_page_id,
+            //before_slot_id, after_page_id, after_slot_id, before_length, after_length);
 
         bool success = true;
 
         if (success) {
             WALLogRecord record;
             record.transaction_id = txn_id;
-            record.record_type = (int)WALLogRecord::INSERT_OP;
             record.withdraw = 0;
             WALLogRecord::DataChange datachange;
-            datachange.before_length = 0;
-            datachange.before_page_id = 0;
-            datachange.before_slot_id = 0;
-            datachange.after_length = after_length;
-            datachange.after_page_id = after_page_id;
-            datachange.after_slot_id = after_slot_id;
+            datachange.length = length;
+            datachange.page_id = page_id;
+            datachange.slot_id = slot_id;
+            datachange.record_type = (int)WALLogRecord::INSERT_OP;
             record.changes.push_back(datachange);
 
             logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
@@ -1019,28 +1026,25 @@ bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
-    uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
+bool EnhancedExecutor::DeleteRecord(uint16_t page_id, uint16_t slot_id, uint16_t length, string sql, 
+    vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        logger->LogDataChange(txn_id, WALLogRecord::DELETE_OP, before_page_id,
-            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
+        /*logger->LogDataChange(txn_id, WALLogRecord::DELETE_OP, before_page_id,
+            before_slot_id, after_page_id, after_slot_id, before_length, after_length);*/
 
         bool success = true;
 
         if (success) {
             WALLogRecord record;
             record.transaction_id = txn_id;
-            record.record_type = (int)WALLogRecord::DELETE_OP;
             record.withdraw = 0;
             WALLogRecord::DataChange datachange;
-            datachange.before_length = before_length;
-            datachange.before_page_id = before_page_id;
-            datachange.before_slot_id = before_slot_id;
-            datachange.after_length = 0;
-            datachange.after_page_id = 0;
-            datachange.after_slot_id = 0;
+            datachange.length = length;
+            datachange.page_id = page_id;
+            datachange.slot_id = slot_id;
+            datachange.record_type = (int)WALLogRecord::DELETE_OP;
             record.changes.push_back(datachange);
 
             logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
@@ -1058,29 +1062,34 @@ bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
-    uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
+bool EnhancedExecutor::UpdateRecord(uint16_t before_page_id, uint16_t before_slot_id, uint16_t before_length, uint16_t after_page_id,
+    uint16_t after_slot_id, uint16_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
-        logger->LogDataChange(txn_id, WALLogRecord::UPDATE_OP, before_page_id,
-            before_slot_id, after_page_id, after_slot_id, before_length, after_length);
+        /*logger->LogDataChange(txn_id, WALLogRecord::UPDATE_OP, before_page_id,
+            before_slot_id, after_page_id, after_slot_id, before_length, after_length);*/
 
         bool success = true;
 
         if (success) {
             WALLogRecord record;
             record.transaction_id = txn_id;
-            record.record_type = (int)WALLogRecord::UPDATE_OP;
             record.withdraw = 0;
-            WALLogRecord::DataChange datachange;
-            datachange.before_length = before_length;
-            datachange.before_page_id = before_page_id;
-            datachange.before_slot_id = before_slot_id;
-            datachange.after_length = after_length;
-            datachange.after_page_id = after_page_id;
-            datachange.after_slot_id = after_slot_id;
-            record.changes.push_back(datachange);
+
+            WALLogRecord::DataChange before_datachange;
+            before_datachange.length = before_length;
+            before_datachange.page_id = before_page_id;
+            before_datachange.slot_id = before_slot_id;
+            before_datachange.record_type = (int)WALLogRecord::UPDATE_OP_DE;
+            record.changes.push_back(before_datachange);
+
+            WALLogRecord::DataChange after_datachange;
+            after_datachange.length = after_length;
+            after_datachange.page_id = after_page_id;
+            after_datachange.slot_id = after_slot_id;
+            after_datachange.record_type = (int)WALLogRecord::UPDATE_OP_IN;
+            record.changes.push_back(after_datachange);
 
             logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
             logger->CommitTransaction(txn_id, record);
@@ -1116,38 +1125,70 @@ bool EnhancedExecutor::UndoLastInsert() {
     return recovery->UndoInsert(last_log_id);
 }
 
-bool EnhancedExecutor::UndoLastOperation(){
-    // 获取最近一条操作
+vector<WithdrawLog> EnhancedExecutor::UndoLastOperation(int counts){
+    // 获取记录的WAL操作
     RecoveryManager* recovery = logger->GetRecoveryManager();
-    auto record = recovery->FindLatestWALRecord();
+    auto records = recovery->FindFilteredWALRecords();
 
-    cout << record.transaction_id << endl;
-    cout << record.timestamp << endl;
-    cout << record.record_type << endl;
+    //// 根据类型确定撤销操作
+    //switch (record.record_type)
+    //{
+    //case (int)WALLogRecord::INSERT_OP:
+    //    recovery->UndoInsert(record.transaction_id);
+    //    break;
+    //case (int)WALLogRecord::DELETE_OP:
+    //    recovery->UndoDelete(record);
+    //    break;
+    //case (int)WALLogRecord::UPDATE_OP:
+    //    recovery->UndoUpdate(record.transaction_id);
+    //    break;
+    //default:
+    //    cout << "无法识别的操作" << endl;
+    //    return false;
+    //}
 
-    // 根据类型确定撤销操作
-    switch (record.record_type)
+    vector<WithdrawLog> logs;
+    for (int i = 0; i < std::min<int>(counts, records.size()); i++)
     {
-    case (int)WALLogRecord::INSERT_OP:
-        recovery->UndoInsert(record.transaction_id);
-        break;
-    case (int)WALLogRecord::DELETE_OP:
-        recovery->UndoDelete(record);
-        break;
-    case (int)WALLogRecord::UPDATE_OP:
-        recovery->UndoUpdate(record.transaction_id);
-        break;
-    default:
-        cout << "无法识别的操作" << endl;
-        return false;
+        std::reverse(records[i].changes.begin(), records[i].changes.end());
+        for (int j = 0; j < records[i].changes.size(); j++)
+        {
+            WithdrawLog log;
+            log.page_id = records[i].changes[j].page_id;
+            log.slot_id = records[i].changes[j].slot_id;
+            log.length = records[i].changes[j].length;
+            log.record_type = records[i].changes[j].record_type;
+            logs.push_back(log);
+        }
     }
 
-    return true;
+    return logs;
+}
+
+void EnhancedExecutor::PrintAllWAL()
+{
+    RecoveryManager* recovery = logger->GetRecoveryManager();
+    auto records = recovery->FindAllWALRecords();
+
+    cout << "读取所有WAL记录" << endl;
+    cout << "--------------------------" << endl;
+    for (auto& record : records)
+    {
+        cout << "lsn: " << record.lsn << "  transaction_id: " << record.transaction_id
+            << "  timestamp: " << record.timestamp << "  withdraw: " << record.withdraw << endl;
+        cout << "changes: " << endl;
+        for (auto& change : record.changes)
+        {
+            cout << "page_id: " << change.page_id << "  slot_id: " << change.slot_id << "  length: " << change.length << "  record_type:" << change.record_type << endl;
+        }
+        cout << "****************************" << endl;
+    }
 }
 
 bool EnhancedExecutor::PerformCrashRecovery() {
     RecoveryManager* recovery = logger->GetRecoveryManager();
-    return recovery->PerformCrashRecovery();
+    //return recovery->PerformCrashRecovery();
+    return true;
 }
 
 void EnhancedExecutor::ShowLoggerStatus() {

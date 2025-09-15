@@ -11,6 +11,7 @@
 #include "buffer_pool.h"
 #include "index_manager.h"
 #include "catalog_manager.h"
+#include "logger_integration.h"
 
 using namespace std;
 
@@ -67,6 +68,11 @@ class Operator {
 public:
 	virtual ~Operator() {}
 	virtual vector<Row> execute() = 0;
+	std::unique_ptr<EnhancedExecutor> enhanced_executor;
+	Operator()
+		: enhanced_executor(std::make_unique<EnhancedExecutor>(DBName, USER_NAME, "")) {
+		enhanced_executor->Initialize();
+	}
 };
 struct IndexedCondition {
 	std::string col;
@@ -498,3 +504,4 @@ public:
 
 	vector<Row> execute() override;
 };
+

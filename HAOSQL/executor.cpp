@@ -2,6 +2,28 @@
 
 using namespace std;
 
+// 全局变量
+WALDataRecord WAL_DATA_RECORD;
+void SET_BEFORE_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len)
+{
+	WAL_DATA_RECORD.before_page_id = pid;
+	WAL_DATA_RECORD.before_slot_id = sid;
+	WAL_DATA_RECORD.before_length = len;
+}
+
+void SET_AFTER_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len)
+{
+	WAL_DATA_RECORD.after_page_id = pid;
+	WAL_DATA_RECORD.after_slot_id = sid;
+	WAL_DATA_RECORD.after_length = len;
+}
+
+void SET_SQL_QUAS(string sql, vector<Quadruple> quas)
+{
+	WAL_DATA_RECORD.sql = sql;
+	WAL_DATA_RECORD.quas = quas;
+}
+
 Scan::Scan(BufferPoolManager* bpm, const string& tName, PageId i) :bpm(bpm), tableName(tName), pageOffset(i) {}
 vector<Row> Scan::execute() {
 	vector<Row> output;
@@ -174,6 +196,11 @@ vector<Row> Insert::execute() {
 			// 插入索引（传 int key）
 			indexManager->InsertEntry(tableName, idx.column_names, keyInt, rid);
 		}
+
+		SET_AFTER_WAL_RECORD(pageId, slotId, page->getSlot(slotId)->length);
+		// 记入日志
+		enhanced_executor->InsertRecord(WAL_DATA_RECORD.after_page_id, WAL_DATA_RECORD.after_slot_id, WAL_DATA_RECORD.after_length,
+			WAL_DATA_RECORD.sql, WAL_DATA_RECORD.quas, USER_NAME, true, 0, "");
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
@@ -246,7 +273,7 @@ vector<Row> Update::execute() {
 		}
 
 		// 找到这行在页中的位置，并进行逻辑删除
-		// 同样，这里采用低效的遍历查找方式。
+		// 同样，这里采用遍历查找方式。
 		string key_col = "id";
 		string key_val = row.at(key_col);
 
@@ -276,6 +303,9 @@ vector<Row> Update::execute() {
 			}
 		}
 
+		// 记录老记录位置
+		SET_BEFORE_WAL_RECORD(pageId, targetSlot, page->getSlot(targetSlot)->length);
+
 		// 将新记录写入页面的槽中
 		page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
 		string newKeyVal = row.at(key_col);
@@ -285,11 +315,21 @@ vector<Row> Update::execute() {
 			RID rid{ id, 0 }; // TODO: 根据 slot / 页号 定义 RID
 			indexManager->InsertEntry(idx.table_name, idx.column_names, newKey, rid);
 		}
+		int newSlot =  page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
+
+		// 记录新纪录位置
+		SET_AFTER_WAL_RECORD(pageId, newSlot, page->getSlot(newSlot)->length);
+
 		// 将页面标记为脏，以便后续写回磁盘
 		bpm->unpinPage(pageId, true); // true 表示该页是脏页
 
 		// 手动写回
 		bpm->flushPage(pageId);
+
+		// 记入日志
+		enhanced_executor->UpdateRecord(WAL_DATA_RECORD.before_page_id, WAL_DATA_RECORD.before_slot_id, WAL_DATA_RECORD.before_length,
+			WAL_DATA_RECORD.after_page_id, WAL_DATA_RECORD.after_slot_id, WAL_DATA_RECORD.after_length,
+			WAL_DATA_RECORD.sql, WAL_DATA_RECORD.quas, USER_NAME, true, 0, "");
 
 		output.push_back(row);
 	}

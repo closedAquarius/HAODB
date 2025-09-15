@@ -27,6 +27,13 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 
 IndexManager* indexManager = nullptr;
 
+// 全局变量
+std::string USER_NAME;
+void SET_USER_Name(std::string& name)
+{
+    USER_NAME = name;
+}
+
 // 工具函数：封装发送，自动加 >>END
 void sendWithEnd(SOCKET sock, const string& msg) {
     string data = msg + ">>END\n";
@@ -69,6 +76,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
 
         if (lm.loginUser(account, password)) {
+            SET_USER_Name(account);
             std::string welcome =
                 "-------------------------------------------------------------------------------\n"
                 "- 名称规范 : 数据库名、表名、列名只能包含字母、数字和下划线，长度不超过63字符 -\n"
@@ -156,6 +164,8 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
                     << q.arg2 << ", "
                     << q.result << ")" << std::endl;
             }
+
+            SET_SQL_QUAS(sql, quadruple);
         }
         catch (const std::exception& e) {
             std::cerr << "Error (compile): " << e.what() << std::endl;
@@ -200,6 +210,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
+/*
 int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -248,8 +259,9 @@ int main() {
     WSACleanup();
     return 0;
 }
+*/
 
-/*int main()
+int main()
 {
     SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
     SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
@@ -307,7 +319,7 @@ int main() {
          
         /*std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         } catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
         }
@@ -315,6 +327,7 @@ int main() {
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
         std::cout << "最终执行 SQL: " << finalSQL << std::endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
+        SET_SQL_QUAS(finalSQL, quadruple);
 
         //vector<TableInfo> tables = catalog.ListTables("HelloDB");
         //cout << "!!!!!!!!!!!!" << endl;
@@ -354,7 +367,7 @@ int main() {
     }
 
     return 0;
-}*/
+}
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 {
@@ -453,7 +466,7 @@ vector<Quadruple> sql_compiler(string sql)
         std::cout << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
@@ -468,7 +481,7 @@ vector<Quadruple> sql_compiler(string sql)
         std::cout << "语义分析错误：" << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
