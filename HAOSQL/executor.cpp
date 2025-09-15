@@ -229,7 +229,11 @@ vector<Row> Update::execute() {
 			}
 		}
 
+
+
 		if (targetSlot != -1) {
+			page->getSlot(targetSlot)->length;
+
 			page->deleteRecord(targetSlot);
 			cout << "Deleted row with " << key_col << " = " << key_val << endl;
 		}

@@ -82,7 +82,7 @@ int notmain() {
         // 2. 使用简化接口
         std::cout << "\n--- SimpleLogger 演示 ---" << std::endl;
         SimpleLogger simple_logger("TestDB");
-        simple_logger.BeginTransaction();
+        // simple_logger.BeginTransaction();
 
         // 记录各种类型的操作
         /*std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
@@ -96,7 +96,7 @@ int notmain() {
         simple_logger.LogUpdate("students", "id = 1001", { {"age", "23"} });
         simple_logger.LogDelete("students", "id = 1002");*/
 
-        simple_logger.CommitTransaction();
+        // simple_logger.CommitTransaction();
         std::cout << "SimpleLogger 操作完成" << std::endl;
 
         // 3. 使用增强执行器
@@ -110,7 +110,16 @@ int notmain() {
             {"SELECT", "id,name,age", "T1", "T3"}
         };
 
-        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.DeleteRecord(4, 5, 6, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.InsertRecord(7, 8, 9, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        enhanced_executor.UpdateRecord(10, 11, 12, 13, 14, 15, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
         //enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
 
         //enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
@@ -119,7 +128,11 @@ int notmain() {
         
 
         // 演示撤销功能
-        enhanced_executor.UndoLastOperation();
+        auto logs = enhanced_executor.UndoLastOperation(3);
+        for (auto& log : logs)
+        {
+            cout << "page" << log.page_id << " "<<"slot" << log.slot_id << " "<<"length" << log.length << "type" << log.record_type << endl;
+        }
         std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;
 
         // ========== 第二部分：日志查看和分析 ==========

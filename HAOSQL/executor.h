@@ -486,3 +486,4 @@ public:
 
 	vector<Row> execute() override;
 };
+

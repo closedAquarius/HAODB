@@ -22,7 +22,7 @@ struct WALLogRecord {
     uint64_t lsn;                    // 日志序列号
     uint32_t transaction_id;         // 事务ID
     uint64_t timestamp;              // 时间戳
-    int record_type;             // 记录类型
+    // int record_type;                 // 记录类型
     uint32_t record_size;            // 记录总大小
     uint32_t checksum;               // 校验和
     int withdraw = 0;
@@ -40,14 +40,18 @@ struct WALLogRecord {
 
     // 数据变更信息
     struct DataChange {
+        /*
         uint32_t before_page_id;            // 页面ID
-        uint32_t before_slot_id;            // 槽位ID
+        uint32_t before_slot_id;           // 槽位ID
         uint32_t after_page_id;            // 页面ID
         uint32_t after_slot_id;            // 槽位ID
-        uint32_t before_length;      // 修改前数据长度
-        uint32_t after_length;       // 修改后数据长度
-        // std::vector<char> before_image; // 修改前的完整记录
-        // std::vector<char> after_image;  // 修改后的完整记录
+        uint32_t before_length;            // 修改前数据长度
+        uint32_t after_length;             // 修改后数据长度
+        */
+        uint16_t page_id;                // 页面ID
+        uint16_t slot_id;                // 槽位ID
+        uint16_t length;                 // 数据长度
+        int record_type;                 // 记录类型
 
         DataChange();
     };
@@ -55,13 +59,14 @@ struct WALLogRecord {
 
     // 记录类型枚举
     enum RecordType {
-        TXN_BEGIN = 1,
-        TXN_COMMIT = 2,
-        TXN_ABORT = 3,
-        INSERT_OP = 4,
-        DELETE_OP = 5,
-        UPDATE_OP = 6,
-        CHECKPOINT = 7
+        TXN_BEGIN = 0,
+        INSERT_OP = 1,
+        DELETE_OP = 2,
+        UPDATE_OP_DE = 3,
+        UPDATE_OP_IN = 4,
+        CHECKPOINT = 5,
+        TXN_COMMIT = 6,
+        TXN_ABORT = 7
     };
 
     WALLogRecord();
@@ -202,7 +207,7 @@ public:
     RecoveryManager(const std::string& db, LogFileManager* fm);
 
     // 崩溃恢复
-    bool PerformCrashRecovery();
+    // bool PerformCrashRecovery();
 
     // 操作恢复
     bool UndoDelete(WALLogRecord record);
@@ -215,6 +220,8 @@ public:
 
     // 获取最新WAL操作
     WALLogRecord FindLatestWALRecord();
+    // 获取所有的WAL操作
+    vector<WALLogRecord> FindFilteredWALRecords();
 
 private:
     std::vector<WALLogRecord> ReadWALLog();
@@ -286,7 +293,7 @@ public:
         const std::string error_message = "",
         const std::string& session_id = "");
 
-    void LogDataChange(
+    /*void LogDataChange(
         uint32_t transaction_id,
         uint8_t operation_type,
         uint32_t before_page_id,
@@ -294,7 +301,7 @@ public:
         uint32_t after_page_id,
         uint32_t after_slot_id,
         uint32_t before_length,
-        uint32_t after_length);
+        uint32_t after_length);*/
 
     void LogError(const std::string& error_message,
         const std::string& context = "");
