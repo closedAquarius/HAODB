@@ -1275,9 +1275,43 @@ std::string CatalogManager::DataTypeToString(uint8_t type) {
 }
 
 bool CatalogManager::LoadDatabaseManager(const std::string& db_name) {
+    /*
+    std::cout << db_name << std::endl;
     // 如果已经加载，直接返回
+    for (auto& ma : database_managers)
+    {
+        std::cout << "data_manas" << std::endl;
+        std::cout << "-------------------" << std::endl;
+        std::cout << ma.first << std::endl;
+    }
     if (database_managers.find(db_name) != database_managers.end()) {
         return true;
+    }
+    */
+
+    // 添加调试信息
+    std::cout << "LoadDatabaseManager: db_name = " << db_name << std::endl;
+    std::cout << "this指针: " << this << std::endl;
+    std::cout << "database_managers地址: " << &database_managers << std::endl;
+
+    try {
+        // 检查是否已经加载
+        std::cout << "开始查找..." << std::endl;
+        auto it = database_managers.find(db_name);
+        std::cout << "查找完成" << std::endl;
+
+        if (it != database_managers.end()) {
+            std::cout << "找到已加载的管理器" << std::endl;
+            return true;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "异常: " << e.what() << std::endl;
+        return false;
+    }
+    catch (...) {
+        std::cerr << "未知异常" << std::endl;
+        return false;
     }
 
     // 检查数据库是否存在

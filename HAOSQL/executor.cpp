@@ -117,6 +117,19 @@ vector<Row> Insert::execute() {
 
 	// 获取该表的所有索引信息
 	// IndexManager* indexManager; // 假设全局可用
+	cout << "initIndexManager=" << endl;
+	std::cout << "检查catalog对象:" << std::endl;
+	std::cout << "catalog指针: " << indexManager->catalog_ << std::endl;
+	std::cout << "this指针: " << static_cast<void*>(indexManager->catalog_) << std::endl;
+
+	// 尝试访问成员变量
+	try {
+		// 如果对象有效，这应该正常工作
+		std::cout << "对象状态检查通过" << std::endl;
+	}
+	catch (...) {
+		std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
+	}
 	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);
 
 	// 将每一行数据插入到页中
@@ -135,6 +148,8 @@ vector<Row> Insert::execute() {
 
 		// 插入所有索引
 		for (auto& idx : tableIndexes) {
+			cout << "===================================" << endl;
+			cout << idx.column_names[0] << endl;
 			int keyInt = 0;
 
 			if (idx.column_names.size() == 1) {
@@ -182,6 +197,21 @@ vector<Row> Set::execute() {
 	}
 
 	return output;
+}
+
+bool tryParseInt(const std::string& str, int& out) {
+	try {
+		size_t pos;
+		long val = std::stol(str, &pos, 10);  // 先用 long 接，避免越界
+		if (pos != str.size()) return false;  // 有非法字符
+		if (val < std::numeric_limits<int>::min() || val > std::numeric_limits<int>::max())
+			return false;  // 超出 int 范围
+		out = static_cast<int>(val);
+		return true;
+	}
+	catch (...) {
+		return false;  // 转换失败
+	}
 }
 
 Update::Update(Operator* c, Operator* d, BufferPoolManager* b, PageId i) :child(c), data(d), bpm(b), pageOffset(i) {}
@@ -236,10 +266,25 @@ vector<Row> Update::execute() {
 		else {
 			cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
 		}
+		vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable("students"); // TODO: 替换成当前表名
+		for (auto& idx : tableIndexes) {
+			int id = pageId;
+			RID rid{ id, targetSlot };
+			int i;
+			if (tryParseInt(key_val, i)) {
+				indexManager->DeleteEntry(idx.table_name, idx.column_names, i, rid);
+			}
+		}
 
 		// 将新记录写入页面的槽中
 		page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
-
+		string newKeyVal = row.at(key_col);
+		int newKey = stoi(newKeyVal);
+		for (auto& idx : tableIndexes) {
+			int id = pageId;
+			RID rid{ id, 0 }; // TODO: 根据 slot / 页号 定义 RID
+			indexManager->InsertEntry(idx.table_name, idx.column_names, newKey, rid);
+		}
 		// 将页面标记为脏，以便后续写回磁盘
 		bpm->unpinPage(pageId, true); // true 表示该页是脏页
 
@@ -267,9 +312,9 @@ vector<Row> Delete::execute() {
 		throw runtime_error("Failed to fetch page for delete.");
 	}
 
-	/*// IndexManager* indexManager;
+	// IndexManager* indexManager;
 	// 获取该表的所有索引信息
-	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);*/
+	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);
 
 	// 遍历所有需要删除的行
 	for (auto& row : inputRows) {
@@ -285,7 +330,7 @@ vector<Row> Delete::execute() {
 			}
 		}
 
-		/*if (targetSlot != -1) {
+		if (targetSlot != -1) {
 			// 构造 RID
 			RID rid{ pageId, static_cast<uint16_t>(targetSlot) };
 
@@ -321,7 +366,7 @@ vector<Row> Delete::execute() {
 		}
 		else {
 			cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
-		}*/
+		}
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页
@@ -410,6 +455,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 	PageId pageOffset;
 	// DDL构建状态
 	DDLBuildState ddl_state;
+	IndexedCondition ic;
 
 	for (auto& q : quads) {
 		// ========== 基本表扫描 ==========
@@ -424,6 +470,9 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		// (OP, column , value , T(condition))
 		else if (q.op == ">" || q.op == "=") {
 			condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
+			ic.col = q.arg1;
+			ic.val = q.arg2;
+			ic.op = q.op;
 		}
 		else if (q.op == "AND") {
 			condTable[q.result] = Condition::And(condTable[q.arg1], condTable[q.arg2]);
@@ -442,13 +491,12 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
 			Condition cond = condTable[q.arg2];      // arg2 是条件符号
 			symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
-			/*Operator* child = symbolTables[q.arg1];
-			Condition cond = condTable[q.arg2];
+			
 
 			// 提取条件信息（目前只支持 = 且单列索引）
-			string colName = cond.leftCol;
-			string colValue = cond.rightVal;
-			string op = cond.op;
+			string colName = ic.col;
+			string colValue = ic.val;
+			string op = ic.op;
 
 			// 从 FROM 节点里拿表名
 			Scan* scanOp = dynamic_cast<Scan*>(child);
@@ -475,7 +523,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			if (!useIndex) {
 				// 回退到 Filter+Scan
 				symbolTables[q.result] = new Filter(child, cond.get());
-			}*/
+			}
 		}
 
 		// ====== 投影 ======

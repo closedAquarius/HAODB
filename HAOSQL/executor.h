@@ -15,10 +15,13 @@
 using namespace std;
 
 extern IndexManager* indexManager;
-
+bool tryParseInt(const std::string& str, int& out);
 // ========== 表数据 ==========
 using Row = map<string, string>;
 using Table = vector<Row>;
+
+
+
 
 // ========== 条件 ==========
 class Condition {							// 非算子，挂靠在Filter算子
@@ -64,6 +67,12 @@ class Operator {
 public:
 	virtual ~Operator() {}
 	virtual vector<Row> execute() = 0;
+};
+struct IndexedCondition {
+	std::string col;
+	std::string val;
+	std::string op;
+	Condition cond;
 };
 
 class Scan : public Operator {				// 扫描
