@@ -957,6 +957,15 @@ EnhancedExecutor::EnhancedExecutor(const std::string& db_name, const std::string
 
 EnhancedExecutor::~EnhancedExecutor() {}
 
+bool EnhancedExecutor::Initialize()
+{
+    RecoveryManager* recovery = logger->GetRecoveryManager();
+    uint32_t last_lsn = recovery->FindMaxLSN();
+
+    SET_LSN(last_lsn);
+    return true;
+}
+
 //bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads) {
 //    try {
 //        uint32_t txn_id = logger->BeginTransaction();
@@ -1154,6 +1163,26 @@ vector<WithdrawLog> EnhancedExecutor::UndoLastOperation(int counts){
     }
 
     return logs;
+}
+
+void EnhancedExecutor::PrintAllWAL()
+{
+    RecoveryManager* recovery = logger->GetRecoveryManager();
+    auto records = recovery->FindAllWALRecords();
+
+    cout << "读取所有WAL记录" << endl;
+    cout << "--------------------------" << endl;
+    for (auto& record : records)
+    {
+        cout << "lsn: " << record.lsn << "  transaction_id: " << record.transaction_id
+            << "  timestamp: " << record.timestamp << "  withdraw: " << record.withdraw << endl;
+        cout << "changes: " << endl;
+        for (auto& change : record.changes)
+        {
+            cout << "page_id: " << change.page_id << "  slot_id: " << change.slot_id << "  length: " << change.length << "  record_type:" << change.record_type << endl;
+        }
+        cout << "****************************" << endl;
+    }
 }
 
 bool EnhancedExecutor::PerformCrashRecovery() {

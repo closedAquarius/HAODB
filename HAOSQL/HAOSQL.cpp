@@ -203,6 +203,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
+/*
 int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -251,8 +252,9 @@ int main() {
     WSACleanup();
     return 0;
 }
+*/
 
-/*int main()
+int notmain()
 {
     SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
     SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
@@ -308,7 +310,7 @@ int main() {
          
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         } catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
         }
@@ -355,7 +357,7 @@ int main() {
     }
 
     return 0;
-}*/
+}
 
 bool checkDatabaseExists(string sql, CatalogManager &catalog)
 {
@@ -439,7 +441,7 @@ vector<Quadruple> sql_compiler(string sql)
         std::cout << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
@@ -454,7 +456,7 @@ vector<Quadruple> sql_compiler(string sql)
         std::cout << "语义分析错误：" << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;

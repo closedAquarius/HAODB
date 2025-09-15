@@ -8,6 +8,13 @@
 
 namespace fs = std::filesystem;
 
+// 全局变量
+std::uint32_t LAST_LSN;
+void SET_LSN(uint32_t lsn)
+{
+    LAST_LSN = lsn;
+}
+
 // ========== 结构体构造函数实现 ==========
 // WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
 
@@ -693,6 +700,31 @@ std::vector<WALLogRecord> RecoveryManager::FindFilteredWALRecords() {
     return valid;
 }
 
+std::vector<WALLogRecord> RecoveryManager::FindAllWALRecords()
+{
+    return ReadWALLog();
+}
+
+uint64_t RecoveryManager::FindMaxLSN() 
+{
+    auto records = ReadWALLog();
+
+    if (records.empty()) {
+        return 0;
+    }
+
+    // 遍历找最大值
+    uint64_t max_lsn = 0;
+    for (const auto& r : records) {
+        if (r.lsn > max_lsn) {
+            max_lsn = r.lsn;
+        }
+    }
+
+    return max_lsn;
+}
+
+
 std::vector<WALLogRecord> RecoveryManager::FindWALRecordsByTransaction(uint32_t txn_id) {
     auto all_records = ReadWALLog();
     std::vector<WALLogRecord> result;
@@ -806,13 +838,16 @@ uint32_t DatabaseLogger::BeginTransaction() {
 
     if (config.enable_wal) {
         WALLogRecord record;
-        record.lsn = GenerateLSN();
+        record.lsn = LAST_LSN + 1;
+        SET_LSN(record.lsn);
         record.transaction_id = txn_id;
         record.timestamp = GetCurrentTimestamp();
 
         WALLogRecord::DataChange dataChange;
         dataChange.record_type = (int)WALLogRecord::TXN_BEGIN;
         record.changes.push_back(dataChange);
+
+        cout << "record.lsn:" << record.lsn << endl;
 
         WriteWALLog(record);
     }
@@ -824,7 +859,8 @@ void DatabaseLogger::CommitTransaction(uint32_t txn_id, WALLogRecord& record) {
     txn_manager->CommitTransaction(txn_id);
 
     if (config.enable_wal) {
-        record.lsn = GenerateLSN();
+        record.lsn = LAST_LSN + 1;
+        SET_LSN(record.lsn);
         record.timestamp = GetCurrentTimestamp();
 
         WriteWALLog(record);

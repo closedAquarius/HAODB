@@ -39,5 +39,7 @@ struct RID {
 // 全局变量：存储数据库名称
 extern std::string DBName;
 void setDBName(const std::string& name);
+extern std::uint32_t LAST_LSN; 
+void SET_LSN(uint32_t lsn);
 
 

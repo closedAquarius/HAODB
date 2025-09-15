@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int notmain() {
+int main() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -102,6 +102,7 @@ int notmain() {
         // 3. 使用增强执行器
         std::cout << "\n--- EnhancedExecutor 演示 ---" << std::endl;
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
+        enhanced_executor.Initialize();
 
         // 执行数据操作（自动WAL记录）
         std::vector<Quadruple> select_quads = {
@@ -109,6 +110,8 @@ int notmain() {
             {"WHERE", "age > 20", "-", "T2"},
             {"SELECT", "id,name,age", "T1", "T3"}
         };
+
+        enhanced_executor.PrintAllWAL();
 
         enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
         enhanced_executor.InsertRecord(1, 2, 3, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
@@ -126,6 +129,8 @@ int notmain() {
         
         //enhanced_executor.DeleteRecord(1,2,3,4,5,6);
         
+
+        enhanced_executor.PrintAllWAL();
 
         // 演示撤销功能
         auto logs = enhanced_executor.UndoLastOperation(3);

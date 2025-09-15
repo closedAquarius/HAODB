@@ -220,8 +220,12 @@ public:
 
     // 获取最新WAL操作
     WALLogRecord FindLatestWALRecord();
-    // 获取所有的WAL操作
+    // 获取所有的可撤销WAL操作
     vector<WALLogRecord> FindFilteredWALRecords();
+    // 获取所有的WAL记录
+    vector<WALLogRecord> FindAllWALRecords();
+    // 获取最后的lsn值
+    uint64_t FindMaxLSN();
 
 private:
     std::vector<WALLogRecord> ReadWALLog();

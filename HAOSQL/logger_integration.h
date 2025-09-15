@@ -277,6 +277,7 @@ private:
 public:
     EnhancedExecutor(const std::string& db_name, const std::string& session = "", const std::string& user = "");
     ~EnhancedExecutor();
+    bool Initialize();
 
     // 执行SQL语句（带完整日志记录）
     // bool ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads);
@@ -295,6 +296,7 @@ public:
     bool UndoLastInsert();
     bool PerformCrashRecovery();
     vector<WithdrawLog> UndoLastOperation(int counts);
+    void PrintAllWAL();
 
     // 日志状态查看
     void ShowLoggerStatus();
