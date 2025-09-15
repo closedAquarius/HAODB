@@ -38,6 +38,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     char buffer[4096];
     string account, password;
 
+
     // 登录循环
     while (true) {
         sendWithEnd(clientSock, "请输入账号:");
@@ -49,7 +50,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             return;
         }
         account = buffer;
-        cout << "[客户端账号] " << account << endl;
+        std::cout << "[客户端账号] " << account << endl;
 
         sendWithEnd(clientSock, "请输入密码:");
 
@@ -64,6 +65,8 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
         FileManager fm("HAODB");
         LoginManager lm(fm, "HAODB");
+
+
 
         if (lm.loginUser(account, password)) {
             std::string welcome =
@@ -84,10 +87,19 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     // 加载元数据
     CatalogManager catalog("HAODB");
     catalog.Initialize();
-    setDBName("Students");
+    // 加载元数据
+    setDBName("Test");
+
+    cout << catalog.GetStorageConfig(DBName).data_file_path << endl
+        << catalog.GetStorageConfig(DBName).index_file_path << endl
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+
+    StorageConfigInfo info = catalog.GetStorageConfig(DBName);
+
+    initIndexManager();
 
     // 创建 DiskManager
-    DiskManager dm("database.db");
+    DiskManager dm(info.data_file_path);
     // 创建 BufferPoolManager
     // 缓冲池大小 10
     BufferPoolManager bpm(10, &dm);
@@ -102,9 +114,16 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
 
         string sql = buffer;
-        if (sql == "exit;") break;
-        if (sql == "gen;") {
+        if (checkDatabaseExists(sql, catalog))
+            continue;
+
+        if (sql == "exit") break;
+        if (sql == "gen") {
             generateDBFile();
+            continue;
+        }
+        if (sql == "add") {
+            addDBFile();
             continue;
         }
         if (sql.empty()) {
@@ -184,7 +203,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
-/*int main() {
+int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
@@ -231,7 +250,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(serverSock);
     WSACleanup();
     return 0;
-}*/
+}
 
 /*int main()
 {

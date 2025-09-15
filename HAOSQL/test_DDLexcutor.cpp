@@ -3,7 +3,7 @@
 
 using namespace std;
 
-int testDDL() {
+/*int testDDL() {
     setDBName("TestDB");
 
     // 创建模拟的组件
@@ -111,4 +111,4 @@ int testDDL() {
     cout << endl << "=== All DDL operations completed ===" << endl;
 
     return 0;
-}
+}*/
