@@ -15,12 +15,12 @@ WALLogRecord::DataChange::DataChange() : before_page_id(0), before_slot_id(0), a
 
 WALLogRecord::WALLogRecord() : lsn(0), transaction_id(0), timestamp(0), record_type(0), record_size(0), checksum(0) {}
 
-OperationLogRecord::SimpleQuadruple::SimpleQuadruple() {}
-
-OperationLogRecord::SimpleQuadruple::SimpleQuadruple(const std::string& op, const std::string& arg1,
-    const std::string& arg2, const std::string& result)
-    : op(op), arg1(arg1), arg2(arg2), result(result) {
-}
+//OperationLogRecord::SimpleQuadruple::SimpleQuadruple() {}
+//
+//OperationLogRecord::SimpleQuadruple::SimpleQuadruple(const std::string& op, const std::string& arg1,
+//    const std::string& arg2, const std::string& result)
+//    : op(op), arg1(arg1), arg2(arg2), result(result) {
+//}
 
 OperationLogRecord::ExecutionResult::ExecutionResult() : success(false), affected_rows(0), execution_time_ms(0) {}
 
@@ -836,7 +836,7 @@ void DatabaseLogger::AbortTransaction(uint32_t txn_id) {
 uint64_t DatabaseLogger::LogQuadrupleExecution(
     uint32_t transaction_id,
     const std::string& original_sql,
-    const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
+    // const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
     const std::string& session_id,
     const std::string& user_name) {
 
@@ -849,9 +849,37 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
     op_log.user_name = user_name;
     op_log.log_level = config.log_level_code;
     op_log.original_sql = original_sql;
-    op_log.quad_sequence = quads;
+    // op_log.quad_sequence = quads;
 
     WriteOperationLog(op_log);
+
+    return op_log.log_id;
+}
+
+uint64_t DatabaseLogger::LogQuadrupleExecution(
+    uint32_t transaction_id,
+    const std::string& original_sql,
+    const std::vector<Quadruple>& quads,
+    const std::string& user_name,
+    const bool success,
+    const uint64_t execution_time_ms,
+    const std::string error_message,
+    const std::string& session_id) {
+
+    std::lock_guard<std::mutex> lock(log_mutex);
+
+    OperationLogRecord op_log;
+    op_log.log_id = GenerateLogId();
+    op_log.timestamp = GetCurrentTimestamp();
+    op_log.session_id = session_id;
+    op_log.user_name = user_name;
+    op_log.log_level = config.log_level_code;
+    op_log.original_sql = original_sql;
+    op_log.quad_sequence = quads;
+
+    // op_log.result.
+
+    // WriteOperationLog(op_log);
 
     return op_log.log_id;
 }

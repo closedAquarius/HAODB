@@ -14,12 +14,13 @@ void initIndexManager();
 
 IndexManager* indexManager = nullptr;
 
-int notmain()
+int main()
 {
 
     std::cout << "Hello World!\n";
     initIndexManager();
     string sql;
+
     while (true)
     {
         cout << "请输入 SQL 语句: ";
@@ -38,9 +39,18 @@ int notmain()
         vector<Quadruple> quadruple = sql_compiler(sql);
 
         // 加载元数据
-        CatalogManager catalog("HAODB");
+        CatalogManager catalog("TEST_HAODB");
         catalog.Initialize();
-        setDBName("Students");
+        setDBName("HelloDB");
+
+        //vector<TableInfo> tables = catalog.ListTables("HelloDB");
+        //cout << "!!!!!!!!!!!!" << endl;
+        //cout << "表数量" << catalog.GetDatabaseInfo("HelloDB").table_count << endl;
+        //catalog.ShowTableList("HelloDB");
+        //for (auto& table : tables)
+        //{
+        //    cout << table.table_name << " " << table.data_file_offset << endl;
+        //}
 
         // 创建 DiskManager
         DiskManager dm("database.db");

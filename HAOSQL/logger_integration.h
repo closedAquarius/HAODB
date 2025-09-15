@@ -55,11 +55,10 @@ public:
     void CommitTransaction();
     void RollbackTransaction();
 
-    void LogSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads, bool success = true);
-    void LogInsert(const std::string& table_name, const std::map<std::string, std::string>& data);
-    void LogDelete(const std::string& table_name, const std::string& condition);
-    void LogUpdate(const std::string& table_name, const std::string& condition,
-        const std::map<std::string, std::string>& changes);
+    // void LogSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads, bool success = true);
+    // void LogInsert(const std::string& table_name, const std::map<std::string, std::string>& data);
+    //void LogDelete(const std::string& table_name, const std::string& condition);
+    //void LogUpdate(const std::string& table_name, const std::string& condition, const std::map<std::string, std::string>& changes);
     void LogError(const std::string& error_msg);
     void LogInfo(const std::string& info_msg);
 
@@ -272,15 +271,15 @@ public:
     ~EnhancedExecutor();
 
     // 执行SQL语句（带完整日志记录）
-    bool ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads);
+    // bool ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads);
 
     // 数据变更操作（带WAL日志）
-    bool InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
-    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
-    bool UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t before_length, uint32_t after_length);
+    bool InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
+    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
+    bool UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
+        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
 
     // 恢复操作
     bool UndoLastDelete();
@@ -313,5 +312,5 @@ namespace LoggerUtils {
 }
 
 // ========== 转换函数（用于与原有代码集成）==========
-std::vector<OperationLogRecord::SimpleQuadruple> ConvertQuadruples(const std::vector<Quadruple>& quads);
-std::vector<Quadruple> ConvertSimpleQuadruples(const std::vector<OperationLogRecord::SimpleQuadruple>& simple_quads);
+//std::vector<OperationLogRecord::SimpleQuadruple> ConvertQuadruples(const std::vector<Quadruple>& quads);
+//std::vector<Quadruple> ConvertSimpleQuadruples(const std::vector<OperationLogRecord::SimpleQuadruple>& simple_quads);

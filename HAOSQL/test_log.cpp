@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int main() {
+int notmain() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -76,8 +76,6 @@ int main() {
         catalog.Initialize();
         catalog.ShowDatabaseList();
 
-        catalog.CreateDatabase("HelloDB", "admin");
-
         INIT_LOGGER("TestDB", &catalog);
         std::cout << "日志系统初始化完成" << std::endl;
 
@@ -87,7 +85,7 @@ int main() {
         simple_logger.BeginTransaction();
 
         // 记录各种类型的操作
-        std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
+        /*std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
             {"FROM", "students", "-", "T1"},
             {"WHERE", "age > 20", "-", "T2"},
             {"SELECT", "id,name,age", "T1", "T3"}
@@ -112,10 +110,11 @@ int main() {
         enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
         
         enhanced_executor.DeleteRecord(1,2,3,4,5,6);
+        
 
         // 演示撤销功能
         enhanced_executor.UndoLastOperation();
-        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;
+        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;*/
 
         // ========== 第二部分：日志查看和分析 ==========
         std::cout << "\n第二部分：日志查看和分析" << std::endl;
@@ -163,7 +162,7 @@ int main() {
         std::cout << "\n第四部分：配置管理演示" << std::endl;
 
         // 显示当前配置
-        enhanced_executor.ShowLoggerStatus();
+        // enhanced_executor.ShowLoggerStatus();
 
         // 动态更新配置
         // LogConfigManager::UpdateLogLevel("DemoDB", 3); // DEBUG级别
@@ -275,10 +274,10 @@ void RunIndependentTests() {
                     thread_logger.BeginTransaction();
 
                     for (int j = 0; j < 5; ++j) {
-                        thread_logger.LogInsert("concurrent_table", {
+                        /*thread_logger.LogInsert("concurrent_table", {
                             {"thread_id", std::to_string(i)},
                             {"operation", std::to_string(j)}
-                            });
+                            });*/
                     }
 
                     thread_logger.CommitTransaction();

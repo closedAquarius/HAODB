@@ -209,6 +209,7 @@ void SimpleLogger::RollbackTransaction() {
     current_transaction_id = 0;
 }
 
+/*
 void SimpleLogger::LogSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads, bool success) {
     uint32_t txn_id = current_transaction_id;
     if (txn_id == 0) {
@@ -284,6 +285,7 @@ void SimpleLogger::LogUpdate(const std::string& table_name, const std::string& c
 
     logger->LogQuadrupleExecution(current_transaction_id, ss.str(), quads);
 }
+*/
 
 void SimpleLogger::LogError(const std::string& error_msg) {
     logger->LogError(error_msg);
@@ -954,32 +956,32 @@ EnhancedExecutor::EnhancedExecutor(const std::string& db_name, const std::string
 
 EnhancedExecutor::~EnhancedExecutor() {}
 
-bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads) {
-    try {
-        uint32_t txn_id = logger->BeginTransaction();
-
-        logger->LogQuadrupleExecution(txn_id, sql, quads, session_id, user_name);
-
-        // 这里应该实际执行SQL，简化为总是成功
-        bool success = true;
-
-        if (success) {
-            // logger->CommitTransaction(txn_id);
-        }
-        else {
-            logger->AbortTransaction(txn_id);
-        }
-
-        return success;
-    }
-    catch (const std::exception& e) {
-        logger->LogError(e.what(), "ExecuteSQL");
-        return false;
-    }
-}
+//bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads) {
+//    try {
+//        uint32_t txn_id = logger->BeginTransaction();
+//
+//        // logger->LogQuadrupleExecution(txn_id, sql, quads, session_id, user_name);
+//
+//        // 这里应该实际执行SQL，简化为总是成功
+//        bool success = true;
+//
+//        if (success) {
+//            // logger->CommitTransaction(txn_id);
+//        }
+//        else {
+//            logger->AbortTransaction(txn_id);
+//        }
+//
+//        return success;
+//    }
+//    catch (const std::exception& e) {
+//        logger->LogError(e.what(), "ExecuteSQL");
+//        return false;
+//    }
+//}
 
 bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,uint32_t after_page_id,
-    uint32_t after_slot_id,  uint32_t after_length) {
+    uint32_t after_slot_id,  uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
@@ -1002,6 +1004,7 @@ bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slo
             datachange.after_slot_id = after_slot_id;
             record.changes.push_back(datachange);
 
+            logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
             logger->CommitTransaction(txn_id, record);
         }
         else {
@@ -1016,8 +1019,8 @@ bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
-    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
+    uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
@@ -1040,6 +1043,7 @@ bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slo
             datachange.after_slot_id = 0;
             record.changes.push_back(datachange);
 
+            logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
             logger->CommitTransaction(txn_id, record);
         }
         else {
@@ -1054,8 +1058,8 @@ bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, 
-    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
+    uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
@@ -1078,6 +1082,7 @@ bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slo
             datachange.after_slot_id = after_slot_id;
             record.changes.push_back(datachange);
 
+            logger->LogQuadrupleExecution(txn_id, sql, qua, user, result, duration, message);
             logger->CommitTransaction(txn_id, record);
         }
         else {
@@ -1272,20 +1277,20 @@ namespace LoggerUtils {
 }
 
 // ========== 转换函数实现 ==========
-std::vector<OperationLogRecord::SimpleQuadruple> ConvertQuadruples(const std::vector<Quadruple>& quads) {
-    std::vector<OperationLogRecord::SimpleQuadruple> simple_quads;
-
-    // 这里需要实际的转换逻辑，暂时返回空
-    // 实际实现需要根据Quadruple的具体定义来转换
-
-    return simple_quads;
-}
-
-std::vector<Quadruple> ConvertSimpleQuadruples(const std::vector<OperationLogRecord::SimpleQuadruple>& simple_quads) {
-    std::vector<Quadruple> quads;
-
-    // 这里需要实际的转换逻辑，暂时返回空
-    // 实际实现需要根据Quadruple的具体定义来转换
-
-    return quads;
-}
+//std::vector<OperationLogRecord::SimpleQuadruple> ConvertQuadruples(const std::vector<Quadruple>& quads) {
+//    std::vector<OperationLogRecord::SimpleQuadruple> simple_quads;
+//
+//    // 这里需要实际的转换逻辑，暂时返回空
+//    // 实际实现需要根据Quadruple的具体定义来转换
+//
+//    return simple_quads;
+//}
+//
+//std::vector<Quadruple> ConvertSimpleQuadruples(const std::vector<OperationLogRecord::SimpleQuadruple>& simple_quads) {
+//    std::vector<Quadruple> quads;
+//
+//    // 这里需要实际的转换逻辑，暂时返回空
+//    // 实际实现需要根据Quadruple的具体定义来转换
+//
+//    return quads;
+//}

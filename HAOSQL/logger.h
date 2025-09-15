@@ -77,7 +77,7 @@ struct OperationLogRecord {
     std::string original_sql;        // 原始SQL语句
 
     // 四元式序列
-    struct SimpleQuadruple {
+    /*struct SimpleQuadruple {
         std::string op;
         std::string arg1;
         std::string arg2;
@@ -86,8 +86,8 @@ struct OperationLogRecord {
         SimpleQuadruple();
         SimpleQuadruple(const std::string& op, const std::string& arg1,
             const std::string& arg2, const std::string& result);
-    };
-    std::vector<SimpleQuadruple> quad_sequence;
+    };*/
+    std::vector<Quadruple> quad_sequence;
 
     // 执行结果
     struct ExecutionResult {
@@ -272,9 +272,19 @@ public:
     uint64_t LogQuadrupleExecution(
         uint32_t transaction_id,
         const std::string& original_sql,
-        const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
+        // const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
         const std::string& session_id = "",
         const std::string& user_name = "");
+
+    uint64_t LogQuadrupleExecution(
+        uint32_t transaction_id,
+        const std::string& original_sql,
+        const std::vector<Quadruple>& quads,
+        const std::string& user_name = "",
+        const bool success = true,
+        const uint64_t execution_time_ms = 0,
+        const std::string error_message = "",
+        const std::string& session_id = "");
 
     void LogDataChange(
         uint32_t transaction_id,
