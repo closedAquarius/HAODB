@@ -57,6 +57,7 @@ public:
     int insertRecord(const char* record, uint16_t len);
     std::string readRecord(int idx) const;
     void deleteRecord(int idx);
+    void undeleteRecord(int idx, int len);
     void compact();
 
     char* rawData();
@@ -70,4 +71,5 @@ public:
     DiskManager(std::string d);
     DiskManager* readPage(int pageId, Page& pageData);
     DiskManager* writePage(int pageId, Page& pageData);
+    DiskManager* addPage(int pageId, Page& pageData);
 };

@@ -9,18 +9,18 @@
 namespace fs = std::filesystem;
 
 // ========== 结构体构造函数实现 ==========
-WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
+// WALLogRecord::QuadrupleInfo::QuadrupleInfo() : op_code(0), affected_rows(0) {}
 
-WALLogRecord::DataChange::DataChange() : page_id(0), slot_id(0), before_length(0), after_length(0) {}
+WALLogRecord::DataChange::DataChange() : before_page_id(0), before_slot_id(0), after_page_id(0), after_slot_id(0), before_length(0), after_length(0) {}
 
 WALLogRecord::WALLogRecord() : lsn(0), transaction_id(0), timestamp(0), record_type(0), record_size(0), checksum(0) {}
 
-OperationLogRecord::SimpleQuadruple::SimpleQuadruple() {}
-
-OperationLogRecord::SimpleQuadruple::SimpleQuadruple(const std::string& op, const std::string& arg1,
-    const std::string& arg2, const std::string& result)
-    : op(op), arg1(arg1), arg2(arg2), result(result) {
-}
+//OperationLogRecord::SimpleQuadruple::SimpleQuadruple() {}
+//
+//OperationLogRecord::SimpleQuadruple::SimpleQuadruple(const std::string& op, const std::string& arg1,
+//    const std::string& arg2, const std::string& result)
+//    : op(op), arg1(arg1), arg2(arg2), result(result) {
+//}
 
 OperationLogRecord::ExecutionResult::ExecutionResult() : success(false), affected_rows(0), execution_time_ms(0) {}
 
@@ -75,65 +75,177 @@ void WALBuffer::Clear() {
     current_pos = 0;
 }
 
-std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
-    std::vector<char> data;
+bool WALBuffer::read_exact(std::istream& in, void* buf, std::size_t n) {
+    return static_cast<bool>(in.read(reinterpret_cast<char*>(buf),
+        static_cast<std::streamsize>(n)));
+}
 
-    // 写入固定长度的头部信息
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.lsn),
-        reinterpret_cast<const char*>(&record.lsn) + sizeof(record.lsn));
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.transaction_id),
-        reinterpret_cast<const char*>(&record.transaction_id) + sizeof(record.transaction_id));
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.timestamp),
-        reinterpret_cast<const char*>(&record.timestamp) + sizeof(record.timestamp));
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.record_type),
-        reinterpret_cast<const char*>(&record.record_type) + sizeof(record.record_type));
+template<typename T>
+bool WALBuffer::read_pod(std::istream& in, T& v) {
+    static_assert(std::is_trivially_copyable_v<T>, "T must be POD");
+    return read_exact(in, &v, sizeof(T));
+}
 
-    // 写入四元式信息
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.quad_info.op_code),
-        reinterpret_cast<const char*>(&record.quad_info.op_code) + sizeof(record.quad_info.op_code));
+// 读取长度前缀为 uint32_t 的字符串，同时把“长度字段 + 内容字节”追加到 payload
+bool WALBuffer::read_len_prefixed_string(std::istream& in, std::string& s, std::vector<char>& payload) {
+    uint32_t n = 0;
+    if (!read_pod(in, n)) return false;
+    // 先把长度字节也计入 payload（与写入一致）
+    payload.insert(payload.end(),
+        reinterpret_cast<const char*>(&n),
+        reinterpret_cast<const char*>(&n) + sizeof(n));
 
-    // 写入字符串（长度+内容）
-    uint32_t table_name_len = record.quad_info.table_name.length();
-    data.insert(data.end(), reinterpret_cast<const char*>(&table_name_len),
-        reinterpret_cast<const char*>(&table_name_len) + sizeof(table_name_len));
-    data.insert(data.end(), record.quad_info.table_name.begin(), record.quad_info.table_name.end());
+    // 防御：限制长度，避免损坏文件导致巨量分配
+    if (n > (1u << 28)) return false; // 256MB 上限，可按需调整
 
-    uint32_t condition_len = record.quad_info.condition.length();
-    data.insert(data.end(), reinterpret_cast<const char*>(&condition_len),
-        reinterpret_cast<const char*>(&condition_len) + sizeof(condition_len));
-    data.insert(data.end(), record.quad_info.condition.begin(), record.quad_info.condition.end());
+    s.resize(n);
+    if (n == 0) return true;
 
-    uint32_t sql_len = record.quad_info.original_sql.length();
-    data.insert(data.end(), reinterpret_cast<const char*>(&sql_len),
-        reinterpret_cast<const char*>(&sql_len) + sizeof(sql_len));
-    data.insert(data.end(), record.quad_info.original_sql.begin(), record.quad_info.original_sql.end());
+    if (!read_exact(in, s.data(), n)) return false;
 
-    data.insert(data.end(), reinterpret_cast<const char*>(&record.quad_info.affected_rows),
-        reinterpret_cast<const char*>(&record.quad_info.affected_rows) + sizeof(record.quad_info.affected_rows));
+    // 字面内容也加入 payload
+    payload.insert(payload.end(), s.begin(), s.end());
+    return true;
+}
 
-    // 写入数据变更信息
-    uint32_t changes_count = record.changes.size();
-    data.insert(data.end(), reinterpret_cast<const char*>(&changes_count),
-        reinterpret_cast<const char*>(&changes_count) + sizeof(changes_count));
+// 读取长度为 before_length/after_length 的原始字节数组，并把其内容也计入 payload
+bool WALBuffer::read_bytes_exact(std::istream& in, std::vector<char>& out, uint32_t n, std::vector<char>& payload) {
+    if (n > (1u << 28)) return false; // 防御：上限可调
+    out.resize(n);
+    if (n == 0) return true;
+    if (!read_exact(in, out.data(), n)) return false;
+    payload.insert(payload.end(), out.begin(), out.end());
+    return true;
+}
 
-    for (const auto& change : record.changes) {
-        data.insert(data.end(), reinterpret_cast<const char*>(&change.page_id),
-            reinterpret_cast<const char*>(&change.page_id) + sizeof(change.page_id));
-        data.insert(data.end(), reinterpret_cast<const char*>(&change.slot_id),
-            reinterpret_cast<const char*>(&change.slot_id) + sizeof(change.slot_id));
-        data.insert(data.end(), reinterpret_cast<const char*>(&change.before_length),
-            reinterpret_cast<const char*>(&change.before_length) + sizeof(change.before_length));
-        data.insert(data.end(), reinterpret_cast<const char*>(&change.after_length),
-            reinterpret_cast<const char*>(&change.after_length) + sizeof(change.after_length));
+// 反序列化单条WALLogRecord（与写入顺序严格一致）
+bool WALBuffer::DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec) {
+    std::vector<char> payload; //用来重算checksum，收集“除 checksum 外的所有字节”
+    payload.reserve(256);      //预设小容量，避免频繁扩容
 
-        data.insert(data.end(), change.before_image.begin(), change.before_image.end());
-        data.insert(data.end(), change.after_image.begin(), change.after_image.end());
+    auto append_pod_to_payload = [&](const auto& v) {
+        const char* p = reinterpret_cast<const char*>(&v);
+        payload.insert(payload.end(), p, p + sizeof(v));
+        };
+
+    // 固定头部
+    if (!read_pod(in, rec.lsn))            return false; append_pod_to_payload(rec.lsn);
+    if (!read_pod(in, rec.transaction_id)) return false; append_pod_to_payload(rec.transaction_id);
+    if (!read_pod(in, rec.timestamp))      return false; append_pod_to_payload(rec.timestamp);
+    if (!read_pod(in, rec.record_type))    return false; append_pod_to_payload(rec.record_type);
+    if (!read_pod(in, rec.withdraw))       return false; append_pod_to_payload(rec.withdraw);
+    if (!read_pod(in, rec.record_size))    return false; append_pod_to_payload(rec.record_size);
+
+    // 四元式信息
+    /*if (!read_pod(in, rec.quad_info.op_code)) return false; append_pod_to_payload(rec.quad_info.op_code);
+
+    if (!read_len_prefixed_string(in, rec.quad_info.table_name, payload))   return false;
+    if (!read_len_prefixed_string(in, rec.quad_info.condition, payload))  return false;
+    if (!read_len_prefixed_string(in, rec.quad_info.original_sql, payload)) return false;
+
+    if (!read_pod(in, rec.quad_info.affected_rows)) return false; append_pod_to_payload(rec.quad_info.affected_rows);*/
+
+    // changes数组（先个数，再每条的字段 + 两段 image 原始字节）
+    uint32_t changes_count = 0;
+    if (!read_pod(in, changes_count)) return false; append_pod_to_payload(changes_count);
+
+    // 限制条目数
+    if (changes_count > (1u << 26)) return false; // ~67M，可按需调小
+    rec.changes.clear();
+    rec.changes.reserve(changes_count);
+
+    for (uint32_t i = 0; i < changes_count; ++i) {
+        WALLogRecord::DataChange c{};
+
+        if (!read_pod(in, c.before_page_id))       return false; append_pod_to_payload(c.before_page_id);
+        if (!read_pod(in, c.before_slot_id))       return false; append_pod_to_payload(c.before_slot_id);
+        if (!read_pod(in, c.after_page_id))       return false; append_pod_to_payload(c.after_page_id);
+        if (!read_pod(in, c.after_slot_id))       return false; append_pod_to_payload(c.after_slot_id);
+        if (!read_pod(in, c.before_length)) return false; append_pod_to_payload(c.before_length);
+        if (!read_pod(in, c.after_length))  return false; append_pod_to_payload(c.after_length);
+
+        rec.changes.emplace_back(std::move(c));
     }
 
-    // 计算校验和
-    uint32_t checksum = CalculateChecksum(data);
-    data.insert(data.end(), reinterpret_cast<const char*>(&checksum),
-        reinterpret_cast<const char*>(&checksum) + sizeof(checksum));
+    // 末尾checksum（不计入payload）
+    uint32_t checksum_on_disk = 0;
+    if (!read_pod(in, checksum_on_disk)) return false;
+
+    // 计算checksum验证
+    const uint32_t checksum_calc = CalculateChecksum(payload);
+    if (checksum_calc != checksum_on_disk) {
+        return false; // 校验失败 -> 视为损坏记录
+    }
+
+    return true;
+}
+
+std::vector<char> WALBuffer::SerializeRecord(const WALLogRecord& record) {
+    std::vector<char> data;
+    data.reserve(256); // 按需调整，减少扩容
+
+    auto append_pod = [&](const auto& v) {
+        const char* p = reinterpret_cast<const char*>(&v);
+        data.insert(data.end(), p, p + sizeof(v));
+        };
+    auto append_str_with_len = [&](const std::string& s) {
+        uint32_t n = static_cast<uint32_t>(s.size());
+        append_pod(n);
+        data.insert(data.end(), s.begin(), s.end());
+        };
+
+    // 固定头
+    append_pod(record.lsn);
+    append_pod(record.transaction_id);
+    append_pod(record.timestamp);
+    append_pod(record.record_type);
+    cout << "appen_pod" << record.record_type << endl;
+    append_pod(record.withdraw);
+
+    // 预留record_size（4字节占位，稍后回填）
+    const std::size_t record_size_pos = data.size();
+    {
+        uint32_t placeholder = 0;
+        append_pod(placeholder);
+    }
+
+    // 四元式信息
+    /*append_pod(record.quad_info.op_code);
+    append_str_with_len(record.quad_info.table_name);
+    append_str_with_len(record.quad_info.condition);
+    append_str_with_len(record.quad_info.original_sql);
+    append_pod(record.quad_info.affected_rows);*/
+
+    // 数据变更信息
+    {
+        uint32_t changes_count = static_cast<uint32_t>(record.changes.size());
+        append_pod(changes_count);
+
+        for (const auto& change : record.changes) {
+            append_pod(change.before_page_id);
+            append_pod(change.before_slot_id);
+            append_pod(change.after_page_id);
+            append_pod(change.after_slot_id);
+            append_pod(change.before_length);
+            append_pod(change.after_length);
+        }
+    }
+
+    // 回填 record_size
+    // 定义：record_size = （从record_size字段之后到末尾的总长度）= (当前data.size() - (record_size_pos + 4)) + sizeof(checksum)
+    {
+        const uint32_t record_size_val =
+            static_cast<uint32_t>((data.size() - (record_size_pos + sizeof(uint32_t))) + sizeof(uint32_t));
+
+        // 回写到占位的4字节
+        std::memcpy(&data[record_size_pos], &record_size_val, sizeof(record_size_val));
+    }
+
+    // 计算并追加checksum（对“除 checksum 本身以外的所有字节”做校验）
+    {
+        uint32_t checksum = CalculateChecksum(data);
+        append_pod(checksum);
+    }
 
     return data;
 }
@@ -358,15 +470,14 @@ bool RecoveryManager::PerformCrashRecovery() {
                 if (record.record_type == WALLogRecord::INSERT_OP ||
                     record.record_type == WALLogRecord::UPDATE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.after_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::DELETE_OP) {
                     for (const auto& change : record.changes) {
-                        DeleteRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id);
+                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
             }
@@ -378,22 +489,20 @@ bool RecoveryManager::PerformCrashRecovery() {
             if (status_it != transaction_status.end() && !status_it->second) {
                 if (record.record_type == WALLogRecord::INSERT_OP) {
                     for (const auto& change : record.changes) {
-                        DeleteRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id);
+                        DeleteRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::DELETE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.before_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
                 else if (record.record_type == WALLogRecord::UPDATE_OP) {
                     for (const auto& change : record.changes) {
-                        RestoreRecord(record.quad_info.table_name,
-                            change.page_id, change.slot_id,
-                            change.before_image);
+                        RestoreRecord(change.before_page_id, change.before_slot_id, change.before_length,
+                            change.after_page_id, change.after_slot_id, change.after_length);
                     }
                 }
             }
@@ -407,7 +516,9 @@ bool RecoveryManager::PerformCrashRecovery() {
     }
 }
 
-bool RecoveryManager::UndoDelete(uint64_t log_id) {
+bool RecoveryManager::UndoDelete(WALLogRecord record) {
+    
+    /*
     auto records = FindWALRecordsByLogId(log_id);
 
     for (auto it = records.rbegin(); it != records.rend(); ++it) {
@@ -425,12 +536,26 @@ bool RecoveryManager::UndoDelete(uint64_t log_id) {
     }
 
     return false;
+    */
+
+    cout << "撤销删除" << endl;
+    cout << "删除前内容" << endl;
+    cout << record.changes[0].before_page_id << record.changes[0].before_slot_id << record.changes[0].before_length << endl;
+    /*for (auto& change : record.changes)
+    {
+        for (auto& before : change.before_image)
+        {
+            cout << before;
+        }
+        cout << endl;
+    }*/
+    return true;
 }
 
 bool RecoveryManager::UndoUpdate(uint64_t log_id) {
     auto records = FindWALRecordsByLogId(log_id);
 
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
+    /*for (auto it = records.rbegin(); it != records.rend(); ++it) {
         const auto& record = *it;
         if (record.record_type == WALLogRecord::UPDATE_OP) {
             for (const auto& change : record.changes) {
@@ -442,7 +567,7 @@ bool RecoveryManager::UndoUpdate(uint64_t log_id) {
             }
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -450,7 +575,7 @@ bool RecoveryManager::UndoUpdate(uint64_t log_id) {
 bool RecoveryManager::UndoInsert(uint64_t log_id) {
     auto records = FindWALRecordsByLogId(log_id);
 
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
+    /*for (auto it = records.rbegin(); it != records.rend(); ++it) {
         const auto& record = *it;
         if (record.record_type == WALLogRecord::INSERT_OP) {
             for (const auto& change : record.changes) {
@@ -459,7 +584,7 @@ bool RecoveryManager::UndoInsert(uint64_t log_id) {
             }
             return true;
         }
-    }
+    }*/
 
     return false;
 }
@@ -489,26 +614,25 @@ std::vector<WALLogRecord> RecoveryManager::ReadWALLog() {
     std::vector<WALLogRecord> records;
 
     try {
-        std::string wal_path = file_manager->GetWALFilePath();
-        std::ifstream file(wal_path, std::ios::binary);
+        std::ifstream file(file_manager->GetWALFilePath(), std::ios::binary);
+        if (!file.is_open()) return records;
 
-        if (!file.is_open()) {
-            return records;
-        }
+        while (true) {
+            // 小心处理 EOF：peek 一下，避免在 EOF 上报“损坏”
+            file.peek();
+            if (!file.good()) break;
 
-        // 简化实现：实际需要完整的反序列化逻辑
-        while (file.good()) {
-            uint64_t lsn;
-            if (!file.read(reinterpret_cast<char*>(&lsn), sizeof(lsn))) {
+            WALLogRecord rec;
+            auto pos = file.tellg();
+            WALBuffer wal;
+
+            if (!wal.DeserializeWALLogRecord(file, rec)) {
+                std::cerr << "Corrupted WAL record at offset "
+                    << static_cast<long long>(pos) << "\n";
                 break;
             }
-
-            WALLogRecord record;
-            record.lsn = lsn;
-            records.push_back(record);
+            records.emplace_back(std::move(rec));
         }
-
-        file.close();
     }
     catch (const std::exception& e) {
         std::cerr << "Failed to read WAL log: " << e.what() << std::endl;
@@ -526,6 +650,36 @@ std::vector<WALLogRecord> RecoveryManager::FindWALRecordsByLogId(uint64_t log_id
     }
 
     return result;
+}
+
+WALLogRecord RecoveryManager::FindLatestWALRecord() {
+    auto records = ReadWALLog();
+
+    //for (auto& re : records)
+    //{
+    //    cout << "reid: " << re.lsn << endl;
+    //    cout << "retime: " << re.timestamp << endl;
+    //    cout << "type: " << re.record_type << endl;
+    //    cout << "---------------------------" << endl;
+    //}
+
+    // 过滤掉已经撤回，withdraw==true的操作
+    std::vector<WALLogRecord> valid;
+    std::copy_if(records.begin(), records.end(), std::back_inserter(valid),
+        [](const WALLogRecord& r) { return !r.withdraw; });
+
+    if (valid.empty()) {
+        throw std::runtime_error("No valid WAL records found");
+    }
+
+    auto it = std::max_element(valid.begin(), valid.end(),
+        [](const WALLogRecord& a, const WALLogRecord& b) {
+            //cout << "a,time" << a.timestamp<<endl;
+            //cout << "b,time" << b.timestamp << endl;
+            return a.lsn < b.lsn;
+        });
+
+    return *it;
 }
 
 std::vector<WALLogRecord> RecoveryManager::FindWALRecordsByTransaction(uint32_t txn_id) {
@@ -547,16 +701,15 @@ WALLogRecord RecoveryManager::DeserializeWALRecord(const std::vector<char>& data
     return record;
 }
 
-bool RecoveryManager::RestoreRecord(const std::string& table_name, uint32_t page_id,
-    uint32_t slot_id, const std::vector<char>& data) {
-    std::cout << "Restoring record in table " << table_name
-        << " at page " << page_id << " slot " << slot_id << std::endl;
+bool RecoveryManager::RestoreRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+    std::cout << "Restoring record in table at page " << before_page_id << " slot " << before_slot_id << std::endl;
     return true;
 }
 
-bool RecoveryManager::DeleteRecord(const std::string& table_name, uint32_t page_id, uint32_t slot_id) {
-    std::cout << "Deleting record in table " << table_name
-        << " at page " << page_id << " slot " << slot_id << std::endl;
+bool RecoveryManager::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
+    std::cout << "Deleting record in table at page " << before_page_id << " slot " << before_slot_id << std::endl;
     return true;
 }
 
@@ -653,15 +806,13 @@ uint32_t DatabaseLogger::BeginTransaction() {
     return txn_id;
 }
 
-void DatabaseLogger::CommitTransaction(uint32_t txn_id) {
+// uint32_t txn_id, int type
+void DatabaseLogger::CommitTransaction(uint32_t txn_id, WALLogRecord& record) {
     txn_manager->CommitTransaction(txn_id);
 
     if (config.enable_wal) {
-        WALLogRecord record;
         record.lsn = GenerateLSN();
-        record.transaction_id = txn_id;
         record.timestamp = GetCurrentTimestamp();
-        record.record_type = WALLogRecord::TXN_COMMIT;
 
         WriteWALLog(record);
         FlushWALBuffer();
@@ -685,7 +836,7 @@ void DatabaseLogger::AbortTransaction(uint32_t txn_id) {
 uint64_t DatabaseLogger::LogQuadrupleExecution(
     uint32_t transaction_id,
     const std::string& original_sql,
-    const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
+    // const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
     const std::string& session_id,
     const std::string& user_name) {
 
@@ -698,7 +849,38 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
     op_log.user_name = user_name;
     op_log.log_level = config.log_level_code;
     op_log.original_sql = original_sql;
+    // op_log.quad_sequence = quads;
+
+    WriteOperationLog(op_log);
+
+    return op_log.log_id;
+}
+
+uint64_t DatabaseLogger::LogQuadrupleExecution(
+    uint32_t transaction_id,
+    const std::string& original_sql,
+    const std::vector<Quadruple>& quads,
+    const std::string& user_name,
+    const bool success,
+    const uint64_t execution_time_ms,
+    const std::string error_message,
+    const std::string& session_id) {
+
+    std::lock_guard<std::mutex> lock(log_mutex);
+
+    OperationLogRecord op_log;
+    op_log.log_id = GenerateLogId();
+    op_log.timestamp = GetCurrentTimestamp();
+    op_log.session_id = session_id;
+    op_log.user_name = user_name;
+    op_log.log_level = config.log_level_code;
+    op_log.original_sql = original_sql;
     op_log.quad_sequence = quads;
+
+    op_log.result.success = success;
+    op_log.result.error_message = error_message;
+    op_log.result.execution_time_ms = execution_time_ms;
+
 
     WriteOperationLog(op_log);
 
@@ -708,11 +890,12 @@ uint64_t DatabaseLogger::LogQuadrupleExecution(
 void DatabaseLogger::LogDataChange(
     uint32_t transaction_id,
     uint8_t operation_type,
-    const std::string& table_name,
-    uint32_t page_id,
-    uint32_t slot_id,
-    const std::vector<char>& before_data,
-    const std::vector<char>& after_data) {
+    uint32_t before_page_id,
+    uint32_t before_slot_id,
+    uint32_t after_page_id,
+    uint32_t after_slot_id,
+    uint32_t before_length,
+    uint32_t after_length) {
 
     if (!config.enable_wal) return;
 
@@ -722,17 +905,13 @@ void DatabaseLogger::LogDataChange(
     record.timestamp = GetCurrentTimestamp();
     record.record_type = operation_type;
 
-    record.quad_info.op_code = operation_type;
-    record.quad_info.table_name = table_name;
-    record.quad_info.affected_rows = 1;
-
     WALLogRecord::DataChange change;
-    change.page_id = page_id;
-    change.slot_id = slot_id;
-    change.before_length = before_data.size();
-    change.after_length = after_data.size();
-    change.before_image = before_data;
-    change.after_image = after_data;
+    change.before_page_id = before_page_id;
+    change.before_slot_id = before_slot_id;
+    change.after_page_id = after_page_id;
+    change.after_slot_id = after_slot_id;
+    change.before_length = before_length;
+    change.after_length = after_length;
 
     record.changes.push_back(change);
 
@@ -818,7 +997,6 @@ std::string DatabaseLogger::SerializeOperationLog(const OperationLogRecord& reco
         << "[" << (int)record.log_level << "] "
         << "[TXN:" << record.log_id << "] "
         << "[User:" << record.user_name << "] "
-        << "[Session:" << record.session_id << "] "
         << "SQL: " << record.original_sql << " | "
         << "Quads: ";
 
@@ -831,7 +1009,6 @@ std::string DatabaseLogger::SerializeOperationLog(const OperationLogRecord& reco
     }
 
     ss << " | Result: " << (record.result.success ? "SUCCESS" : "FAILED")
-        << " | Rows: " << record.result.affected_rows
         << " | Time: " << record.result.execution_time_ms << "ms";
 
     if (!record.result.error_message.empty()) {

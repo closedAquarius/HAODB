@@ -22,29 +22,32 @@ struct WALLogRecord {
     uint64_t lsn;                    // 日志序列号
     uint32_t transaction_id;         // 事务ID
     uint64_t timestamp;              // 时间戳
-    uint8_t record_type;             // 记录类型
+    int record_type;             // 记录类型
     uint32_t record_size;            // 记录总大小
     uint32_t checksum;               // 校验和
+    int withdraw = 0;
 
     // 四元式信息
-    struct QuadrupleInfo {
-        uint8_t op_code;             // 操作码
-        std::string table_name;      // 表名
-        std::string condition;       // 条件表达式
-        uint32_t affected_rows;      // 影响行数
-        std::string original_sql;    // 原始SQL
+    //struct QuadrupleInfo {
+    //    uint8_t op_code;             // 操作码
+    //    std::string table_name;      // 表名
+    //    std::string condition;       // 条件表达式
+    //    uint32_t affected_rows;      // 影响行数
+    //    std::string original_sql;    // 原始SQL
 
-        QuadrupleInfo();
-    } quad_info;
+    //    QuadrupleInfo();
+    //} quad_info;
 
     // 数据变更信息
     struct DataChange {
-        uint32_t page_id;            // 页面ID
-        uint32_t slot_id;            // 槽位ID
+        uint32_t before_page_id;            // 页面ID
+        uint32_t before_slot_id;            // 槽位ID
+        uint32_t after_page_id;            // 页面ID
+        uint32_t after_slot_id;            // 槽位ID
         uint32_t before_length;      // 修改前数据长度
         uint32_t after_length;       // 修改后数据长度
-        std::vector<char> before_image; // 修改前的完整记录
-        std::vector<char> after_image;  // 修改后的完整记录
+        // std::vector<char> before_image; // 修改前的完整记录
+        // std::vector<char> after_image;  // 修改后的完整记录
 
         DataChange();
     };
@@ -74,7 +77,7 @@ struct OperationLogRecord {
     std::string original_sql;        // 原始SQL语句
 
     // 四元式序列
-    struct SimpleQuadruple {
+    /*struct SimpleQuadruple {
         std::string op;
         std::string arg1;
         std::string arg2;
@@ -83,8 +86,8 @@ struct OperationLogRecord {
         SimpleQuadruple();
         SimpleQuadruple(const std::string& op, const std::string& arg1,
             const std::string& arg2, const std::string& result);
-    };
-    std::vector<SimpleQuadruple> quad_sequence;
+    };*/
+    std::vector<Quadruple> quad_sequence;
 
     // 执行结果
     struct ExecutionResult {
@@ -128,8 +131,15 @@ public:
     void Clear();
 
 private:
-    std::vector<char> SerializeRecord(const WALLogRecord& record);
+    inline bool read_exact(std::istream& in, void* buf, std::size_t n);
+    template<typename T> inline bool read_pod(std::istream& in, T& v);
+    bool read_len_prefixed_string(std::istream& in, std::string& s, std::vector<char>& payload);
+    bool read_bytes_exact(std::istream& in, std::vector<char>& out, uint32_t n, std::vector<char>& payload);
     uint32_t CalculateChecksum(const std::vector<char>& data);
+
+public:
+    std::vector<char> SerializeRecord(const WALLogRecord& record);
+    bool DeserializeWALLogRecord(std::istream& in, WALLogRecord& rec);
 };
 
 // ========== 日志文件管理器 ==========
@@ -195,13 +205,16 @@ public:
     bool PerformCrashRecovery();
 
     // 操作恢复
-    bool UndoDelete(uint64_t log_id);
+    bool UndoDelete(WALLogRecord record);
     bool UndoUpdate(uint64_t log_id);
     bool UndoInsert(uint64_t log_id);
 
     // 事务恢复
     bool UndoTransaction(uint32_t transaction_id);
     bool RedoTransaction(uint32_t transaction_id);
+
+    // 获取最新WAL操作
+    WALLogRecord FindLatestWALRecord();
 
 private:
     std::vector<WALLogRecord> ReadWALLog();
@@ -210,9 +223,10 @@ private:
     WALLogRecord DeserializeWALRecord(const std::vector<char>& data);
 
     // 物理恢复操作
-    bool RestoreRecord(const std::string& table_name, uint32_t page_id,
-        uint32_t slot_id, const std::vector<char>& data);
-    bool DeleteRecord(const std::string& table_name, uint32_t page_id, uint32_t slot_id);
+    bool RestoreRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+        uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length);
+    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+        uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length);
 };
 
 // ========== 数据库日志管理器（主类）==========
@@ -250,25 +264,37 @@ public:
 
     // 事务管理
     uint32_t BeginTransaction();
-    void CommitTransaction(uint32_t txn_id);
+    // void CommitTransaction(uint32_t txn_id, int type = WALLogRecord::TXN_COMMIT);
+    void CommitTransaction(uint32_t txn_id, WALLogRecord& record);
     void AbortTransaction(uint32_t txn_id);
 
     // 主要日志接口
     uint64_t LogQuadrupleExecution(
         uint32_t transaction_id,
         const std::string& original_sql,
-        const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
+        // const std::vector<OperationLogRecord::SimpleQuadruple>& quads,
         const std::string& session_id = "",
         const std::string& user_name = "");
+
+    uint64_t LogQuadrupleExecution(
+        uint32_t transaction_id,
+        const std::string& original_sql,
+        const std::vector<Quadruple>& quads,
+        const std::string& user_name = "",
+        const bool success = true,
+        const uint64_t execution_time_ms = 0,
+        const std::string error_message = "",
+        const std::string& session_id = "");
 
     void LogDataChange(
         uint32_t transaction_id,
         uint8_t operation_type,
-        const std::string& table_name,
-        uint32_t page_id,
-        uint32_t slot_id,
-        const std::vector<char>& before_data,
-        const std::vector<char>& after_data);
+        uint32_t before_page_id,
+        uint32_t before_slot_id,
+        uint32_t after_page_id,
+        uint32_t after_slot_id,
+        uint32_t before_length,
+        uint32_t after_length);
 
     void LogError(const std::string& error_message,
         const std::string& context = "");
@@ -293,7 +319,7 @@ private:
     uint64_t GenerateLogId();
     uint64_t GetCurrentTimestamp();
 
-    // 序列化/反序列化
+    // 序列化
     std::string SerializeOperationLog(const OperationLogRecord& record);
 };
 

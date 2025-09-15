@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int test_log() {
+int notmain() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -85,7 +85,7 @@ int test_log() {
         simple_logger.BeginTransaction();
 
         // 记录各种类型的操作
-        std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
+        /*std::vector<OperationLogRecord::SimpleQuadruple> select_quads = {
             {"FROM", "students", "-", "T1"},
             {"WHERE", "age > 20", "-", "T2"},
             {"SELECT", "id,name,age", "T1", "T3"}
@@ -94,7 +94,7 @@ int test_log() {
 
         simple_logger.LogInsert("students", { {"id", "1001"}, {"name", "张三"}, {"age", "22"} });
         simple_logger.LogUpdate("students", "id = 1001", { {"age", "23"} });
-        simple_logger.LogDelete("students", "id = 1002");
+        simple_logger.LogDelete("students", "id = 1002");*/
 
         simple_logger.CommitTransaction();
         std::cout << "SimpleLogger 操作完成" << std::endl;
@@ -104,22 +104,26 @@ int test_log() {
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P001"}, {"name", "笔记本电脑"}, {"price", "5999"}
-            });
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P002"}, {"name", "无线鼠标"}, {"price", "199"}
-            });
+        std::vector<Quadruple> select_quads = {
+            {"FROM", "students", "-", "T1"},
+            {"WHERE", "age > 20", "-", "T2"},
+            {"SELECT", "id,name,age", "T1", "T3"}
+        };
 
-        enhanced_executor.UpdateRecord("products", "id = P001", { {"price", "5799"} });
-        enhanced_executor.DeleteRecord("products", "id = P002");
+        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6, "SELECT id, name, age FROM students WHERE age > 20", select_quads, "admin", true, 12, "");
+        //enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
+
+        //enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
+        
+        //enhanced_executor.DeleteRecord(1,2,3,4,5,6);
+        
 
         // 演示撤销功能
-        enhanced_executor.UndoLastDelete();
-        std::cout << "✓ EnhancedExecutor 操作完成（包含撤销）" << std::endl;
+        enhanced_executor.UndoLastOperation();
+        std::cout << "EnhancedExecutor 操作完成（包含撤销）" << std::endl;
 
         // ========== 第二部分：日志查看和分析 ==========
-        std::cout << "\n📊 第二部分：日志查看和分析" << std::endl;
+        std::cout << "\n第二部分：日志查看和分析" << std::endl;
 
         LogViewer log_viewer("TestDB");
 
@@ -140,12 +144,13 @@ int test_log() {
         std::cout << "日志大小: " << stats.total_log_size_mb << " MB" << std::endl;
 
         // ========== 第三部分：性能监控演示 ==========
-        std::cout << "\n⚡ 第三部分：性能监控演示" << std::endl;
+        std::cout << "\n第三部分：性能监控演示" << std::endl;
 
         LogPerformanceMonitor perf_monitor;
 
         // 模拟批量操作性能测试
         perf_monitor.StartOperation("BATCH_INSERT");
+        /*
         for (int i = 0; i < 100; ++i) {
             enhanced_executor.InsertRecord("performance_test", {
                 {"id", std::to_string(i)},
@@ -153,23 +158,24 @@ int test_log() {
                 {"timestamp", std::to_string(time(nullptr))}
                 });
         }
+        */
         perf_monitor.EndOperation("BATCH_INSERT");
 
         // 显示性能统计
         perf_monitor.PrintAllStats();
 
         // ========== 第四部分：配置管理演示 ==========
-        std::cout << "\n⚙️ 第四部分：配置管理演示" << std::endl;
+        std::cout << "\n第四部分：配置管理演示" << std::endl;
 
         // 显示当前配置
-        enhanced_executor.ShowLoggerStatus();
+        // enhanced_executor.ShowLoggerStatus();
 
         // 动态更新配置
         // LogConfigManager::UpdateLogLevel("DemoDB", 3); // DEBUG级别
         // LogConfigManager::UpdateSyncMode("DemoDB", 2); // 全同步模式
 
         // ========== 第五部分：高级功能演示 ==========
-        std::cout << "\n🚀 第五部分：高级功能演示" << std::endl;
+        std::cout << "\n第五部分：高级功能演示" << std::endl;
 
         // 使用组合模式的带日志算子
         Table test_table;
@@ -181,18 +187,18 @@ int test_log() {
             &test_table, test_row, "test_table", CURRENT_LOGGER, txn_id);
 
         logged_insert->execute();
-        CURRENT_LOGGER->CommitTransaction(txn_id);
+        // CURRENT_LOGGER->CommitTransaction(txn_id);
 
-        std::cout << "✓ 组合模式算子执行完成，表中记录数: " << test_table.size() << std::endl;
+        std::cout << "组合模式算子执行完成，表中记录数: " << test_table.size() << std::endl;
 
         // 导出日志
         bool export_result = log_viewer.ExportLogs("demo_logs_export.txt");
         if (export_result) {
-            std::cout << "✓ 日志导出完成: demo_logs_export.txt" << std::endl;
+            std::cout << "日志导出完成: demo_logs_export.txt" << std::endl;
         }
 
         // ========== 第六部分：运行完整测试套件 ==========
-        std::cout << "\n🧪 第六部分：运行完整测试套件" << std::endl;
+        std::cout << "\n第六部分：运行完整测试套件" << std::endl;
 
         // LoggerTestSuite test_suite("TestDB");
         // test_suite.RunAllTests();
@@ -201,25 +207,25 @@ int test_log() {
         std::cout << "\n" << std::string(60, '=') << std::endl;
         std::cout << "              演示完成总结" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
-        std::cout << "✓ 基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
-        std::cout << "✓ WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
-        std::cout << "✓ 日志管理：轮转、查看、搜索、导出" << std::endl;
-        std::cout << "✓ 性能监控：操作统计、时间分析" << std::endl;
-        std::cout << "✓ 配置管理：动态配置、多级日志" << std::endl;
-        std::cout << "✓ 高级功能：组合模式算子、并发安全" << std::endl;
-        std::cout << "✓ 测试套件：全面的单元测试和集成测试" << std::endl;
+        std::cout << "基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
+        std::cout << "WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
+        std::cout << "日志管理：轮转、查看、搜索、导出" << std::endl;
+        std::cout << "性能监控：操作统计、时间分析" << std::endl;
+        std::cout << "配置管理：动态配置、多级日志" << std::endl;
+        std::cout << "高级功能：组合模式算子、并发安全" << std::endl;
+        std::cout << "测试套件：全面的单元测试和集成测试" << std::endl;
 
-        std::cout << "\n🎉 HAODB日志系统演示成功完成！" << std::endl;
+        std::cout << "\ HAODB日志系统演示成功完成！" << std::endl;
 
         return 0;
 
     }
     catch (const std::exception& e) {
-        std::cerr << "\n❌ 演示过程中发生错误: " << e.what() << std::endl;
+        std::cerr << "\n演示过程中发生错误: " << e.what() << std::endl;
         return 1;
     }
     catch (...) {
-        std::cerr << "\n❌ 发生未知错误" << std::endl;
+        std::cerr << "\n发生未知错误" << std::endl;
         return 2;
     }
 }
@@ -274,10 +280,10 @@ void RunIndependentTests() {
                     thread_logger.BeginTransaction();
 
                     for (int j = 0; j < 5; ++j) {
-                        thread_logger.LogInsert("concurrent_table", {
+                        /*thread_logger.LogInsert("concurrent_table", {
                             {"thread_id", std::to_string(i)},
                             {"operation", std::to_string(j)}
-                            });
+                            });*/
                     }
 
                     thread_logger.CommitTransaction();
@@ -293,7 +299,7 @@ void RunIndependentTests() {
             t.join();
         }
 
-        std::cout << "✓ 并发测试完成，成功线程数: " << success_count.load() << "/3" << std::endl;
+        std::cout << "并发测试完成，成功线程数: " << success_count.load() << "/3" << std::endl;
 
     }
     catch (const std::exception& e) {

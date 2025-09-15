@@ -11,7 +11,6 @@
 #include "buffer_pool.h"
 #include "index_manager.h"
 #include "catalog_manager.h"
-#include <sstream>
 
 using namespace std;
 
@@ -67,11 +66,11 @@ public:
 
 class Scan : public Operator {				// …®√Ë
 private:
-	Table table;
-	BufferPoolManager* bpm;
+	BufferPoolManager* bpm;	
+	PageId pageOffset;
 public:
 	string tableName;
-	Scan(BufferPoolManager* bpm, const string& tName);
+	Scan(BufferPoolManager* bpm, const string& tName, PageId i);
 	vector<Row> execute();
 };
 
@@ -107,8 +106,9 @@ private:
 	Operator* child;
 	BufferPoolManager* bpm;
 	std::string tableName;
+	PageId pageOffset;
 public:
-	Insert(Operator* c, BufferPoolManager* b, const std::string& tName);
+	Insert(Operator* c, BufferPoolManager* b, const std::string& tName, PageId i);
 	std::vector<Row> execute() override;
 };
 
@@ -126,8 +126,9 @@ private:
 	Operator* child;
 	Operator* data;
 	BufferPoolManager* bpm;
+	PageId pageOffset;
 public:
-	Update(Operator* c, Operator* d, BufferPoolManager* b);
+	Update(Operator* c, Operator* d, BufferPoolManager* b, PageId i);
 	vector<Row> execute();
 };
 
@@ -136,8 +137,9 @@ private:
 	Operator* child;
 	BufferPoolManager* bpm;
 	string tableName;
+	PageId pageOffset;
 public:
-	Delete(Operator* c, BufferPoolManager* b);
+	Delete(Operator* c, BufferPoolManager* b, PageId i);
 	vector<Row> execute();
 };
 

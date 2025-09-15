@@ -1158,6 +1158,25 @@ bool CatalogManager::CreateDirectoryStructure(const std::string& db_name) {
         fs::create_directories(db_path + "\\index");
         fs::create_directories(db_path + "\\logs");
 
+        // 在(db_path + "\\data")下创建database.db
+        std::ofstream data_file(db_path + "\\data\\database.db");
+        if (!data_file.is_open()) {
+            throw std::runtime_error("无法创建 database.db 文件");
+        }
+        data_file.close();
+
+        // 将db_name转换为小写
+        std::string index_filename = db_name;
+        std::transform(index_filename.begin(), index_filename.end(), index_filename.begin(), ::tolower);
+        index_filename += ".idx";
+
+        // 在(db_path + "\\index")下创建db_name.idx
+        std::ofstream index_file(db_path + "\\index\\" + index_filename);
+        if (!index_file.is_open()) {
+            throw std::runtime_error("无法创建索引文件 " + index_filename);
+        }
+        index_file.close();
+
         std::cout << "数据库目录结构创建成功: " << db_path << std::endl;
         return true;
     }

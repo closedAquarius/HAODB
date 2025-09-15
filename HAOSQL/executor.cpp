@@ -2,15 +2,12 @@
 
 using namespace std;
 
-Scan::Scan(BufferPoolManager* bpm, const string& tName) : bpm(bpm), tableName(tName) {}
+Scan::Scan(BufferPoolManager* bpm, const string& tName, PageId i) :bpm(bpm), tableName(tName), pageOffset(i) {}
 vector<Row> Scan::execute() {
-	// TODO: 从元数据中获得tableName的页地址
-	// 假设Students表位于 PageId 0
-	PageId pageId = 0;
 	vector<Row> output;
 
 	// 通过缓冲池获取页
-	Page* page = bpm->fetchPage(pageId);
+	Page* page = bpm->fetchPage(pageOffset);
 	if (!page) {
 		throw runtime_error("Failed ro fetch page from buffer pool.");
 	}
@@ -20,8 +17,7 @@ vector<Row> Scan::execute() {
 		string record_str = page->readRecord(i);
 		Row row;
 
-		// TODO
-		// 假设记录是键值对的字符串形式，例如 "id:1,name:Alice,..."
+		// 记录是键值对的字符串形式，例如 "id:1,name:Alice,..."
 		vector<string> parts;
 		split(record_str, ",", parts);
 		for (const auto& p : parts) {
@@ -37,7 +33,7 @@ vector<Row> Scan::execute() {
 	}
 
 	// 使用完毕后解除 pin
-	bpm->unpinPage(pageId, false);
+	bpm->unpinPage(pageOffset, false);
 
 	return output;
 }
@@ -107,15 +103,12 @@ vector<Row> Values::execute() {
 }
 
 // Insert 算子实现
-Insert::Insert(Operator* c, BufferPoolManager* b, const string& tName) : child(c), bpm(b), tableName(tName) {}
-
+Insert::Insert(Operator* c, BufferPoolManager* b, const string& tName, PageId i) : child(c), bpm(b), tableName(tName), pageOffset(i) {}
 vector<Row> Insert::execute() {
 	// 从子节点（VALUES 算子）获取要插入的数据行
 	vector<Row> input = child->execute();
 
-	// TODO: 从元数据中获得tableName的页地址
-	// 假设Students表位于 PageId 0
-	PageId pageId = 0;
+	PageId pageId = pageOffset;
 
 	Page* page = bpm->fetchPage(pageId);
 	if (!page) {
@@ -191,7 +184,7 @@ vector<Row> Set::execute() {
 	return output;
 }
 
-Update::Update(Operator* c, Operator* d, BufferPoolManager* b) :child(c), data(d), bpm(b) {}
+Update::Update(Operator* c, Operator* d, BufferPoolManager* b, PageId i) :child(c), data(d), bpm(b), pageOffset(i) {}
 vector<Row> Update::execute() {
 	// 获取子节点（通常是 Filter）返回的行
 	vector<Row> rowsToUpdate = child->execute();
@@ -199,18 +192,10 @@ vector<Row> Update::execute() {
 	vector<Row> output;
 
 	Row updateValues = updateData.front();
-	// TODO
-	// 假设在 Scan 或 Filter 阶段已经将物理地址（例如：PageId 和 SlotId）存储在 Row 对象中
-	// 实际系统中，Row 对象会包含 `rid`（Record ID），用来定位记录
-	// 简化，直接从 child 获得 Row，然后假设可以定位并更新
 
 	for (auto& row : rowsToUpdate) {
-		// 伪代码：从 Row 获取其物理地址 (pageId, slotId)
-		// PageId pageId = row.getPageId();
-		// SlotId slotId = row.getSlotId();
 
-		// 假设通过某种机制可以获取到页号，这里我们假设为 0
-		PageId pageId = 0; // 这是一个简化！
+		PageId pageId = pageOffset;
 
 		// 锁定并获取页面
 		Page* page = bpm->fetchPage(pageId);
@@ -267,7 +252,7 @@ vector<Row> Update::execute() {
 	return output;
 }
 
-Delete::Delete(Operator* c, BufferPoolManager* b) : child(c), bpm(b) {}
+Delete::Delete(Operator* c, BufferPoolManager* b, PageId i) : child(c), bpm(b), pageOffset(i) {}
 vector<Row> Delete::execute() {
 	// child 算子树执行后，返回需要删除的行
 	vector<Row> inputRows = child->execute();
@@ -276,8 +261,7 @@ vector<Row> Delete::execute() {
 		return {};
 	}
 
-	// TODO: 找到 tableName 对应的页，这里简化为 PageId 0
-	PageId pageId = 0;
+	PageId pageId = pageOffset;
 	Page* page = bpm->fetchPage(pageId);
 	if (!page) {
 		throw runtime_error("Failed to fetch page for delete.");
@@ -419,21 +403,25 @@ vector<vector<string>> buildColumnSpecs(const vector<string>& names,
 	return specs;
 }
 
-Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm, CatalogManager* catalog = nullptr) {
+Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, BufferPoolManager* bpm, CatalogManager* catalog) {
 	Operator* root = nullptr;
 	map<string, Operator*> symbolTables;
 	map<string, Condition> condTable;
-
+	PageId pageOffset;
 	// DDL构建状态
 	DDLBuildState ddl_state;
 
 	for (auto& q : quads) {
 		// ========== 基本表扫描 ==========
+		// (FROM, databaseName , - , T(scan))
 		if (q.op == "FROM") {
-			symbolTables[q.result] = new Scan(bpm, q.arg1);
+			// 从元数据中获得tableName的页地址
+			pageOffset = catalog->GetTableInfo(DBName, q.arg1).data_file_offset / 4096;
+			symbolTables[q.result] = new Scan(bpm, q.arg1, pageOffset);
 		}
 
 		// ====== 条件选择 ======
+		// (OP, column , value , T(condition))
 		else if (q.op == ">" || q.op == "=") {
 			condTable[q.result] = Condition::simple(q.op, q.arg1, q.arg2);
 		}
@@ -446,7 +434,9 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		else if (q.op == "NOT") {
 			condTable[q.result] = Condition::Not(condTable[q.arg1]);
 		}
+
 		// ====== 条件选择 ======
+		// (WHERE, T(scan) , T(condition) , T(filter))
 		else if (q.op == "WHERE") {
 			// 动态获取 FROM 节点，而不是写死 "T1"
 			Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
@@ -489,6 +479,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		}
 
 		// ====== 投影 ======
+		// (SELECT , columns , T(filter) , T(Project))
 		else if (q.op == "SELECT") {
 			getColumns(columns, q.arg1);
 			Operator* child = symbolTables[q.arg2];
@@ -513,6 +504,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		}
 
 		// ====== VALUES ======
+		// (VALUES , values , columns , T(values))
 		else if (q.op == "VALUES") {
 			// arg1 是值列表字符串，arg2 是列名列表字符串
 			// 创建 VALUES 算子，并将它存入符号表
@@ -520,6 +512,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 		}
 
 		// ====== 插入 ======
+		// (INSERT , T(scan) , T(values) , T(r))
 		else if (q.op == "INSERT") {
 			// arg1 是 FROM 的符号（表名），arg2 是 VALUES 的符号
 			Operator* fromChild = symbolTables[q.arg1];
@@ -532,27 +525,30 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			}
 			string tableName = scanOp->tableName;
 
-			root = new Insert(valuesChild, bpm, tableName);
+			root = new Insert(valuesChild, bpm, tableName, pageOffset);
 		}
 
 		// ====== SET ======
+		// (SET , column , value , T(set))
 		else if (q.op == "SET") {
 			// 假设 SET 四元式的格式为 (SET, 列名, 值, 符号)
 			symbolTables[q.result] = new Set(q.arg1, q.arg2);
 		}
+
 		// ====== 更新 ======
+		// (UPDATE , T(scan) , T(set) , T(r))
 		else if (q.op == "UPDATE") {
 			Operator* child = symbolTables[q.arg1];
 			Operator* data = symbolTables[q.arg2];
-			root = new Update(child, data, bpm);
+			root = new Update(child, data, bpm, pageOffset);
 		}
 
 		// ====== 删除 ======
+		// (DELETE , T(scan) , - , T(r))
 		else if (q.op == "DELETE") {
 			// arg1 是 FROM 或 WHERE 算子的符号，用于定位要删除的行
-			// q.result 是表名
 			Operator* child = symbolTables[q.arg2]; // 获取 FROM/WHERE 算子
-			root = new Delete(child, bpm);
+			root = new Delete(child, bpm, pageOffset);
 		}
 
 		// ========== DDL操作 ==========
@@ -592,7 +588,11 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			}
 
 			ddl_state.table_name = q.arg1;
-			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs);
+
+			// 计算表的页id
+			int pageId = catalog->GetDatabaseInfo(DBName).table_count;
+
+			CreateTable* create_op = new CreateTable(catalog, ddl_state.table_name, ddl_state.column_specs, pageId);
 			symbolTables[q.result] = create_op;
 			root = create_op;
 		}

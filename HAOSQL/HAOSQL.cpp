@@ -21,6 +21,7 @@ using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
 int generateDBFile();
+int addDBFile();
 void initIndexManager();
 
 IndexManager* indexManager = nullptr;
@@ -231,15 +232,40 @@ int main() {
     std::cout << "Hello World!\n";
     initIndexManager();
     string sql;
+    
+    // 加载元数据
+    CatalogManager catalog("HAODB");
+    catalog.Initialize();
+    setDBName("Students");
+
+    cout << catalog.GetStorageConfig(DBName).data_file_path << endl
+        << catalog.GetStorageConfig(DBName).index_file_path << endl
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+
+    StorageConfigInfo info = catalog.GetStorageConfig(DBName);
+
+
+    cout << endl
+        << "------------------------------------------------------------------------------- " << endl
+        << "- 名称规范 : 数据库名、表名、列名只能包含字母、数字和下划线，长度不超过63字符 -" << endl
+        << "- 数据类型 : 支持 \"INT\", \"VARCHAR\", \"DECIMAL\", \"DATETIME\"                     -" << endl
+        << "- 主键约束 : 主键列自动设为不可空                                             -" << endl
+        << "- 帮助 : exit退出数据库系统                                                   -" << endl
+        << "------------------------------------------------------------------------------- " << endl;
+
     while (true)
     {
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
 
-        if (sql == "exit;") break;
-        if (sql == "gen;") {
+        if (sql == "exit") break;
+        if (sql == "gen") {
             generateDBFile();
+            continue;
+        }
+        if (sql == "add") {
+            addDBFile();
             continue;
         }
         if (sql.empty()) {
@@ -258,12 +284,21 @@ int main() {
         vector<Quadruple> quadruple = sql_compiler(sql);
 
         // 加载元数据
-        CatalogManager catalog("HAODB");
+        CatalogManager catalog("TEST_HAODB");
         catalog.Initialize();
-        setDBName("Students");
+        setDBName("HelloDB");
+
+        //vector<TableInfo> tables = catalog.ListTables("HelloDB");
+        //cout << "!!!!!!!!!!!!" << endl;
+        //cout << "表数量" << catalog.GetDatabaseInfo("HelloDB").table_count << endl;
+        //catalog.ShowTableList("HelloDB");
+        //for (auto& table : tables)
+        //{
+        //    cout << table.table_name << " " << table.data_file_offset << endl;
+        //}
 
         // 创建 DiskManager
-        DiskManager dm("database.db");
+        DiskManager dm(info.data_file_path) ;
         // 创建 BufferPoolManager
         // 缓冲池大小 10
         BufferPoolManager bpm(10, &dm);
@@ -276,6 +311,10 @@ int main() {
         if (!result.empty()) {
             cout << "主函数打印" << endl;
             // 输出结果
+            cout << endl;
+            for (auto& col : columns) {
+                cout << col << "\t|";
+            }
             cout << endl;
             for (auto& row : result) {
                 for (auto& col : columns) {
@@ -386,7 +425,7 @@ vector<Quadruple> sql_compiler(string sql)
 //using namespace std;
 //
 int generateDBFile() {
-    DiskManager dm("database.db");
+    DiskManager dm("HAODB/Students/data/students.dat");
     Page p(DATA_PAGE);
 
     // 假设这些是你的Students表数据
@@ -404,6 +443,29 @@ int generateDBFile() {
 
     // 将页写回磁盘
     dm.writePage(0, p);
+
+    return 0;
+}
+
+int addDBFile() {
+    DiskManager dm("HAODB/Students/data/students.dat");
+    Page p(DATA_PAGE);
+
+    //// 假设这些是你的Students表数据
+    //vector<string> records = {
+    //    "id:1,name:1Alice,age:21,grade:A",
+    //    "id:2,name:2Bob,age:18,grade:B",
+    //    "id:3,name:3Charlie,age:22,grade:A",
+    //    "id:4,name:4John,age:19,grade:A"
+    //};
+
+    //// 插入记录到页中
+    //for (const auto& rec : records) {
+    //    p.insertRecord(rec.c_str(), rec.length());
+    //}
+
+    // 将页写回磁盘
+    dm.addPage(2, p);
 
     return 0;
 }
