@@ -128,6 +128,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AI.cpp" />
     <ClCompile Include="catalog_manager.cpp" />
     <ClCompile Include="database_metadata_manager.cpp" />
     <ClCompile Include="database_registry_Manager.cpp" />
@@ -160,6 +161,7 @@
     <Text Include="test.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AI.h" />
     <ClInclude Include="catalog_manager.h" />
     <ClInclude Include="database_metadata_manager.h" />
     <ClInclude Include="database_registry_manager.h" />

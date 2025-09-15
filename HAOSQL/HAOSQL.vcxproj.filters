@@ -114,6 +114,9 @@
     <ClCompile Include="test_log.cpp">
       <Filter>源文件\tests</Filter>
     </ClCompile>
+    <ClCompile Include="AI.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
@@ -174,6 +177,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="logger_integration.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="AI.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

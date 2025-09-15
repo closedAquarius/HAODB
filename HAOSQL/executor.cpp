@@ -115,9 +115,9 @@ vector<Row> Insert::execute() {
 		throw runtime_error("Failed to fetch page for insert.");
 	}
 
-	/*// 获取该表的所有索引信息
+	// 获取该表的所有索引信息
 	// IndexManager* indexManager; // 假设全局可用
-	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);*/
+	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);
 
 	// 将每一行数据插入到页中
 	for (auto& row : input) {
@@ -133,7 +133,7 @@ vector<Row> Insert::execute() {
 		int slotId = page->insertRecord(record_str.c_str(), record_str.length());
 		RID rid{ pageId, slotId };
 
-		/*// 插入所有索引
+		// 插入所有索引
 		for (auto& idx : tableIndexes) {
 			int keyInt = 0;
 
@@ -158,7 +158,7 @@ vector<Row> Insert::execute() {
 
 			// 插入索引（传 int key）
 			indexManager->InsertEntry(tableName, idx.column_names, keyInt, rid);
-		}*/
+		}
 	}
 
 	bpm->unpinPage(pageId, true); // 标记为脏页

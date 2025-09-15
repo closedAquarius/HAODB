@@ -86,10 +86,8 @@ vector<Token> Lexer::analyze() {
             column++;
         }
         else {
-            cerr << "词法错误：非法字符 '" << c
-                << "' 在 第" << line << "行 第" << column << "列" << endl;
-            pos++;
-            column++;
+            throw LexicalError("词法错误：非法字符 '" + string(1, c) +
+                "' 在 第" + to_string(line) + "行 第" + to_string(column) + "列");
         }
     }
     
@@ -149,7 +147,8 @@ string Lexer::readString() {
         column++;
     }
     else {
-        cerr << "词法错误：字符串未闭合 在第" << line << "行 第" << startCol << "列" << endl;
+        throw LexicalError("词法错误：字符串未闭合 在第" +
+            to_string(line) + "行 第" + to_string(startCol) + "列");
     }
     return result;
 }

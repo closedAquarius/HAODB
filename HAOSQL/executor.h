@@ -14,6 +14,8 @@
 
 using namespace std;
 
+extern IndexManager* indexManager;
+
 // ========== 表数据 ==========
 using Row = map<string, string>;
 using Table = vector<Row>;
@@ -257,7 +259,7 @@ public:
 			Page p(PageType::DATA_PAGE);
 			dm->writePage(page_id_, p);
 
-			/*// 2. 设置主键约束
+			// 2. 设置主键约束
 			if (!primary_keys_.empty()) {
 				for (auto& primary_key : primary_keys_)
 				{
@@ -266,11 +268,12 @@ public:
 						throw runtime_error("Failed to set primary key for table: " + table_name_);
 					}
 					std::string pk_index_name = table_name_ + primary_key + "_pk";
-					indexManager->CreateIndex(table_name_, pk_index_name, intKeys);
+					vector<string> keyCols = { primary_key };
+					indexManager->CreateIndex(table_name_, pk_index_name, keyCols, true);
 						std::cout << "Primary key index created on table "
 							<< table_name_ << " (" << pk_index_name << ")\n";
 				}
-			}*/
+			}
 
 
 			// 3. 设置非空约束
@@ -471,7 +474,7 @@ vector<vector<string>> buildColumnSpecs(const vector<string>& names,
 	const vector<string>& types,
 	const vector<string>& lengths);
 
-extern IndexManager* indexManager;
+
 
 class IndexScan : public Operator {
 private:
