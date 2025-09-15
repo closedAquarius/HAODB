@@ -34,4 +34,8 @@ public:
     vector<Token> analyze();           // 执行词法分析并返回结果
 };
 
+class LexicalError : public std::runtime_error {
+public:
+    explicit LexicalError(const std::string& msg) : std::runtime_error(msg) {}
+};
 #endif // LEXER_H

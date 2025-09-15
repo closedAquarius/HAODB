@@ -1,4 +1,14 @@
 ﻿// HAOSQL.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <mutex>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")  // VS 需要
+
 #include "dataType.h"
 #include "parser.h"
 #include "lexer.h"
@@ -14,7 +24,193 @@ void initIndexManager();
 
 IndexManager* indexManager = nullptr;
 
-int notmain()
+// 工具函数：封装发送，自动加 >>END
+void sendWithEnd(SOCKET sock, const string& msg) {
+    string data = msg + ">>END\n";
+    send(sock, data.c_str(), static_cast<int>(data.size()), 0);
+}
+
+// 每个客户端一个线程
+void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
+    char buffer[4096];
+    string account, password;
+
+    // 登录循环
+    while (true) {
+        sendWithEnd(clientSock, "请输入账号:");
+
+        memset(buffer, 0, sizeof(buffer));
+        int bytes = recv(clientSock, buffer, sizeof(buffer) - 1, 0);
+        if (bytes <= 0) {
+            closesocket(clientSock);
+            return;
+        }
+        account = buffer;
+        cout << "[客户端账号] " << account << endl;
+
+        sendWithEnd(clientSock, "请输入密码:");
+
+        memset(buffer, 0, sizeof(buffer));
+        bytes = recv(clientSock, buffer, sizeof(buffer) - 1, 0);
+        if (bytes <= 0) {
+            closesocket(clientSock);
+            return;
+        }
+        password = buffer;
+        cout << "[客户端密码] " << password << endl;
+
+        FileManager fm("HAODB");
+        LoginManager lm(fm, "HAODB");
+
+        if (lm.loginUser(account, password)) {
+            string welcome = "欢迎您 " + current_username;
+            sendWithEnd(clientSock, welcome);
+            break;
+        }
+        else {
+            sendWithEnd(clientSock, "账号或密码错误，请重试");
+        }
+    }
+    // 加载元数据
+    CatalogManager catalog("HAODB");
+    catalog.Initialize();
+    setDBName("Students");
+
+    // 创建 DiskManager
+    DiskManager dm("database.db");
+    // 创建 BufferPoolManager
+    // 缓冲池大小 10
+    BufferPoolManager bpm(10, &dm);
+    // SQL 循环
+    while (true) {
+        sendWithEnd(clientSock, "请输入 SQL 语句:");
+
+        memset(buffer, 0, sizeof(buffer));
+        int bytes = recv(clientSock, buffer, sizeof(buffer) - 1, 0);
+        if (bytes <= 0) {
+            break;
+        }
+
+        string sql = buffer;
+        if (sql == "exit;") break;
+        if (sql == "gen;") {
+            generateDBFile();
+            continue;
+        }
+        if (sql.empty()) {
+            continue;
+        }
+
+        std::vector<Quadruple> quadruple;
+        try {
+            quadruple = sql_compiler(sql);
+
+            if (quadruple.empty()) {
+                std::cerr << "Error: SQL parsing failed, please check syntax." << std::endl;
+                continue;
+            }
+
+            std::cout << "Generated quadruples:" << std::endl;
+            for (auto& q : quadruple) {
+                std::cout << "(" << q.op << ", "
+                    << q.arg1 << ", "
+                    << q.arg2 << ", "
+                    << q.result << ")" << std::endl;
+            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error (compile): " << e.what() << std::endl;
+            continue;  // 允许用户继续输入
+        }
+
+        // ----------------------
+        // 执行阶段错误处理
+        // ----------------------
+        try {
+            vector<string> columns;
+            Operator* root = buildPlan(quadruple, columns, &bpm, &catalog);
+            vector<Row> result = root->execute();
+
+            string resultStr;
+            if (!result.empty()) {
+                cout << "主函数打印" << endl;
+                for (auto& row : result) {
+                    for (auto& col : columns) {
+                        cout << row.at(col) << "\t|";
+                        resultStr += row.at(col) + "\t|";
+                    }
+                    cout << endl;
+                    resultStr += "\n";
+                }
+            }
+
+            if (resultStr.empty()) {
+                sendWithEnd(clientSock, "执行成功！");
+            }
+            else {
+                sendWithEnd(clientSock, resultStr);
+            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << "执行错误: " << e.what() << std::endl;
+            sendWithEnd(clientSock, string("执行错误: ") + e.what());
+            continue;  // 不中断主循环
+        }
+    }
+
+    closesocket(clientSock);
+}
+
+int main() {
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+    SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSock == INVALID_SOCKET) {
+        cerr << "socket failed, error: " << WSAGetLastError() << endl;
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(8080);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+
+    if (::bind(serverSock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "bind failed, error: " << WSAGetLastError() << endl;
+        closesocket(serverSock);
+        WSACleanup();
+        return 1;
+    }
+
+    if (listen(serverSock, SOMAXCONN) == SOCKET_ERROR) {
+        cerr << "listen failed, error: " << WSAGetLastError() << endl;
+        closesocket(serverSock);
+        WSACleanup();
+        return 1;
+    }
+
+    cout << "服务器已启动，端口 8080，等待客户端连接..." << endl;
+
+    while (true) {
+        sockaddr_in clientAddr;
+        int clientSize = sizeof(clientAddr);
+        SOCKET clientSock = accept(serverSock, (sockaddr*)&clientAddr, &clientSize);
+        if (clientSock == INVALID_SOCKET) {
+            cerr << "accept failed, error: " << WSAGetLastError() << endl;
+            continue;
+        }
+
+        thread(handle_client, clientSock, clientAddr).detach();
+    }
+
+    closesocket(serverSock);
+    WSACleanup();
+    return 0;
+}
+
+/*int main()
 {
 
     std::cout << "Hello World!\n";
@@ -67,7 +263,7 @@ int notmain()
     }
 
     return 0;
-}
+}*/
 
 void initIndexManager() {
     // 假设你有 FileManager 和 CatalogManager
@@ -83,22 +279,24 @@ vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
     SQLParser sqlParser;
-    cout << "开始词法分析" << endl;
-    vector<Token> tokens = lexer.analyze();
-    for (auto& t : tokens) {
-        cout << left << setw(10) << t.type
-            << setw(15) << t.value
-            << setw(10) << t.line
-            << setw(10) << t.column << endl;
-    }
-
-    for (int i = 0; i < tokens.size(); ++i) {
-        std::cout << tokens[i].type << " " << tokens[i].value << " ";
-    }
-    cout << "开始语法分析" << endl;
-    sqlParser.start_parser(tokens);
-    SemanticAnalyzer analyzer;
     try {
+        cout << "开始词法分析" << endl;
+        vector<Token> tokens = lexer.analyze();
+
+        for (auto& t : tokens) {
+            cout << left << setw(10) << t.type
+                << setw(15) << t.value
+                << setw(10) << t.line
+                << setw(10) << t.column << endl;
+        }
+
+        for (int i = 0; i < tokens.size(); ++i) {
+            std::cout << tokens[i].type << " " << tokens[i].value << " ";
+        }
+        cout << "开始语法分析" << endl;
+        sqlParser.start_parser(tokens);
+
+        SemanticAnalyzer analyzer;
         auto quads = analyzer.analyze(tokens);
 
         std::cout << "四元式结果：" << std::endl;
@@ -107,11 +305,19 @@ vector<Quadruple> sql_compiler(string sql)
                 << q.arg2 << ", " << q.result << ")" << std::endl;
         }
 
-        return analyzer.analyze(tokens);
+        return quads;
+    }
+    catch (const LexicalError& e) {
+        std::cerr << e.what() << std::endl;
+        return {};
     }
     catch (const SemanticError& e) {
         std::cerr << "语义分析错误：" << e.what() << std::endl;
         return {};
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Syntax Error] " << e.what() << std::endl;
+        return {};  // 返回空，表示错误
     }
 }
 

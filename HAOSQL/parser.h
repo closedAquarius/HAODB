@@ -105,6 +105,8 @@ public:
 
     // ´íÎó´¦Àíº¯Êı
     void emergency(int model);
+
+
 };
 
 #endif // SQL_PARSER_H#pragma once

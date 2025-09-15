@@ -664,4 +664,6 @@ int test() {
         std::cout << "(" << q.op << ", " << q.arg1 << ", "
             << q.arg2 << ", " << q.result << ")" << std::endl;
     }
+
+    return 0;
 }
