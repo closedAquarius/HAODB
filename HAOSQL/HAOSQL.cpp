@@ -23,7 +23,7 @@ vector<Quadruple> sql_compiler(string sql);
 int generateDBFile();
 int addDBFile();
 void initIndexManager(CatalogManager* catalog);
-bool checkDatabaseExists(string sql, CatalogManager &catalog);
+bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock);
 
 IndexManager* indexManager = nullptr;
 
@@ -34,7 +34,6 @@ void sendWithEnd(SOCKET sock, const string& msg) {
 }
 
 // 每个客户端一个线程
-/*
 void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     char buffer[4096];
     string account, password;
@@ -86,18 +85,15 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
     }
     // 加载元数据
-    CatalogManager catalog("HAODB");
-    catalog.Initialize();
-    // 加载元数据
-    setDBName("Test");
+    auto catalog = std::make_unique<CatalogManager>("HAODB");
+    //CatalogManager catalog("HAODB");
+    catalog->Initialize();
+    setDBName("T");
+    initIndexManager(catalog.get());
 
-    cout << catalog.GetStorageConfig(DBName).data_file_path << endl
-        << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+    StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
-    StorageConfigInfo info = catalog.GetStorageConfig(DBName);
-
-    initIndexManager(catalog);
+    initIndexManager(catalog.get());
 
     // 创建 DiskManager
     DiskManager dm(info.data_file_path);
@@ -115,8 +111,10 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
 
         string sql = buffer;
-        if (checkDatabaseExists(sql, catalog))
+        if (checkDatabaseExists(sql, *catalog))
             continue;
+        string lowerSql = sql;
+        transform(lowerSql.begin(), lowerSql.end(), lowerSql.begin(), ::tolower);
 
         if (sql == "exit") break;
         if (sql == "gen") {
@@ -128,6 +126,17 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             continue;
         }
         if (sql.empty()) {
+            continue;
+        }
+        const string prefix = "use database ";
+        if (lowerSql.find(prefix) == 0) {
+            string dbName = sql.substr(prefix.size()); // 保留原大小写
+            // 去掉末尾分号
+            if (!dbName.empty() && dbName.back() == ';') dbName.pop_back();
+            // 去掉首尾空格
+            dbName.erase(0, dbName.find_first_not_of(" \t"));
+            dbName.erase(dbName.find_last_not_of(" \t") + 1);
+            setDBName(dbName);
             continue;
         }
 
@@ -158,7 +167,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         // ----------------------
         try {
             vector<string> columns;
-            Operator* root = buildPlan(quadruple, columns, &bpm, &catalog);
+            Operator* root = buildPlan(quadruple, columns, &bpm, catalog.get());
             vector<Row> result = root->execute();
 
             string resultStr;
@@ -189,9 +198,9 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     }
 
     closesocket(clientSock);
-}*/
+}
 
-/*int main() {
+int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
@@ -238,9 +247,9 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(serverSock);
     WSACleanup();
     return 0;
-}*/
+}
 
-int main()
+/*int main()
 {
     SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
     SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
@@ -258,7 +267,7 @@ int main()
 
     /*cout << catalog.GetStorageConfig(DBName).data_file_path << endl
         << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;*/
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;
 
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
@@ -304,7 +313,7 @@ int main()
         }
 
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;*/
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
 
         //vector<TableInfo> tables = catalog.ListTables("HelloDB");
@@ -345,9 +354,9 @@ int main()
     }
 
     return 0;
-}
+}*/
 
-bool checkDatabaseExists(string sql, CatalogManager& catalog)
+bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 {
     // 将sql转换为小写以进行大小写不敏感的比较
     std::string lower_sql = sql;
@@ -375,7 +384,13 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog)
         // 提取数据库名
         std::string db_name = sql.substr(start_pos, end_pos - start_pos);
         setDBName(db_name);
-        catalog.CreateDatabase(DBName, current_username);
+        try {
+            catalog.CreateDatabase(DBName, current_username);
+            sendWithEnd(clientSock, "数据库 " + db_name + " 创建成功！");
+        }
+        catch (const std::exception& e) {
+            sendWithEnd(clientSock, string("创建数据库失败: ") + e.what());
+        }
 
         return true;
     }
