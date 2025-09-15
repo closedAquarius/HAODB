@@ -169,7 +169,7 @@ public:
     LogConfigInfo GetLogConfig(const std::string& db_name);
     void ShowLogConfig(const std::string& db_name);
 
-    // (6)获取数据库存储配置信息
+    // (6) 获取数据库存储配置信息
     StorageConfigInfo GetStorageConfig(const std::string& db_name);
 
     // ==================== 数据表管理 ====================

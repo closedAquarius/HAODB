@@ -75,6 +75,12 @@ void Page::deleteRecord(int idx) {
     slot->length = 0; // Âß¼­É¾³ý
 }
 
+// È¡ÏûÉ¾³ý±ê¼Ç
+void Page::undeleteRecord(int idx, int len) {
+    Slot* slot = getSlot(idx);
+    slot->length = len;
+}
+
 // Ñ¹ËõÊý¾ÝÇø£¨ÒÆ³ý¿Õ¶´£©
 void Page::compact() {
     uint16_t newOffset = sizeof(PageHeader);
@@ -164,6 +170,19 @@ DiskManager* DiskManager::writePage(int pageId, Page& pageData) {
     if (!f.good()) {
         throw std::runtime_error("DiskManager::writePage failed at pageId=" + pageId);
     }
+
+    return this;
+}
+
+DiskManager* DiskManager::addPage(int pageId, Page& pageData) {
+    std::ofstream f(diskName, std::ios::out | std::ios::app | std::ios::binary);
+
+    if (!f.is_open()) {
+        throw std::runtime_error("Failed to open database file for adding page: " + diskName);
+    }
+
+    f.write(pageData.rawData(), PAGE_SIZE);
+    f.close();
 
     return this;
 }
