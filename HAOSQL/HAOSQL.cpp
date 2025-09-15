@@ -14,7 +14,7 @@ void initIndexManager();
 
 IndexManager* indexManager = nullptr;
 
-int main()
+int notmain()
 {
 
     std::cout << "Hello World!\n";

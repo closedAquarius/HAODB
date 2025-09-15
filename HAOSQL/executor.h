@@ -463,7 +463,6 @@ vector<string> parseColumnList(const string& str);
 vector<vector<string>> buildColumnSpecs(const vector<string>& names,
 	const vector<string>& types,
 	const vector<string>& lengths);
-};
 
 extern IndexManager* indexManager;
 

@@ -978,19 +978,31 @@ bool EnhancedExecutor::ExecuteSQL(const std::string& sql, const std::vector<Oper
     }
 }
 
-bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
+bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,uint32_t after_page_id,
+    uint32_t after_slot_id,  uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
         logger->LogDataChange(txn_id, WALLogRecord::INSERT_OP, before_page_id,
             before_slot_id, after_page_id, after_slot_id, before_length, after_length);
 
-        // 这里应该实际执行插入操作
         bool success = true;
 
         if (success) {
-            // logger->CommitTransaction(txn_id, (int)WALLogRecord::INSERT_OP);
+            WALLogRecord record;
+            record.transaction_id = txn_id;
+            record.record_type = (int)WALLogRecord::INSERT_OP;
+            record.withdraw = 0;
+            WALLogRecord::DataChange datachange;
+            datachange.before_length = 0;
+            datachange.before_page_id = 0;
+            datachange.before_slot_id = 0;
+            datachange.after_length = after_length;
+            datachange.after_page_id = after_page_id;
+            datachange.after_slot_id = after_slot_id;
+            record.changes.push_back(datachange);
+
+            logger->CommitTransaction(txn_id, record);
         }
         else {
             logger->AbortTransaction(txn_id);
@@ -1004,9 +1016,8 @@ bool EnhancedExecutor::InsertRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-// const std::string& table_name, const std::string& condition
-bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
+bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length,
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
@@ -1024,9 +1035,9 @@ bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slo
             datachange.before_length = before_length;
             datachange.before_page_id = before_page_id;
             datachange.before_slot_id = before_slot_id;
-            datachange.after_length = after_length;
-            datachange.after_page_id = after_page_id;
-            datachange.after_slot_id = after_slot_id;
+            datachange.after_length = 0;
+            datachange.after_page_id = 0;
+            datachange.after_slot_id = 0;
             record.changes.push_back(datachange);
 
             logger->CommitTransaction(txn_id, record);
@@ -1043,8 +1054,8 @@ bool EnhancedExecutor::DeleteRecord(uint32_t before_page_id, uint32_t before_slo
     }
 }
 
-bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t after_page_id,
-    uint32_t after_slot_id, uint32_t before_length, uint32_t after_length) {
+bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, 
+    uint32_t after_page_id, uint32_t after_slot_id, uint32_t after_length) {
     try {
         uint32_t txn_id = logger->BeginTransaction();
 
@@ -1054,7 +1065,20 @@ bool EnhancedExecutor::UpdateRecord(uint32_t before_page_id, uint32_t before_slo
         bool success = true;
 
         if (success) {
-            // logger->CommitTransaction(txn_id, (int)WALLogRecord::UPDATE_OP);
+            WALLogRecord record;
+            record.transaction_id = txn_id;
+            record.record_type = (int)WALLogRecord::UPDATE_OP;
+            record.withdraw = 0;
+            WALLogRecord::DataChange datachange;
+            datachange.before_length = before_length;
+            datachange.before_page_id = before_page_id;
+            datachange.before_slot_id = before_slot_id;
+            datachange.after_length = after_length;
+            datachange.after_page_id = after_page_id;
+            datachange.after_slot_id = after_slot_id;
+            record.changes.push_back(datachange);
+
+            logger->CommitTransaction(txn_id, record);
         }
         else {
             logger->AbortTransaction(txn_id);

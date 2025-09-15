@@ -63,7 +63,7 @@
 */
 
 // ========== 主函数：展示完整功能 ==========
-int notmain() {
+int main() {
     try {
         std::cout << "=== HAODB 完整日志系统演示 ===" << std::endl;
         std::cout << "Version: 1.0 | Build: " << __DATE__ << std::endl;
@@ -75,6 +75,8 @@ int notmain() {
         CatalogManager catalog("TEST_HAODB");
         catalog.Initialize();
         catalog.ShowDatabaseList();
+
+        catalog.CreateDatabase("HelloDB", "admin");
 
         INIT_LOGGER("TestDB", &catalog);
         std::cout << "日志系统初始化完成" << std::endl;
@@ -104,16 +106,11 @@ int notmain() {
         EnhancedExecutor enhanced_executor("TestDB", "demo_session", "demo_user");
 
         // 执行数据操作（自动WAL记录）
-        /*
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P001"}, {"name", "笔记本电脑"}, {"price", "5999"}
-            });
-        enhanced_executor.InsertRecord("products", {
-            {"id", "P002"}, {"name", "无线鼠标"}, {"price", "199"}
-            });
+        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
+        enhanced_executor.InsertRecord(1, 2, 3, 4, 5, 6);
 
-        enhanced_executor.UpdateRecord("products", "id = P001", { {"price", "5799"} });
-        */
+        enhanced_executor.UpdateRecord(1, 2, 3, 4, 5, 6);
+        
         enhanced_executor.DeleteRecord(1,2,3,4,5,6);
 
         // 演示撤销功能
@@ -205,15 +202,15 @@ int notmain() {
         std::cout << "\n" << std::string(60, '=') << std::endl;
         std::cout << "              演示完成总结" << std::endl;
         std::cout << std::string(60, '=') << std::endl;
-        std::cout << "✓ 基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
-        std::cout << "✓ WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
-        std::cout << "✓ 日志管理：轮转、查看、搜索、导出" << std::endl;
-        std::cout << "✓ 性能监控：操作统计、时间分析" << std::endl;
-        std::cout << "✓ 配置管理：动态配置、多级日志" << std::endl;
-        std::cout << "✓ 高级功能：组合模式算子、并发安全" << std::endl;
-        std::cout << "✓ 测试套件：全面的单元测试和集成测试" << std::endl;
+        std::cout << "基础日志功能：SimpleLogger 和 EnhancedExecutor" << std::endl;
+        std::cout << "WAL机制：事务管理、崩溃恢复、操作撤销" << std::endl;
+        std::cout << "日志管理：轮转、查看、搜索、导出" << std::endl;
+        std::cout << "性能监控：操作统计、时间分析" << std::endl;
+        std::cout << "配置管理：动态配置、多级日志" << std::endl;
+        std::cout << "高级功能：组合模式算子、并发安全" << std::endl;
+        std::cout << "测试套件：全面的单元测试和集成测试" << std::endl;
 
-        std::cout << "\n🎉 HAODB日志系统演示成功完成！" << std::endl;
+        std::cout << "\ HAODB日志系统演示成功完成！" << std::endl;
 
         return 0;
 

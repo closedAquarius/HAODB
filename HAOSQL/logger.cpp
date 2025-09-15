@@ -811,12 +811,8 @@ void DatabaseLogger::CommitTransaction(uint32_t txn_id, WALLogRecord& record) {
     txn_manager->CommitTransaction(txn_id);
 
     if (config.enable_wal) {
-        // WALLogRecord record;
         record.lsn = GenerateLSN();
-        // record.transaction_id = txn_id;
         record.timestamp = GetCurrentTimestamp();
-        // record.record_type = record.record_type;
-        // record.withdraw = 0;
 
         WriteWALLog(record);
         FlushWALBuffer();
