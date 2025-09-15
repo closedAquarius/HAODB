@@ -24,6 +24,7 @@ int generateDBFile();
 int addDBFile();
 void initIndexManager(CatalogManager* catalog);
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock);
+bool checkDatabaseExists(string sql, CatalogManager& catalog);
 
 IndexManager* indexManager = nullptr;
 
@@ -275,14 +276,12 @@ int main()
     setDBName("T");
     initIndexManager(catalog.get());
 
-
-
-    /*cout << catalog.GetStorageConfig(DBName).data_file_path << endl
+    /*
+    cout << catalog.GetStorageConfig(DBName).data_file_path << endl
         << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;*/
 
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
-
 
     cout << endl
         << "------------------------------------------------------------------------------- " << endl
@@ -325,9 +324,9 @@ int main()
         }
 
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;*/
         vector<Quadruple> quadruple = sql_compiler(sql);
-        SET_SQL_QUAS(finalSQL, quadruple);
+        SET_SQL_QUAS(sql , quadruple);
 
         //vector<TableInfo> tables = catalog.ListTables("HelloDB");
         //cout << "!!!!!!!!!!!!" << endl;
@@ -367,6 +366,43 @@ int main()
     }
 
     return 0;
+}
+
+bool checkDatabaseExists(string sql, CatalogManager& catalog)
+{
+    // 将sql转换为小写以进行大小写不敏感的比较
+    std::string lower_sql = sql;
+    std::transform(lower_sql.begin(), lower_sql.end(), lower_sql.begin(), ::tolower);
+
+    // 查找"create database"子字符串
+    std::string keyword = "create database";
+    size_t pos = lower_sql.find(keyword);
+
+    if (pos != std::string::npos) {
+        // 找到 "CREATE DATABASE"，提取数据库名
+        size_t start_pos = pos + keyword.length();
+
+        // 忽略空白字符，查找数据库名的起始位置
+        while (start_pos < sql.length() && std::isspace(sql[start_pos])) {
+            ++start_pos;
+        }
+
+        // 查找数据库名的结束位置（直到下一个空白或字符串结束）
+        size_t end_pos = start_pos;
+        while (end_pos < sql.length() && !std::isspace(sql[end_pos]) && sql[end_pos] != ';') {
+            ++end_pos;
+        }
+
+        // 提取数据库名
+        std::string db_name = sql.substr(start_pos, end_pos - start_pos);
+        setDBName(db_name);
+        catalog.CreateDatabase(DBName, current_username);
+
+
+        return true;
+    }
+
+    return false;
 }
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
