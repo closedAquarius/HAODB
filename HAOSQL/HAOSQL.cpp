@@ -16,6 +16,7 @@
 #include "executor.h"
 #include "buffer_pool.h";
 #include "B+tree.h"
+#include "AI.h"
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
@@ -100,6 +101,19 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         if (sql.empty()) {
             continue;
         }
+
+        /*std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
+
+        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        sendWithEnd(clientSock, string("SQL语句错误，你可能想输入: ") + finalSQL);
+        sql = finalSQL;*/
 
         std::vector<Quadruple> quadruple;
         try {
@@ -212,7 +226,8 @@ int main() {
 
 /*int main()
 {
-
+    SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
+    SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
     std::cout << "Hello World!\n";
     initIndexManager();
     string sql;
@@ -230,7 +245,16 @@ int main() {
         if (sql.empty()) {
             continue;
         }
+         
+        std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        } catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
 
+        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
         vector<Quadruple> quadruple = sql_compiler(sql);
 
         // 加载元数据
@@ -308,12 +332,34 @@ vector<Quadruple> sql_compiler(string sql)
         return quads;
     }
     catch (const LexicalError& e) {
-        std::cerr << e.what() << std::endl;
-        return {};
+        std::cout << e.what() << std::endl;
+        std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
+
+        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        sql = finalSQL;
+        return sql_compiler(sql);
     }
     catch (const SemanticError& e) {
-        std::cerr << "语义分析错误：" << e.what() << std::endl;
-        return {};
+        std::cout << "语义分析错误：" << e.what() << std::endl;
+        std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
+
+        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        sql = finalSQL;
+        return sql_compiler(sql);
     }
     catch (const std::exception& e) {
         std::cerr << "[Syntax Error] " << e.what() << std::endl;
