@@ -184,7 +184,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
-int main() {
+/*int main() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
@@ -231,7 +231,7 @@ int main() {
     closesocket(serverSock);
     WSACleanup();
     return 0;
-}
+}*/
 
 /*int main()
 {
