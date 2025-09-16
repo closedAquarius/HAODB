@@ -411,6 +411,10 @@ vector<Row> Delete::execute() {
 				indexManager->DeleteEntry(tableName, idx.column_names, keyInt, rid);
 			}
 
+
+			// 记录老记录位置
+			SET_BEFORE_WAL_RECORD(pageId, targetSlot, page->getSlot(targetSlot)->length);
+
 			// 删除物理记录
 			uint16_t before_length = page->getSlot(targetSlot)->length;
 			page->deleteRecord(targetSlot);
