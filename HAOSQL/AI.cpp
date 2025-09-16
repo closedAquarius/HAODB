@@ -1,4 +1,4 @@
-#include <string>
+ï»¿#include <string>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <windows.h>
@@ -6,13 +6,13 @@
 
 using json = nlohmann::json;
 
-// ----------------- CURL »Øµ÷º¯Êı -----------------
+// ----------------- CURL å›è°ƒå‡½æ•° -----------------
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
 
-// ----------------- ANSI/GBK -> UTF-8 ×ª»» -----------------
+// ----------------- ANSI/GBK -> UTF-8 è½¬æ¢ -----------------
 std::string ansiToUtf8(const std::string& ansi) {
     int lenW = MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, NULL, 0);
     if (lenW == 0) return "";
@@ -23,12 +23,12 @@ std::string ansiToUtf8(const std::string& ansi) {
     int lenU8 = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
     if (lenU8 == 0) return "";
 
-    std::string utf8(lenU8 - 1, '\0'); // È¥µô½áÎ² '\0'
+    std::string utf8(lenU8 - 1, '\0'); // å»æ‰ç»“å°¾ '\0'
     WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &utf8[0], lenU8, NULL, NULL);
     return utf8;
 }
 
-// ----------------- µ÷ÓÃÖÇÆ× AI -----------------
+// ----------------- è°ƒç”¨æ™ºè°± AI -----------------
 std::string callZhipuAI(const std::string& tosql) {
     CURL* curl = curl_easy_init();
     std::string readBuffer;
@@ -41,12 +41,12 @@ std::string callZhipuAI(const std::string& tosql) {
     headers = curl_slist_append(headers, "Content-Type: application/json; charset=UTF-8");
     headers = curl_slist_append(headers, "Authorization: Bearer de9bcb4c9d8c46d5a1854e7ec619feea.kWlX9XpLnD1yfL6F");
 
-    // ¹¹Ôì JSON ÇëÇóÌå
+    // æ„é€  JSON è¯·æ±‚ä½“
     json j;
     j["model"] = "glm-4";
     j["messages"] = {
-        { {"role", "system"}, {"content", u8"ÄãÊÇÒ»¸öSQLÓï·¨¾À´íÖúÊÖ¡£"} },
-        { {"role", "user"}, {"content", u8"°ïÎÒ¾ÀÕıÕâÌõSQLÓï¾ä£¬Èç¹ûÓĞ´íÖ±½Ó¸øÎÒsqlÓï¾ä£¬Ã»ÓĞ´í·µ»ØÊı×Ö1: " + sql} }
+        { {"role", "system"}, {"content", u8"ä½ æ˜¯ä¸€ä¸ªSQLè¯­æ³•çº é”™åŠ©æ‰‹ã€‚"} },
+        { {"role", "user"}, {"content", u8"å¸®æˆ‘çº æ­£è¿™æ¡SQLè¯­å¥ï¼Œå¦‚æœæœ‰é”™ç›´æ¥ç»™æˆ‘sqlè¯­å¥ï¼Œæ²¡æœ‰é”™è¿”å›æ•°å­—1: " + sql} }
     };
     std::string jsonData = j.dump();
 
@@ -58,7 +58,11 @@ std::string callZhipuAI(const std::string& tosql) {
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        std::string err = "curl_easy_perform() failed: ";
+        err += curl_easy_strerror(res);
+        curl_easy_cleanup(curl);
+        if (headers) curl_slist_free_all(headers);
+        throw std::runtime_error(err); 
     }
     curl_easy_cleanup(curl);
     if (headers) curl_slist_free_all(headers);
@@ -67,7 +71,7 @@ std::string callZhipuAI(const std::string& tosql) {
 }
 
 
-// ----------------- ÌáÈ¡¾ÀÕıºóµÄ SQL -----------------
+// ----------------- æå–çº æ­£åçš„ SQL -----------------
 std::string extractCorrectedSQL(const std::string& aiResponse) {
     try {
         auto j = json::parse(aiResponse);
@@ -77,12 +81,12 @@ std::string extractCorrectedSQL(const std::string& aiResponse) {
 
             std::string content = j["choices"][0]["message"]["content"];
 
-            // Èç¹û¿ªÍ·ÊÇÊı×Ö '1'£¬±íÊ¾ SQL ÎŞ´íÎó
+            // å¦‚æœå¼€å¤´æ˜¯æ•°å­— '1'ï¼Œè¡¨ç¤º SQL æ— é”™è¯¯
             if (!content.empty() && content[0] == '1') {
-                return ""; // Ã»ÓĞ´íÎó
+                return ""; // æ²¡æœ‰é”™è¯¯
             }
 
-            // ²éÕÒ ```sql ... ``` ÖĞµÄ SQL
+            // æŸ¥æ‰¾ ```sql ... ``` ä¸­çš„ SQL
             size_t start = content.find("```sql");
             size_t end = content.find("```", start + 6);
             if (start != std::string::npos && end != std::string::npos) {
@@ -94,58 +98,58 @@ std::string extractCorrectedSQL(const std::string& aiResponse) {
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "½âÎöAI·µ»ØÄÚÈİ³ö´í: " << e.what() << std::endl;
+        std::cerr << "è§£æAIè¿”å›å†…å®¹å‡ºé”™: " << e.what() << std::endl;
     }
     return "";
 }
 
 std::string CALLAI(const std::string& sql) {
-    // ±£´æµ±Ç°¿ØÖÆÌ¨±àÂë
+    // ä¿å­˜å½“å‰æ§åˆ¶å°ç¼–ç 
     UINT oldOutCP = GetConsoleOutputCP();
     UINT oldInCP = GetConsoleCP();
 
-    // ÇĞ»»µ½ UTF-8
+    // åˆ‡æ¢åˆ° UTF-8
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
     std::string aiResponse = callZhipuAI(sql);
 
-    std::cout << "AIÔ­Ê¼·µ»Ø£º" << std::endl << aiResponse << std::endl;
+    std::cout << "AIåŸå§‹è¿”å›ï¼š" << std::endl << aiResponse << std::endl;
 
     std::string correctedSQL = extractCorrectedSQL(aiResponse);
     if (!correctedSQL.empty()) {
-        std::cout << "ÌáÈ¡µ½¾ÀÕıºóµÄSQLÓï¾ä£º" << std::endl;
+        std::cout << "æå–åˆ°çº æ­£åçš„SQLè¯­å¥ï¼š" << std::endl;
         std::cout << correctedSQL << std::endl;
     }
     else {
-        std::cout << "SQLÃ»ÓĞ´íÎó»òÎŞ·¨ÌáÈ¡" << std::endl;
+        std::cout << "SQLæ²¡æœ‰é”™è¯¯æˆ–æ— æ³•æå–" << std::endl;
     }
 
-    // ÇĞ»ØÔ­À´µÄ±àÂë
+    // åˆ‡å›åŸæ¥çš„ç¼–ç 
     SetConsoleOutputCP(oldOutCP);
     SetConsoleCP(oldInCP);
 
     return correctedSQL;
 }
 
-// ----------------- Ö÷º¯ÊıÊ¾Àı -----------------
+// ----------------- ä¸»å‡½æ•°ç¤ºä¾‹ -----------------
 /*int main() {
-    // ¿ØÖÆÌ¨Êä³ö UTF-8
+    // æ§åˆ¶å°è¾“å‡º UTF-8
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
-    std::string sql = "SELEC name FORM students;"; // ´íÎó SQL
+    std::string sql = "SELEC name FORM students;"; // é”™è¯¯ SQL
     std::string aiResponse = callZhipuAI(sql);
 
-    std::cout << "AIÔ­Ê¼·µ»Ø£º" << std::endl << aiResponse << std::endl;
+    std::cout << "AIåŸå§‹è¿”å›ï¼š" << std::endl << aiResponse << std::endl;
 
     std::string correctedSQL = extractCorrectedSQL(aiResponse);
     if (!correctedSQL.empty()) {
-        std::cout << "ÌáÈ¡µ½¾ÀÕıºóµÄSQLÓï¾ä£º" << std::endl;
+        std::cout << "æå–åˆ°çº æ­£åçš„SQLè¯­å¥ï¼š" << std::endl;
         std::cout << correctedSQL << std::endl;
     }
     else {
-        std::cout << "SQLÃ»ÓĞ´íÎó»òÎŞ·¨ÌáÈ¡" << std::endl;
+        std::cout << "SQLæ²¡æœ‰é”™è¯¯æˆ–æ— æ³•æå–" << std::endl;
     }
 
     return 0;

@@ -717,6 +717,10 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+            string back = std::string(e.what());
+            sendWithEnd(clientSock, back);
+            //send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+            return {};
         }
         if (correctedSQL.empty()) {
             return {};
@@ -738,6 +742,12 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+            string back = std::string(e.what())
+                + " at line " + std::to_string(e.line)
+                + ", column " + std::to_string(e.col);
+            sendWithEnd(clientSock, back);
+            //send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+            return {};
         }
         if (correctedSQL.empty()) {
             return {};
