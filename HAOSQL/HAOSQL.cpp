@@ -18,6 +18,7 @@
 #include "B+tree.h"
 #include "AI.h"
 #include "rollback.h"
+#include "HAODBstartup.h"
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
@@ -85,16 +86,13 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         FileManager fm("HAODB");
         LoginManager lm(fm, "HAODB");
         if (lm.loginUser(account, password)) {
+            HAODBStartup startup;
+
             SET_USER_Name(account);
-            std::string welcome =
-                "-------------------------------------------------------------------------------\n"
-                "- 名称规范 : 数据库名、表名、列名只能包含字母、数字和下划线，长度不超过63字符 -\n"
-                "- 数据类型 : 支持 \"INT\", \"VARCHAR\", \"DECIMAL\", \"DATETIME\"                     -\n"
-                "- 主键约束 : 主键列自动设为不可空                                             -\n"
-                "- 帮助 : exit退出数据库系统                                                   -\n"
-                "-------------------------------------------------------------------------------\n"
-                "欢迎您 " + current_username;
-            sendWithEnd(clientSock, welcome);
+
+            std::string welcomeScreen = startup.getLoginSuccessScreen(current_username);
+            sendWithEnd(clientSock, welcomeScreen);
+
             break;
         }
         else {
