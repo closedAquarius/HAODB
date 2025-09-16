@@ -313,7 +313,7 @@ vector<Row> Update::execute() {
 		}
 
 		// 将新记录写入页面的槽中
-		page->insertRecord(updatedRecordStr.c_str(), updatedRecordStr.size());
+		
 		string newKeyVal = row.at(key_col);
 		int newKey = stoi(newKeyVal);
 		for (auto& idx : tableIndexes) {
@@ -412,6 +412,7 @@ vector<Row> Delete::execute() {
 			}
 
 			// 删除物理记录
+			uint16_t before_length = page->getSlot(targetSlot)->length;
 			page->deleteRecord(targetSlot);
 			std::cout << "Deleted row with " << key_col << " = " << key_val << endl;
 
@@ -419,7 +420,7 @@ vector<Row> Delete::execute() {
 			GLOBAL_TIMER.stop();
 
 			// 记录老记录位置
-			SET_BEFORE_WAL_RECORD(pageId, targetSlot, page->getSlot(targetSlot)->length);
+			SET_BEFORE_WAL_RECORD(pageId, targetSlot, before_length);
 
 			// 记入日志
 			enhanced_executor->DeleteRecord(WAL_DATA_RECORD.before_page_id, WAL_DATA_RECORD.before_slot_id, WAL_DATA_RECORD.before_length,
