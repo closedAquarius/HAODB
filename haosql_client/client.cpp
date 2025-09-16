@@ -111,6 +111,16 @@ int main() {
             // 接收执行结果
             string result = recvUntilEnd(sock);
             cout << result << endl;
+
+            if (result.find("是否撤销") != string::npos) {
+                string yn;
+                getline(cin, yn);  // 用户输入 Y 或 N
+                sendAll(sock, yn);
+
+                // 再接收撤销结果（撤销成功/失败提示）
+                string rollbackMsg = recvUntilEnd(sock);
+                cout << rollbackMsg << endl;
+            }
         }
 
     }
