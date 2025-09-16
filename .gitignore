@@ -1,31 +1,63 @@
-# Visual Studio
-.vs/
-*.VC.db
-*.opendb
-*.vc.db*
+# =========================
+# Visual Studio generated files
+# =========================
+
+# User-specific files
 *.suo
 *.user
 *.userosscache
-*.sdf
-ipch/
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
 *.pdb
-
-# VS C++ 构建产物
-x64/
-Debug/
-Release/
-*.obj
-*.tlog
-*.log
-
-# 常见临时/缓存
-*.cache
-*.tmp
-*.log
 *.ilk
+*.idb
+*.class
+*.lib
+*.app
+*.iobj
+*.ipdb
+*.iopt
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
 
-# 你项目里的生成目录
-HAOSQL/x64/
+# Visual Studio Code / VS cache
+.vscode/
+.vs/
 
-.vs/HAOSQL/v17/Browse.VC.db
-.vs/*
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NCB, database, and temporary files
+*.ncb
+*.sdf
+*.cachefile
+*.dbmdl
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+*.db
+
+# =========================
+# Keep source files
+# =========================
+# *.cpp, *.h, *.hao, *.db 等源码/必要数据文件将不会被忽略
