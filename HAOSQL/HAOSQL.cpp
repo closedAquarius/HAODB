@@ -100,19 +100,19 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
     }
 
-    setDBName("T");
+    setDBName("System_Data");
     initIndexManager(catalog.get());
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
-
+    // 创建 DiskManager
+    DiskManager dm(info.data_file_path);
+    // 创建 BufferPoolManager
+    // 缓冲池大小 10
+    BufferPoolManager bpm(10, &dm);
     // SQL 循环
     while (true) {
 
-        // 创建 DiskManager
-        DiskManager dm(info.data_file_path);
-        // 创建 BufferPoolManager
-        // 缓冲池大小 10
-        BufferPoolManager bpm(10, &dm);
+
         sendWithEnd(clientSock, "请输入 SQL 语句:");
 
         memset(buffer, 0, sizeof(buffer));
@@ -715,6 +715,10 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+            string back = std::string(e.what());
+            sendWithEnd(clientSock, back);
+            //send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+            return {};
         }
         if (correctedSQL.empty()) {
             return {};
@@ -736,6 +740,12 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+            string back = std::string(e.what())
+                + " at line " + std::to_string(e.line)
+                + ", column " + std::to_string(e.col);
+            sendWithEnd(clientSock, back);
+            //send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+            return {};
         }
         if (correctedSQL.empty()) {
             return {};
