@@ -33,6 +33,7 @@ void SET_USER_Name(std::string& name)
 {
     USER_NAME = name;
 }
+SQLTimer GLOBAL_TIMER;
 
 // 工具函数：封装发送，自动加 >>END
 void sendWithEnd(SOCKET sock, const string& msg) {
@@ -150,6 +151,9 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         std::cout << "最终执行 SQL: " << finalSQL << std::endl;
         sendWithEnd(clientSock, string("SQL语句错误，你可能想输入: ") + finalSQL);
         sql = finalSQL;*/
+
+        // 编译SQL，开始计时
+        GLOBAL_TIMER.start();
 
         std::vector<Quadruple> quadruple;
         try {
@@ -327,6 +331,10 @@ int main()
 
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
         std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+
+        // 编译SQL，开始计时
+        GLOBAL_TIMER.start();
+
         vector<Quadruple> quadruple = sql_compiler(sql);
         SET_SQL_QUAS(finalSQL, quadruple);
 

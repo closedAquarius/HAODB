@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 
 // 词法分析结果
 struct Token {
@@ -38,11 +39,12 @@ struct RID {
 };
 
 // 全局变量
-extern std::string USER_NAME;
+extern std::string USER_NAME;  // 用户名
 void SET_USER_Name(std::string& name);
-extern std::string DBName;  //数据库名称
+extern std::string DBName;  // 数据库名称
 void setDBName(const std::string& name);
-extern std::uint32_t LAST_LSN;  //WAL日志lsn序号
+
+extern std::uint32_t LAST_LSN;  // WAL日志lsn序号
 void SET_LSN(uint32_t lsn);
 struct WALDataRecord
 {
@@ -55,9 +57,36 @@ struct WALDataRecord
     std::string sql;
     std::vector<Quadruple> quas;
 };
-extern WALDataRecord WAL_DATA_RECORD;  //日志记录
+extern WALDataRecord WAL_DATA_RECORD;  // 日志记录
 void SET_BEFORE_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len);
 void SET_AFTER_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len);
 void SET_SQL_QUAS(std::string sql, std::vector<Quadruple> quas);
+class SQLTimer {
+public:
+    SQLTimer() : running(false) {}
 
+    // 开始计时
+    void start() {
+        start_time = std::chrono::high_resolution_clock::now();
+        running = true;
+    }
+
+    // 停止计时
+    void stop() {
+        end_time = std::chrono::high_resolution_clock::now();
+        running = false;
+    }
+
+    // 获取耗时（毫秒）
+    long long elapsed_ms() const {
+        auto end_point = running ? std::chrono::high_resolution_clock::now() : end_time;
+        return std::chrono::duration_cast<std::chrono::milliseconds>(end_point - start_time).count();
+    }
+
+private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
+    bool running;
+};
+extern SQLTimer GLOBAL_TIMER;  // 每次执行计时器
 
