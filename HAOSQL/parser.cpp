@@ -801,7 +801,7 @@ void SQLParser::prediction_table(void)
                 auto key = make_pair(A, a);
                 if (table.find(key) != table.end())
                 {
-                    printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), a.c_str());
+                    //printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), a.c_str());
                 }
                 table[key] = prod_num;
             }
@@ -830,7 +830,7 @@ void SQLParser::prediction_table(void)
                         auto key = make_pair(A, b);
                         if (table.find(key) != table.end())
                         {
-                            printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), b.c_str());
+                            //printf("警告：预测分析表冲突 M[%s, %s]\n", A.c_str(), b.c_str());
                         }
                         table[key] = prod_num;
                     }

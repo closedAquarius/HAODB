@@ -261,7 +261,10 @@ uint32_t WALBuffer::CalculateChecksum(const std::vector<char>& data) {
 // ========== LogFileManager й╣ож ==========
 LogFileManager::LogFileManager(const LogConfigInfo& cfg, const std::string& db)
     : config(cfg), db_name(db) {
-    log_directory = "HAODB/" + DBName + "/logs/";
+    if (LOG_PATH == "")
+        log_directory = "HAODB/" + DBName + "/logs/";
+    else
+        log_directory = LOG_PATH;
     CreateLogDirectory();
 }
 
@@ -282,7 +285,8 @@ bool LogFileManager::CreateLogDirectory() {
 
 std::string LogFileManager::GetWALFilePath() {
     if (current_wal_file.empty()) {
-        current_wal_file = log_directory + DBName + "_wal.log";
+        // current_wal_file = log_directory + DBName + "_wal.log";
+        current_wal_file = "HAODB/" + DBName + "/logs/" + DBName + "_wal.log";
     }
     return current_wal_file;
 }

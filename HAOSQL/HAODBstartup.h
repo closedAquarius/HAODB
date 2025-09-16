@@ -8,7 +8,7 @@
 #pragma comment(lib, "ws2_32.lib")  // Windows下链接socket库
 
 class HAODBStartup {
-private:
+public:
     // ANSI 颜色码
     const std::string RESET = "\033[0m";
     const std::string BOLD = "\033[1m";

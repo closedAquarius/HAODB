@@ -187,6 +187,7 @@
     <ClInclude Include="rollback.h" />
     <ClInclude Include="semantic.h" />
     <ClInclude Include="system_config_manager.h" />
+    <ClInclude Include="table_formatter.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

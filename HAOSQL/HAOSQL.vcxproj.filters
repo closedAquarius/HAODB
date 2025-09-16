@@ -191,6 +191,9 @@
     <ClInclude Include="HAODBstartup.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="table_formatter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

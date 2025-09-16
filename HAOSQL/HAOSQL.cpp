@@ -19,6 +19,8 @@
 #include "AI.h"
 #include "rollback.h"
 #include "HAODBstartup.h"
+#include "table_formatter.h"
+
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
@@ -31,6 +33,7 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog);
 bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm, SOCKET clientsocket);
 //void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog);
 std::string getRollBackRecordsString(const std::vector<WithdrawLog>& logs, int steps, CatalogManager& catalog);
+bool checkShowing(string sql, CatalogManager& catalog, SOCKET clientSock);
 IndexManager* indexManager = nullptr;
 
 // 全局变量
@@ -40,6 +43,7 @@ void SET_USER_Name(std::string& name)
     USER_NAME = name;
 }
 SQLTimer GLOBAL_TIMER;
+HAODBStartup startup;  // 打印效果类
 
 // 工具函数：封装发送，自动加 >>END
 void sendWithEnd(SOCKET sock, const string& msg) {
@@ -49,7 +53,6 @@ void sendWithEnd(SOCKET sock, const string& msg) {
 
 // 每个客户端一个线程
 void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
-
     // 加载元数据
     auto catalog = std::make_unique<CatalogManager>("HAODB");
     //CatalogManager catalog("HAODB");
@@ -72,7 +75,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         account = buffer;
         std::cout << "[客户端账号] " << account << endl;
 
-        sendWithEnd(clientSock, "请输入密码:");
+        sendWithEnd(clientSock, "\n请输入密码:");
 
         memset(buffer, 0, sizeof(buffer));
         bytes = recv(clientSock, buffer, sizeof(buffer) - 1, 0);
@@ -86,8 +89,6 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         FileManager fm("HAODB");
         LoginManager lm(fm, "HAODB");
         if (lm.loginUser(account, password)) {
-            HAODBStartup startup;
-
             SET_USER_Name(account);
 
             std::string welcomeScreen = startup.getLoginSuccessScreen(current_username);
@@ -111,8 +112,6 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     BufferPoolManager bpm(10, &dm);
     // SQL 循环
     while (true) {
-
-
         sendWithEnd(clientSock, "请输入 SQL 语句:");
 
         memset(buffer, 0, sizeof(buffer));
@@ -122,10 +121,10 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
 
         string sql = buffer;
-        if (checkDatabaseExists(sql, *catalog,clientSock) || checkRollBack(sql, *catalog, &bpm,clientSock))
+        if (checkDatabaseExists(sql, *catalog, clientSock) || checkRollBack(sql, *catalog, &bpm, clientSock))
             continue;
         string lowerSql = sql;
-        transform(lowerSql.begin(), lowerSql.end(), lowerSql.begin(), ::tolower);
+        transform(lowerSql.begin(), lowerSql.end(), lowerSql.begin(), ::tolower); if (checkShowing(lowerSql, *catalog, clientSock)) continue;
 
         if (sql == "exit") break;
         if (sql == "gen") {
@@ -149,7 +148,12 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             dbName.erase(dbName.find_last_not_of(" \t") + 1);
             setDBName(dbName);
             initIndexManager(catalog.get());
-            sendWithEnd(clientSock, "正在使用"+dbName);
+
+            std::stringstream ss;
+            ss << startup.GREEN;
+            ss << "正在使用" + dbName << "\n" << startup.RESET;
+            ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+            sendWithEnd(clientSock, ss.str());
             continue;
         }
 
@@ -162,6 +166,10 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
             if (quadruple.empty()) {
                 std::cerr << "Error: SQL parsing failed, please check syntax." << std::endl;
+
+                std::stringstream ss;
+                ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+                sendWithEnd(clientSock, ss.str());
                 continue;
             }
 
@@ -177,7 +185,12 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
         catch (const std::exception& e) {
             std::cerr << "Error (compile): " << e.what() << std::endl;
-            continue;  // 允许用户继续输入
+            //continue;  // 允许用户继续输入
+
+            std::stringstream ss;
+            ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+            sendWithEnd(clientSock, ss.str());
+            continue;
         }
 
         // ----------------------
@@ -189,28 +202,39 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             vector<Row> result = root->execute();
 
             string resultStr;
-            if (!result.empty()) {
-                std::cout << "主函数打印" << endl;
-                for (auto& row : result) {
-                    for (auto& col : columns) {
-                        std::cout << row.at(col) << "\t|";
-                        resultStr += row.at(col) + "\t|";
-                    }
-                    std::cout << endl;
-                    resultStr += "\n";
-                }
+
+            if (!result.empty() && !columns.empty()) {
+                std::cout << "主函数打印" << std::endl;
+
+                // 创建表格格式化器
+                TableFormatter formatter;
+
+                // 生成美观的表格
+                resultStr = formatter.formatTable(columns, result);
+
+                // 同时在服务器端显示（调试用）
+                std::cout << resultStr << std::endl;
             }
 
             if (resultStr.empty()) {
-                sendWithEnd(clientSock, "执行成功！");
+                std::stringstream ss;
+                ss << startup.GREEN;
+                ss << "执行成功！\n ";
+                ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+
+                sendWithEnd(clientSock, ss.str());
             }
             else {
                 sendWithEnd(clientSock, resultStr);
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "执行错误: " << e.what() << std::endl;
-            sendWithEnd(clientSock, string("执行错误: ") + e.what());
+            std::stringstream ss;
+            ss << startup.RED;
+            ss << "执行错误: " << e.what() << "\n";
+            ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+
+            sendWithEnd(clientSock, ss.str());
             continue;  // 不中断主循环
         }
     }
@@ -404,7 +428,6 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog)
         setDBName(db_name);
         catalog.CreateDatabase(DBName, current_username);
 
-
         return true;
     }
 
@@ -457,7 +480,9 @@ bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm,S
 
         string back = getRollBackRecordsString(logs, steps, catalog);
 
-        sendWithEnd(clientsocket, back + "\n是否撤销(Y / N) : ");
+        sendWithEnd(clientsocket, back);
+
+        sendWithEnd(clientsocket,"请输入选择 (Y/N): ");
 
         // 接收用户输入
         char buffer[4096];
@@ -484,136 +509,74 @@ bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm,S
                     undoLogs.push_back(undoLog);
                 }
 
-                undos(undoLogs, bpm);
-                back = "撤销成功！";
-                sendWithEnd(clientsocket, back);
+                undos(undoLogs, bpm);;
+
+                std::stringstream ss;
+                ss << startup.GREEN;
+                ss << "\n撤销成功！" << "\n";
+                ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+
+                sendWithEnd(clientsocket, ss.str());
             }
             else {
                 // 用户选择不撤销
-                back = "撤销失败！";
-                sendWithEnd(clientsocket, back);
+                std::stringstream ss;
+                ss << startup.RED;
+                ss << "\n撤销失败！" << "\n";
+                ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+
+                sendWithEnd(clientsocket, ss.str());
             }
         }
         return true;
     }
     return false;
 }
+
 std::string getRollBackRecordsString(const std::vector<WithdrawLog>& logs, int steps, CatalogManager& catalog)
 {
-    std::ostringstream oss;
-    //LogViewer log_viewer("HAODB", &catalog); // 之前带 catalog 的，如果用不到可以去掉
+    LogFormatter formatter;
     LogViewer log_viewer("HAODB");
 
-    oss << "-------------------------------\n";
-    oss << "最近" << steps << "步的操作为：\n";
-
     auto operations = log_viewer.GetRecentOperations(steps);
-    if (operations.empty()) {
-        oss << "  [INFO] No operation logs found.\n";
-        oss << "  Tip: Execute some database operations first to generate logs.\n";
-        oss << std::string(80, '=') << "\n";
-        return oss.str();
-    }
 
-    oss << " Line | Level | Content\n";
-    oss << std::string(80, '-') << "\n";
+    // 生成美观的日志表格
+    std::string logTable = formatter.formatLogTable(operations, steps);
 
-    int line_num = 1;
-    for (const auto& op : operations) {
-        // 格式化输出每一行
-        oss << std::setw(5) << line_num << " | ";
+    // 生成撤销确认提示
+    std::string rollbackPrompt = formatter.formatRollbackPrompt(operations, steps);
 
-        // 根据内容判断操作类型并添加标识
-        if (op.find("INSERT") != std::string::npos) {
-            oss << "ADD  | ";
-        }
-        else if (op.find("DELETE") != std::string::npos) {
-            oss << "DEL  | ";
-        }
-        else if (op.find("UPDATE") != std::string::npos) {
-            oss << "UPD  | ";
-        }
-        else if (op.find("SELECT") != std::string::npos) {
-            oss << "SEL  | ";
-        }
-        else if (op.find("CREATE") != std::string::npos) {
-            oss << "CRT  | ";
-        }
-        else {
-            oss << "OTH  | ";
-        }
-
-        // 截断过长的日志行以便显示
-        if (op.length() > 65) {
-            oss << op.substr(0, 62) << "..." << "\n";
-        }
-        else {
-            oss << op << "\n";
-        }
-
-        line_num++;
-    }
-
-    oss << std::string(80, '-') << "\n";
-    return oss.str();
+    return logTable + rollbackPrompt;
 }
-/*void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog)
+
+bool checkShowing(string sql, CatalogManager& catalog, SOCKET clientSock)
 {
-    //INIT_LOGGER("HAODB", &catalog);
-    LogViewer log_viewer("HAODB");
-    
-    cout << "-------------------------------" << endl;
-    cout << "最近" << steps << "步的操作为：" << endl;
+    if (sql == "show tables;")
+    {
+        vector<TableInfo> tables = catalog.ListTables(DBName);
 
-    auto operations = log_viewer.GetRecentOperations(steps);
-    if (operations.empty()) {
-        std::cout << "  [INFO] No operation logs found." << std::endl;
-        std::cout << "  Tip: Execute some database operations first to generate logs." << std::endl;
-        std::cout << std::string(80, '=') << std::endl;
-        return;
+        // 创建表格列表格式化器
+        TableListFormatter formatter;
+
+        // 生成美观的表格列表
+        std::string tableList = formatter.formatTableList(tables, DBName);
+
+        // 在服务器端显示（调试用）
+        std::cout << "服务器端显示表格列表:" << std::endl;
+        std::cout << tableList << std::endl;
+
+        // 发送给客户端
+        std::stringstream ss;
+        ss << tableList;
+        ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+
+        sendWithEnd(clientSock, ss.str());
+
+        return true;
     }
 
-    std::cout << " Line | Level | Content" << std::endl;
-    std::cout << std::string(80, '-') << std::endl;
-
-    int line_num = 1;
-    for (const auto& op : operations) {
-        // 格式化输出每一行
-        std::cout << std::setw(5) << line_num << " | ";
-
-        // 根据内容判断操作类型并添加标识
-        if (op.find("INSERT") != std::string::npos) {
-            std::cout << "ADD  | ";
-        }
-        else if (op.find("DELETE") != std::string::npos) {
-            std::cout << "DEL  | ";
-        }
-        else if (op.find("UPDATE") != std::string::npos) {
-            std::cout << "UPD  | ";
-        }
-        else if (op.find("SELECT") != std::string::npos) {
-            std::cout << "SEL  | ";
-        }
-        else if (op.find("CREATE") != std::string::npos) {
-            std::cout << "CRT  | ";
-        }
-        else {
-            std::cout << "OTH  | ";
-        }
-
-        // 截断过长的日志行以便显示
-        if (op.length() > 65) {
-            std::cout << op.substr(0, 62) << "..." << std::endl;
-        }
-        else {
-            std::cout << op << std::endl;
-        }
-
-        line_num++;
-    }
-
-    std::cout << std::string(80, '-') << std::endl;
-}*/
+    return false;
+}
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 {
@@ -645,10 +608,18 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
         setDBName(db_name);
         try {
             catalog.CreateDatabase(DBName, current_username);
-            sendWithEnd(clientSock, "数据库 " + db_name + " 创建成功！");
+            std::stringstream ss;
+            ss << startup.GREEN;
+            ss << "数据库 " + db_name + " 创建成功！" << "\n";
+            ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+            sendWithEnd(clientSock, ss.str());
         }
         catch (const std::exception& e) {
-            sendWithEnd(clientSock, string("创建数据库失败: ") + e.what());
+            std::stringstream ss;
+            ss << startup.GREEN;
+            ss << string("创建数据库失败: ") + e.what() << "\n";
+            ss << "\n" << startup.YELLOW << "HAODB> " << startup.RESET;
+            sendWithEnd(clientSock, ss.str());
         }
 
         return true;
@@ -725,8 +696,16 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         else {
             sql = correctedSQL;
-            string back = std::string(e.what())+ "\n修正SQL: " + sql;
-            send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+            // string back = std::string(e.what())+ "\n[智能修正SQL] " + sql;
+
+            std::stringstream ss;
+            ss << startup.RED;
+            ss << std::string(e.what()) << "\n";
+            ss << "\n" << startup.CYAN << "[智能修正SQL] " << startup.GREEN << sql << startup.RESET;
+
+            send(clientSock, ss.str().c_str(), static_cast<int>(ss.str().size()), 0);
+
+            //send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
         }
         
         std::cout << "最终执行 SQL: " << sql << std::endl;
@@ -752,11 +731,15 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         }
         else {
             sql = correctedSQL;
-            string back = std::string(e.what())
+
+            std::stringstream ss;
+            ss << startup.RED;
+            ss << std::string(e.what()) 
                 + " at line " + std::to_string(e.line)
-                + ", column " + std::to_string(e.col)
-                + "\n修正SQL: " + sql;
-            send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+                + ", column " + std::to_string(e.col) << "\n";
+            ss << "\n" << startup.CYAN << "[智能修正SQL] " << startup.GREEN << sql << startup.RESET;
+
+            send(clientSock, ss.str().c_str(), static_cast<int>(ss.str().size()), 0);
         }
         std::cout << "最终执行 SQL: " << sql << std::endl;
         return sql_compiler(sql, clientSock);
@@ -766,6 +749,7 @@ vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
         return {};  // 返回空，表示错误
     }
 }
+
 vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
@@ -833,6 +817,8 @@ vector<Quadruple> sql_compiler(string sql)
         else {
             sql = correctedSQL;
             string back = std::string(e.what()) + "\n修正SQL: " + sql;
+
+
         }
         std::cout << "最终执行 SQL: " << sql << std::endl;
         return sql_compiler(sql);
