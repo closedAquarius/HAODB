@@ -21,7 +21,7 @@ struct IndexInstance {
 
 class IndexManager {
 public:
-    IndexManager(FileManager& fm, CatalogManager* catalog, const std::string& db_name);
+    IndexManager(FileManager& fm, CatalogManager* catalog);
 
     // ---------------- Create / Drop ----------------
     bool CreateIndex(const std::string& table_name,
@@ -68,13 +68,12 @@ public:
 
 private:
     FileManager& fm_;
-    std::string db_name_;
     std::unordered_map<std::string, std::unique_ptr<IndexInstance>> instances_;
     std::mutex global_mtx_;
 
     // ---------------- 内部方法 ----------------
-    bool ensureIndexLoaded(const std::string& index_name);
+    /*bool ensureIndexLoaded(const std::string& index_name);
     IndexInstance* findInstance(const std::string& index_name);
     bool OpenIndex(const IndexInfo& info);
-    bool _updateRootIfNeeded(IndexInstance* inst);
+    bool _updateRootIfNeeded(IndexInstance* inst);*/
 };

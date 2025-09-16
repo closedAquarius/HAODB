@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unordered_set>
 #include <set>
-
+#include "login.h"
 namespace fs = std::filesystem;
 
 CatalogManager::CatalogManager(const std::string& haodb_path)
@@ -51,6 +51,13 @@ bool CatalogManager::Initialize() {
         if (!registry_manager->LoadRegistry()) {
             std::cerr << "数据库注册表加载失败" << std::endl;
             return false;
+        }
+
+        std::string user_dir = haodb_root_path + "\\users.dat";
+        if (!fs::exists(user_dir)) {
+            FileManager fm("HAODB");
+            LoginManager lm(fm, "HAODB");
+            lm.registerUser("root", "1234");
         }
 
         std::cout << "CatalogManager初始化成功" << std::endl;

@@ -21,14 +21,15 @@
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
+vector<Quadruple> sql_compiler(string sql, SOCKET clientSock);
 int generateDBFile();
 int addDBFile();
 void initIndexManager(CatalogManager* catalog);
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock);
 bool checkDatabaseExists(string sql, CatalogManager& catalog);
-bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm);
-void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog);
-
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm, SOCKET clientsocket);
+//void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog);
+std::string getRollBackRecordsString(const std::vector<WithdrawLog>& logs, int steps, CatalogManager& catalog);
 IndexManager* indexManager = nullptr;
 
 // 全局变量
@@ -47,6 +48,12 @@ void sendWithEnd(SOCKET sock, const string& msg) {
 
 // 每个客户端一个线程
 void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
+
+    // 加载元数据
+    auto catalog = std::make_unique<CatalogManager>("HAODB");
+    //CatalogManager catalog("HAODB");
+    catalog->Initialize();
+
     char buffer[4096];
     string account, password;
 
@@ -73,13 +80,10 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             return;
         }
         password = buffer;
-        cout << "[客户端密码] " << password << endl;
+        std::cout << "[客户端密码] " << password << endl;
 
         FileManager fm("HAODB");
         LoginManager lm(fm, "HAODB");
-
-
-
         if (lm.loginUser(account, password)) {
             SET_USER_Name(account);
             std::string welcome =
@@ -97,24 +101,20 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             sendWithEnd(clientSock, "账号或密码错误，请重试");
         }
     }
-    // 加载元数据
-    auto catalog = std::make_unique<CatalogManager>("HAODB");
-    //CatalogManager catalog("HAODB");
-    catalog->Initialize();
+
     setDBName("T");
     initIndexManager(catalog.get());
-
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
-    initIndexManager(catalog.get());
 
-    // 创建 DiskManager
-    DiskManager dm(info.data_file_path);
-    // 创建 BufferPoolManager
-    // 缓冲池大小 10
-    BufferPoolManager bpm(10, &dm);
     // SQL 循环
     while (true) {
+
+        // 创建 DiskManager
+        DiskManager dm(info.data_file_path);
+        // 创建 BufferPoolManager
+        // 缓冲池大小 10
+        BufferPoolManager bpm(10, &dm);
         sendWithEnd(clientSock, "请输入 SQL 语句:");
 
         memset(buffer, 0, sizeof(buffer));
@@ -124,7 +124,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
 
         string sql = buffer;
-        if (checkDatabaseExists(sql, *catalog))
+        if (checkDatabaseExists(sql, *catalog,clientSock) || checkRollBack(sql, *catalog, &bpm,clientSock))
             continue;
         string lowerSql = sql;
         transform(lowerSql.begin(), lowerSql.end(), lowerSql.begin(), ::tolower);
@@ -150,6 +150,8 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
             dbName.erase(0, dbName.find_first_not_of(" \t"));
             dbName.erase(dbName.find_last_not_of(" \t") + 1);
             setDBName(dbName);
+            initIndexManager(catalog.get());
+            sendWithEnd(clientSock, "正在使用"+dbName);
             continue;
         }
 
@@ -158,7 +160,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
         std::vector<Quadruple> quadruple;
         try {
-            quadruple = sql_compiler(sql);
+            quadruple = sql_compiler(sql,clientSock);
 
             if (quadruple.empty()) {
                 std::cerr << "Error: SQL parsing failed, please check syntax." << std::endl;
@@ -190,13 +192,13 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
             string resultStr;
             if (!result.empty()) {
-                cout << "主函数打印" << endl;
+                std::cout << "主函数打印" << endl;
                 for (auto& row : result) {
                     for (auto& col : columns) {
-                        cout << row.at(col) << "\t|";
+                        std::cout << row.at(col) << "\t|";
                         resultStr += row.at(col) + "\t|";
                     }
-                    cout << endl;
+                    std::cout << endl;
                     resultStr += "\n";
                 }
             }
@@ -218,10 +220,9 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
-/*
 int main() {
     WSADATA wsaData;
-    //WSAStartup(MAKEWORD(2, 2), &wsaData);
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSock == INVALID_SOCKET) {
@@ -249,7 +250,7 @@ int main() {
         return 1;
     }
 
-    cout << "服务器已启动，端口 8080，等待客户端连接..." << endl;
+    std::cout << "服务器已启动，端口 8080，等待客户端连接..." << endl;
 
     while (true) {
         sockaddr_in clientAddr;
@@ -267,9 +268,8 @@ int main() {
     WSACleanup();
     return 0;
 }
-*/
 
-int main()
+/*int main()
 {
     SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
     SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
@@ -286,7 +286,7 @@ int main()
     /*
     cout << catalog.GetStorageConfig(DBName).data_file_path << endl
         << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;*/
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;
 
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
@@ -334,7 +334,7 @@ int main()
         }
 
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;*/
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
 
         // 编译SQL，开始计时
         GLOBAL_TIMER.start();
@@ -374,7 +374,7 @@ int main()
     }
 
     return 0;
-}
+}*/
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog)
 {
@@ -413,7 +413,7 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog)
     return false;
 }
 
-bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm)
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm,SOCKET clientsocket)
 {
     // 转换为小写，便于大小写不敏感匹配
     std::string lower_sql = sql;
@@ -457,40 +457,109 @@ bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm)
 
         enhanced_executor.PrintAllWAL();
 
-        printRollBackRecords(logs, steps, catalog);
+        string back = getRollBackRecordsString(logs, steps, catalog);
 
-        char continueRollBack;
-        cout << "是否撤销(Y/N): ";
-        cin >> continueRollBack;
+        sendWithEnd(clientsocket, back + "\n是否撤销(Y / N) : ");
 
+        // 接收用户输入
+        char buffer[4096];
+        memset(buffer, 0, sizeof(buffer));
         vector<Log> undoLogs;
-        switch (continueRollBack)
-        {
-        case 'Y': case 'y':
-            for (auto& log : logs)
-            {
-                Log undoLog;
-                undoLog.pageId = log.page_id;
-                undoLog.slotId = log.slot_id;
-                undoLog.len = log.length;
-                undoLog.type = log.record_type;
+        int bytesReceived = recv(clientsocket, buffer, sizeof(buffer) - 1, 0);
+        if (bytesReceived > 0) {
+            buffer[bytesReceived] = '\0';  // 以字符串形式处理
+            std::string input(buffer);
 
-                undoLogs.push_back(undoLog);
+            // 去掉可能的换行符
+            input.erase(std::remove(input.begin(), input.end(), '\r'), input.end());
+            input.erase(std::remove(input.begin(), input.end(), '\n'), input.end());
+
+            if (input == "Y" || input == "y") {
+                for (auto& log : logs)
+                {
+                    Log undoLog;
+                    undoLog.pageId = log.page_id;
+                    undoLog.slotId = log.slot_id;
+                    undoLog.len = log.length;
+                    undoLog.type = log.record_type;
+
+                    undoLogs.push_back(undoLog);
+                }
+
+                undos(undoLogs, bpm);
+                back = "撤销成功！";
+                sendWithEnd(clientsocket, back);
             }
-
-            undos(undoLogs, bpm);
-            cout << "撤销成功！" << endl;
-            break;
-        case 'N': case 'n':
-            break;
+            else {
+                // 用户选择不撤销
+                back = "撤销失败！";
+                sendWithEnd(clientsocket, back);
+            }
         }
-
         return true;
     }
     return false;
 }
+std::string getRollBackRecordsString(const std::vector<WithdrawLog>& logs, int steps, CatalogManager& catalog)
+{
+    std::ostringstream oss;
+    //LogViewer log_viewer("HAODB", &catalog); // 之前带 catalog 的，如果用不到可以去掉
+    LogViewer log_viewer("HAODB");
 
-void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog)
+    oss << "-------------------------------\n";
+    oss << "最近" << steps << "步的操作为：\n";
+
+    auto operations = log_viewer.GetRecentOperations(steps);
+    if (operations.empty()) {
+        oss << "  [INFO] No operation logs found.\n";
+        oss << "  Tip: Execute some database operations first to generate logs.\n";
+        oss << std::string(80, '=') << "\n";
+        return oss.str();
+    }
+
+    oss << " Line | Level | Content\n";
+    oss << std::string(80, '-') << "\n";
+
+    int line_num = 1;
+    for (const auto& op : operations) {
+        // 格式化输出每一行
+        oss << std::setw(5) << line_num << " | ";
+
+        // 根据内容判断操作类型并添加标识
+        if (op.find("INSERT") != std::string::npos) {
+            oss << "ADD  | ";
+        }
+        else if (op.find("DELETE") != std::string::npos) {
+            oss << "DEL  | ";
+        }
+        else if (op.find("UPDATE") != std::string::npos) {
+            oss << "UPD  | ";
+        }
+        else if (op.find("SELECT") != std::string::npos) {
+            oss << "SEL  | ";
+        }
+        else if (op.find("CREATE") != std::string::npos) {
+            oss << "CRT  | ";
+        }
+        else {
+            oss << "OTH  | ";
+        }
+
+        // 截断过长的日志行以便显示
+        if (op.length() > 65) {
+            oss << op.substr(0, 62) << "..." << "\n";
+        }
+        else {
+            oss << op << "\n";
+        }
+
+        line_num++;
+    }
+
+    oss << std::string(80, '-') << "\n";
+    return oss.str();
+}
+/*void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog)
 {
     //INIT_LOGGER("HAODB", &catalog);
     LogViewer log_viewer("HAODB");
@@ -546,7 +615,7 @@ void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& c
     }
 
     std::cout << std::string(80, '-') << std::endl;
-}
+}*/
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 {
@@ -592,7 +661,7 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
 
 void initIndexManager(CatalogManager* catalog) {
     // 假设你有 FileManager 和 CatalogManager
-    FileManager fm("./HAODB/"+DBName+"/index/");
+    FileManager fm("./HAODB/"+DBName+"/index");
     cout << "initIndexManager" << endl;
     std::cout << "检查catalog对象:" << std::endl;
     std::cout << "catalog指针: " << catalog << std::endl;
@@ -606,9 +675,89 @@ void initIndexManager(CatalogManager* catalog) {
     catch (...) {
         std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
     }
-    indexManager = new IndexManager(fm, catalog, DBName);
+    indexManager = new IndexManager(fm, catalog);
 }
+vector<Quadruple> sql_compiler(string sql, SOCKET clientSock)
+{
+    Lexer lexer(sql);
+    SQLParser sqlParser;
+    try {
+        cout << "开始词法分析" << endl;
+        vector<Token> tokens = lexer.analyze();
 
+        for (auto& t : tokens) {
+            cout << left << setw(10) << t.type
+                << setw(15) << t.value
+                << setw(10) << t.line
+                << setw(10) << t.column << endl;
+        }
+
+        for (int i = 0; i < tokens.size(); ++i) {
+            std::cout << tokens[i].type << " " << tokens[i].value << " ";
+        }
+        cout << "开始语法分析" << endl;
+        sqlParser.start_parser(tokens);
+
+        SemanticAnalyzer analyzer;
+        auto quads = analyzer.analyze(tokens);
+
+        std::cout << "四元式结果：" << std::endl;
+        for (auto& q : quads) {
+            std::cout << "(" << q.op << ", " << q.arg1 << ", "
+                << q.arg2 << ", " << q.result << ")" << std::endl;
+        }
+
+        return quads;
+    }
+    catch (const LexicalError& e) {
+        std::cout << e.what() << std::endl;
+        std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
+        if (correctedSQL.empty()) {
+            return {};
+        }
+        else {
+            sql = correctedSQL;
+            string back = std::string(e.what())+ "\n修正SQL: " + sql;
+            send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+        }
+        
+        std::cout << "最终执行 SQL: " << sql << std::endl;
+        return sql_compiler(sql, clientSock);
+    }
+    catch (const SemanticError& e) {
+        std::cout << "语义分析错误：" << e.what() << std::endl;
+        std::string correctedSQL;
+        try {
+            correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
+        if (correctedSQL.empty()) {
+            return {};
+        }
+        else {
+            sql = correctedSQL;
+            string back = std::string(e.what())
+                + " at line " + std::to_string(e.line)
+                + ", column " + std::to_string(e.col)
+                + "\n修正SQL: " + sql;
+            send(clientSock, back.c_str(), static_cast<int>(back.size()), 0);
+        }
+        std::cout << "最终执行 SQL: " << sql << std::endl;
+        return sql_compiler(sql, clientSock);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Syntax Error] " << e.what() << std::endl;
+        return {};  // 返回空，表示错误
+    }
+}
 vector<Quadruple> sql_compiler(string sql)
 {
     Lexer lexer(sql);
@@ -642,33 +791,42 @@ vector<Quadruple> sql_compiler(string sql)
         return quads;
     }
     catch (const LexicalError& e) {
-        /*std::cout << e.what() << std::endl;
+        /*
+        std::cout << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            // correctedSQL = CALLAI(sql);
+            correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
         }
-
-        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
-        sql = finalSQL;
+        if (correctedSQL.empty()) {
+            return {};
+        }
+        else {
+            sql = correctedSQL;
+            string back = std::string(e.what()) + "\n修正SQL: " + sql;
+        }
+        std::cout << "最终执行 SQL: " << sql << std::endl;
         return sql_compiler(sql);*/
     }
     catch (const SemanticError& e) {
         std::cout << "语义分析错误：" << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            // correctedSQL = CALLAI(sql);
+            correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
         }
-
-        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
-        sql = finalSQL;
+        if (correctedSQL.empty()) {
+            return {};
+        }
+        else {
+            sql = correctedSQL;
+            string back = std::string(e.what()) + "\n修正SQL: " + sql;
+        }
+        std::cout << "最终执行 SQL: " << sql << std::endl;
         return sql_compiler(sql);
     }
     catch (const std::exception& e) {
@@ -740,16 +898,3 @@ int addDBFile() {
 
     return 0;
 }
-
-//int main() {
-//    int pageId = 0;
-//
-//    DiskManager dm("database.db");
-//    BufferPoolManager bpm(3, &dm);
-//    Page* p = bpm.fetchPage(pageId);
-//
-//    int slotId = p->insertRecord("AAAAAAAAA", 10);
-//    cout << slotId << endl;
-//
-//    dm.writePage(pageId, *p);
-//}

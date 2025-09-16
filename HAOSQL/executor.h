@@ -21,7 +21,7 @@ bool tryParseInt(const std::string& str, int& out);
 using Row = map<string, string>;
 using Table = vector<Row>;
 
-
+extern std::string exe_table_name;
 
 
 // ========== Ìõ¼þ ==========

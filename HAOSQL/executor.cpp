@@ -4,6 +4,7 @@ using namespace std;
 
 // 全局变量
 WALDataRecord WAL_DATA_RECORD;
+std::string exe_table_name;
 void SET_BEFORE_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len)
 {
 	WAL_DATA_RECORD.before_page_id = pid;
@@ -142,19 +143,6 @@ vector<Row> Insert::execute() {
 
 	// 获取该表的所有索引信息
 	// IndexManager* indexManager; // 假设全局可用
-	std::cout << "initIndexManager=" << endl;
-	std::cout << "检查catalog对象:" << std::endl;
-	std::cout << "catalog指针: " << indexManager->catalog_ << std::endl;
-	std::cout << "this指针: " << static_cast<void*>(indexManager->catalog_) << std::endl;
-
-	// 尝试访问成员变量
-	try {
-		// 如果对象有效，这应该正常工作
-		std::cout << "对象状态检查通过" << std::endl;
-	}
-	catch (...) {
-		std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
-	}
 	vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(tableName);
 
 	// 将每一行数据插入到页中
@@ -179,6 +167,7 @@ vector<Row> Insert::execute() {
 
 			if (idx.column_names.size() == 1) {
 				// 单列索引：直接转 int
+				// 单列索引：直接转 int
 				const string& col = idx.column_names[0];
 				keyInt = std::stoi(row.at(col));
 			}
@@ -195,6 +184,14 @@ vector<Row> Insert::execute() {
 				std::hash<std::string> hasher;
 				keyInt = static_cast<int>(hasher(combinedKey));
 			}
+			for (auto& col : idx.column_names) {
+				cout << col << " ";
+			}
+			cout << tableName << keyInt << endl
+				<< rid.page_id << endl
+				<< rid.slot_id << endl;
+			// 插入索引（传 int key）
+			indexManager->InsertEntry(tableName, idx.column_names, keyInt, rid);
 		}
 
 		// 完成操作，结束计时
@@ -206,10 +203,11 @@ vector<Row> Insert::execute() {
 			WAL_DATA_RECORD.sql, WAL_DATA_RECORD.quas, USER_NAME, true, GLOBAL_TIMER.elapsed_ms(), "");
 
 		// enhanced_executor->PrintAllWAL();
+		// enhanced_executor->PrintAllWAL();
+		bpm->unpinPage(pageId, true); // 标记为脏页
+		bpm->flushPage(pageId);       // 手动写回
 	}
 
-	bpm->unpinPage(pageId, true); // 标记为脏页
-	bpm->flushPage(pageId);       // 手动写回
 
 	return {}; // INSERT 不返回数据
 }
@@ -302,12 +300,16 @@ vector<Row> Update::execute() {
 		else {
 			std::cout << "Row with " << key_col << " = " << key_val << " not found." << endl;
 		}
-		vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable("students"); // TODO: 替换成当前表名
+		vector<IndexInfo> tableIndexes = indexManager->FindIndexesByTable(exe_table_name);
 		for (auto& idx : tableIndexes) {
 			int id = pageId;
 			RID rid{ id, targetSlot };
 			int i;
 			if (tryParseInt(key_val, i)) {
+				cout << "===================" << endl;
+				cout << idx.table_name << i << endl
+					<< rid.page_id << endl
+					<< rid.slot_id << endl;
 				indexManager->DeleteEntry(idx.table_name, idx.column_names, i, rid);
 			}
 		}
@@ -532,6 +534,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			// 从元数据中获得tableName的页地址
 			pageOffset = catalog->GetTableInfo(DBName, q.arg1).data_file_offset / 4096;
 			symbolTables[q.result] = new Scan(bpm, q.arg1, pageOffset);
+			exe_table_name = q.arg1;
 		}
 
 		// ====== 条件选择 ======
@@ -558,7 +561,7 @@ Operator* buildPlan(const vector<Quadruple>& quads, vector<string>& columns, Buf
 			// 动态获取 FROM 节点，而不是写死 "T1"
 			Operator* child = symbolTables[q.arg1];  // arg1 是 FROM 的符号
 			Condition cond = condTable[q.arg2];      // arg2 是条件符号
-			symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
+			// symbolTables[q.result] = new Filter(child, cond.get()); // 生成 Filter 节点
 			
 
 			// 提取条件信息（目前只支持 = 且单列索引）

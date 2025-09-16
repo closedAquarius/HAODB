@@ -4,6 +4,8 @@
 FileManager::FileManager(const std::string& db_dir) : db_dir(db_dir) {}
 
 int FileManager::openFile(const std::string& tablespace_name) {
+    std::cout << "param=" << tablespace_name << std::endl;
+    std::cout << "db_dir=" << db_dir << std::endl;
     std::string filename = db_dir + "/" + tablespace_name;
     auto fs = new std::fstream(filename,
         std::ios::in | std::ios::out | std::ios::binary);

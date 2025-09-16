@@ -4,21 +4,8 @@
 #include <iostream>
 
 // ---------------- Constructor ----------------
-IndexManager::IndexManager(FileManager& fm, CatalogManager* catalog, const std::string& db_name)
-    : fm_(fm), catalog_(catalog), db_name_(db_name) {
-    cout << "initIndexManager" << endl;
-    std::cout << "检查catalog对象:" << std::endl;
-    std::cout << "catalog指针: " << catalog_ << std::endl;
-    std::cout << "this指针: " << static_cast<void*>(catalog_) << std::endl;
-
-    // 尝试访问成员变量
-    try {
-        // 如果对象有效，这应该正常工作
-        std::cout << "对象状态检查通过" << std::endl;
-    }
-    catch (...) {
-        std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
-    }
+IndexManager::IndexManager(FileManager& fm, CatalogManager* catalog)
+    : fm_(fm), catalog_(catalog) {
 }
 
 // ---------------- CreateIndex ----------------
@@ -28,31 +15,28 @@ bool IndexManager::CreateIndex(const std::string& table_name,
     bool is_unique)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
-    if (catalog_->IndexExists(db_name_, index_name)) return false;
+    if (catalog_->IndexExists(DBName, index_name)) return false;
 
-    uint32_t index_id = 0; // 可以通过 CatalogManager 获取
-    std::string indexFileName = "HAODB/index/" + db_name_ + ".idx";
-    int file_id = fm_.openFile(indexFileName);
+    uint32_t index_id = 0;
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    std::string indexFileName = DBName + "/index/" + lower_db + ".idx";
+    std::cout << indexFileName << std::endl;
+
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string i = lower_db + ".idx";
+    std::cout << i << std::endl;
+    int file_id = fm.openFile(i);
 
     int degree = 4;
-    BPlusTree tree(fm_, file_id, degree, 0);
-    int root_pid = tree.createIndex(fm_, file_id);
+    BPlusTree tree(fm, file_id, degree, 0);
+    int root_pid = tree.createIndex(fm, file_id);
 
-    if (!catalog_->CreateIndex(db_name_, table_name, index_name, column_names, is_unique, root_pid))
+    if (!catalog_->CreateIndex(DBName, table_name, index_name, column_names, is_unique, root_pid))
         return false;
 
-    catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(root_pid));
-
-    auto inst = std::make_unique<IndexInstance>();
-    inst->meta.index_name = index_name;
-    inst->meta.index_id = index_id;
-    inst->meta.table_name = table_name;
-    inst->meta.column_names = column_names;
-    inst->meta.is_unique = is_unique;
-    inst->meta.root_page_id = root_pid;
-    inst->tree = std::make_unique<BPlusTree>(fm_, file_id, degree, root_pid);
-
-    instances_.emplace(index_name, std::move(inst));
+    catalog_->UpdateIndexRoot(DBName, index_name, static_cast<uint64_t>(root_pid));
     return true;
 }
 
@@ -61,38 +45,33 @@ bool IndexManager::DropIndex(const std::string& index_name)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
 
-    auto all = catalog_->ListIndexes(db_name_);
+    auto all = catalog_->ListIndexes(DBName);
     auto it = std::find_if(all.begin(), all.end(),
         [&](const IndexInfo& info) { return info.index_name == index_name; });
     if (it == all.end()) return false;
     IndexInfo found = *it;
 
-    std::string indexFileName = "HAODB/index/" + db_name_ + ".idx";
-    int file_id = fm_.openFile(indexFileName);
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    std::cout << DBName << lower_db;
+    std::string indexFileName = "./HAODB/" + DBName + "/index/" + lower_db + ".idx";
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string i = lower_db + ".idx";
+    std::cout << i << std::endl;
+    int file_id = fm.openFile(i);
 
-    auto instIt = instances_.find(index_name);
-    if (instIt == instances_.end()) {
-        BPlusTree tmp(fm_, file_id, 4, static_cast<int>(found.root_page_id));
-        tmp.destroyIndex(fm_, file_id, static_cast<int>(found.root_page_id));
-    }
-    else {
-        IndexInstance* inst = instIt->second.get();
-        std::lock_guard<std::mutex> ig(inst->mtx);
-        if (inst->tree) {
-            inst->tree->destroyIndex(fm_, file_id, static_cast<int>(inst->meta.root_page_id));
-            inst->tree.reset();
-        }
-        instances_.erase(instIt);
-    }
+    BPlusTree tmp(fm, file_id, 4, static_cast<int>(found.root_page_id));
+    tmp.destroyIndex(fm, file_id, static_cast<int>(found.root_page_id));
 
-    return catalog_->DropIndex(db_name_, index_name);
+    return catalog_->DropIndex(DBName, index_name);
 }
 
 // ---------------- DropIndexesOnTable ----------------
 bool IndexManager::DropIndexesOnTable(const std::string& table_name)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
-    auto idxs = catalog_->ListIndexes(db_name_, table_name);
+    auto idxs = catalog_->ListIndexes(DBName, table_name);
     for (auto& info : idxs) {
         DropIndex(info.index_name);
     }
@@ -102,21 +81,7 @@ bool IndexManager::DropIndexesOnTable(const std::string& table_name)
 // ---------------- CloseIndex ----------------
 bool IndexManager::CloseIndex(const std::string& table_name, const std::vector<std::string>& column_names)
 {
-    auto indexes = FindIndexesWithColumns(table_name, column_names);
-    if (indexes.empty()) return true;
-
-    const std::string& index_name = indexes[0].index_name;
-    std::lock_guard<std::mutex> g(global_mtx_);
-    auto it = instances_.find(index_name);
-    if (it == instances_.end()) return true;
-
-    IndexInstance* inst = it->second.get();
-    std::lock_guard<std::mutex> ig(inst->mtx);
-    if (inst->tree) {
-        _updateRootIfNeeded(inst);
-        inst->tree.reset();
-    }
-    instances_.erase(it);
+    // 无缓存版本不需要关闭，直接返回 true
     return true;
 }
 
@@ -129,18 +94,22 @@ bool IndexManager::InsertEntry(const std::string& table_name,
     auto indexes = FindIndexesWithColumns(table_name, column_names);
     if (indexes.empty()) return false;
 
-    const std::string& index_name = indexes[0].index_name;
-    if (!ensureIndexLoaded(index_name)) return false;
-    IndexInstance* inst = findInstance(index_name);
-    assert(inst);
-    std::lock_guard<std::mutex> ig(inst->mtx);
+    const IndexInfo& idx = indexes[0];
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string fname = lower_db + ".idx";
+    int file_id = fm.openFile(fname);
 
-    inst->tree->insert(key, rid);
-    int currentRoot = inst->tree->getRootPid();
-    if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
-        inst->meta.root_page_id = currentRoot;
-        catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
+    BPlusTree tree(fm, file_id, 4, static_cast<int>(idx.root_page_id));
+    tree.insert(key, rid);
+
+    int currentRoot = tree.getRootPid();
+    if (static_cast<uint64_t>(currentRoot) != idx.root_page_id) {
+        catalog_->UpdateIndexRoot(DBName, idx.index_name, static_cast<uint64_t>(currentRoot));
     }
+    tree.printTree();
     return true;
 }
 
@@ -153,22 +122,26 @@ bool IndexManager::DeleteEntry(const std::string& table_name,
     auto indexes = FindIndexesWithColumns(table_name, column_names);
     if (indexes.empty()) return false;
 
-    const std::string& index_name = indexes[0].index_name;
-    if (!ensureIndexLoaded(index_name)) return false;
-    IndexInstance* inst = findInstance(index_name);
-    assert(inst);
-    std::lock_guard<std::mutex> ig(inst->mtx);
+    const IndexInfo& idx = indexes[0];
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string fname = lower_db + ".idx";
+    int file_id = fm.openFile(fname);
 
-    inst->tree->remove(key, rid);
-    int currentRoot = inst->tree->getRootPid();
-    if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
-        inst->meta.root_page_id = currentRoot;
-        catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
+    BPlusTree tree(fm, file_id, 4, static_cast<int>(idx.root_page_id));
+    tree.remove(key, rid);
+
+    int currentRoot = tree.getRootPid();
+    if (static_cast<uint64_t>(currentRoot) != idx.root_page_id) {
+        catalog_->UpdateIndexRoot(DBName, idx.index_name, static_cast<uint64_t>(currentRoot));
     }
+    tree.printTree();
     return true;
 }
 
-// ---------------- Search / SearchRange ----------------
+// ---------------- Search ----------------
 std::vector<RID> IndexManager::Search(const std::string& table_name,
     const std::vector<std::string>& column_names,
     int key)
@@ -176,15 +149,19 @@ std::vector<RID> IndexManager::Search(const std::string& table_name,
     auto indexes = FindIndexesWithColumns(table_name, column_names);
     if (indexes.empty()) return {};
 
-    const std::string& index_name = indexes[0].index_name;
-    if (!ensureIndexLoaded(index_name)) return {};
-    IndexInstance* inst = findInstance(index_name);
-    assert(inst);
-    std::lock_guard<std::mutex> ig(inst->mtx);
+    const IndexInfo& idx = indexes[0];
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string fname = lower_db + ".idx";
+    int file_id = fm.openFile(fname);
 
-    return inst->tree->search(key);
+    BPlusTree tree(fm, file_id, 4, static_cast<int>(idx.root_page_id));
+    return tree.search(key);
 }
 
+// ---------------- SearchRange ----------------
 std::vector<RID> IndexManager::SearchRange(const std::string& table_name,
     const std::vector<std::string>& column_names,
     int low, int high)
@@ -192,24 +169,27 @@ std::vector<RID> IndexManager::SearchRange(const std::string& table_name,
     auto indexes = FindIndexesWithColumns(table_name, column_names);
     if (indexes.empty()) return {};
 
-    const std::string& index_name = indexes[0].index_name;
-    if (!ensureIndexLoaded(index_name)) return {};
-    IndexInstance* inst = findInstance(index_name);
-    assert(inst);
-    std::lock_guard<std::mutex> ig(inst->mtx);
+    const IndexInfo& idx = indexes[0];
+    std::string lower_db = DBName;
+    std::transform(lower_db.begin(), lower_db.end(), lower_db.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    FileManager fm("./HAODB/" + DBName + "/index");
+    std::string fname = lower_db + ".idx";
+    int file_id = fm.openFile(fname);
 
-    return inst->tree->searchRange(low, high);
+    BPlusTree tree(fm, file_id, 4, static_cast<int>(idx.root_page_id));
+    return tree.searchRange(low, high);
 }
 
 // ---------------- ListIndexes / IndexExists ----------------
 std::vector<IndexInfo> IndexManager::ListIndexes(const std::string& table_name)
 {
-    return catalog_->ListIndexes(db_name_, table_name);
+    return catalog_->ListIndexes(DBName, table_name);
 }
 
 bool IndexManager::IndexExists(const std::string& index_name)
 {
-    return catalog_->IndexExists(db_name_, index_name);
+    return catalog_->IndexExists(DBName, index_name);
 }
 
 // ---------------- FindIndexesWithColumns ----------------
@@ -218,7 +198,7 @@ std::vector<IndexInfo> IndexManager::FindIndexesWithColumns(
     const std::vector<std::string>& column_names)
 {
     std::vector<IndexInfo> result;
-    auto allIndexes = catalog_->ListIndexes(db_name_, table_name);
+    auto allIndexes = catalog_->ListIndexes(DBName, table_name);
 
     for (const auto& idx : allIndexes) {
         bool match = true;
@@ -233,54 +213,7 @@ std::vector<IndexInfo> IndexManager::FindIndexesWithColumns(
     return result;
 }
 
-// ---------------- Private helpers ----------------
-bool IndexManager::ensureIndexLoaded(const std::string& index_name)
-{
-    if (instances_.count(index_name)) return true;
-
-    auto all = catalog_->ListIndexes(db_name_);
-    for (auto& info : all) {
-        if (info.index_name == index_name) {
-            return OpenIndex(info);
-        }
-    }
-    return false;
-}
-
-IndexInstance* IndexManager::findInstance(const std::string& index_name)
-{
-    auto it = instances_.find(index_name);
-    if (it == instances_.end()) return nullptr;
-    return it->second.get();
-}
-
-bool IndexManager::OpenIndex(const IndexInfo& info)
-{
-    std::lock_guard<std::mutex> g(global_mtx_);
-    if (instances_.count(info.index_name)) return true;
-
-    auto inst = std::make_unique<IndexInstance>();
-    inst->meta = info;
-
-    std::string indexFileName = "HAODB/index/" + db_name_ + ".idx";
-    int file_id = fm_.openFile(indexFileName);
-
-    inst->tree = std::make_unique<BPlusTree>(fm_, file_id, 4, static_cast<int>(inst->meta.root_page_id));
-    instances_.emplace(info.index_name, std::move(inst));
-    return true;
-}
-
-bool IndexManager::_updateRootIfNeeded(IndexInstance* inst)
-{
-    int currentRoot = inst->tree->getRootPid();
-    if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
-        inst->meta.root_page_id = currentRoot;
-        return catalog_->UpdateIndexRoot(db_name_, inst->meta.index_name, static_cast<uint64_t>(currentRoot));
-    }
-    return true;
-}
-
-
+// ---------------- FindIndexesByTable ----------------
 std::vector<IndexInfo> IndexManager::FindIndexesByTable(const std::string& table_name) {
-    return catalog_->ListIndexes(DBName,table_name);
+    return catalog_->ListIndexes(DBName, table_name);
 }
