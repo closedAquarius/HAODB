@@ -17,6 +17,7 @@
 #include "buffer_pool.h";
 #include "B+tree.h"
 #include "AI.h"
+#include "rollback.h"
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
@@ -25,6 +26,8 @@ int addDBFile();
 void initIndexManager(CatalogManager* catalog);
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock);
 bool checkDatabaseExists(string sql, CatalogManager& catalog);
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm);
+void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog);
 
 IndexManager* indexManager = nullptr;
 
@@ -297,14 +300,17 @@ int main()
 
     while (true)
     {
-        // 加载元数据
-        
+        // 创建 DiskManager
+        DiskManager dm(info.data_file_path);
+        // 创建 BufferPoolManager
+        // 缓冲池大小 10
+        BufferPoolManager bpm(10, &dm);
         
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
 
-        if(checkDatabaseExists(sql, *catalog))
+        if(checkDatabaseExists(sql, *catalog) || checkRollBack(sql, *catalog, &bpm))
             continue;
 
         if (sql == "exit") break;
@@ -344,12 +350,6 @@ int main()
         //{
         //    cout << table.table_name << " " << table.data_file_offset << endl;
         //}
-
-        // 创建 DiskManager
-        DiskManager dm(info.data_file_path) ;
-        // 创建 BufferPoolManager
-        // 缓冲池大小 10
-        BufferPoolManager bpm(10, &dm);
 
         // 构建并执行计划
         vector<string> columns;
@@ -411,6 +411,141 @@ bool checkDatabaseExists(string sql, CatalogManager& catalog)
     }
 
     return false;
+}
+
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm)
+{
+    // 转换为小写，便于大小写不敏感匹配
+    std::string lower_sql = sql;
+    std::transform(lower_sql.begin(), lower_sql.end(), lower_sql.begin(), ::tolower);
+
+    // 查找 "rollback"
+    std::string keyword = "rollback";
+    size_t pos = lower_sql.find(keyword);
+
+    if (pos != std::string::npos) {
+        size_t start_pos = pos + keyword.length();
+
+        // 跳过空格
+        while (start_pos < sql.length() && std::isspace(sql[start_pos])) {
+            ++start_pos;
+        }
+
+        // 提取数字
+        size_t end_pos = start_pos;
+        while (end_pos < sql.length() && std::isdigit(sql[end_pos])) {
+            ++end_pos;
+        }
+
+        if (start_pos == end_pos) {
+            return false; // 没有数字
+        }
+
+        std::string num_str = sql.substr(start_pos, end_pos - start_pos);
+
+        // 去掉可能的分号
+        if (!num_str.empty() && num_str.back() == ';') {
+            num_str.pop_back();
+        }
+
+        int steps = std::stoi(num_str);
+        EnhancedExecutor enhanced_executor("HAODB", USER_NAME, "");
+        // enhanced_executor.Initialize();
+
+        // 回滚
+        auto logs = enhanced_executor.UndoLastOperation(steps);
+
+        enhanced_executor.PrintAllWAL();
+
+        printRollBackRecords(logs, steps, catalog);
+
+        char continueRollBack;
+        cout << "是否撤销(Y/N): ";
+        cin >> continueRollBack;
+
+        vector<Log> undoLogs;
+        switch (continueRollBack)
+        {
+        case 'Y': case 'y':
+            for (auto& log : logs)
+            {
+                Log undoLog;
+                undoLog.pageId = log.page_id;
+                undoLog.slotId = log.slot_id;
+                undoLog.len = log.length;
+                undoLog.type = log.record_type;
+
+                undoLogs.push_back(undoLog);
+            }
+
+            undos(undoLogs, bpm);
+            cout << "撤销成功！" << endl;
+            break;
+        case 'N': case 'n':
+            break;
+        }
+
+        return true;
+    }
+    return false;
+}
+
+void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog)
+{
+    //INIT_LOGGER("HAODB", &catalog);
+    LogViewer log_viewer("HAODB");
+    
+    cout << "-------------------------------" << endl;
+    cout << "最近" << steps << "步的操作为：" << endl;
+
+    auto operations = log_viewer.GetRecentOperations(steps);
+    if (operations.empty()) {
+        std::cout << "  [INFO] No operation logs found." << std::endl;
+        std::cout << "  Tip: Execute some database operations first to generate logs." << std::endl;
+        std::cout << std::string(80, '=') << std::endl;
+        return;
+    }
+
+    std::cout << " Line | Level | Content" << std::endl;
+    std::cout << std::string(80, '-') << std::endl;
+
+    int line_num = 1;
+    for (const auto& op : operations) {
+        // 格式化输出每一行
+        std::cout << std::setw(5) << line_num << " | ";
+
+        // 根据内容判断操作类型并添加标识
+        if (op.find("INSERT") != std::string::npos) {
+            std::cout << "ADD  | ";
+        }
+        else if (op.find("DELETE") != std::string::npos) {
+            std::cout << "DEL  | ";
+        }
+        else if (op.find("UPDATE") != std::string::npos) {
+            std::cout << "UPD  | ";
+        }
+        else if (op.find("SELECT") != std::string::npos) {
+            std::cout << "SEL  | ";
+        }
+        else if (op.find("CREATE") != std::string::npos) {
+            std::cout << "CRT  | ";
+        }
+        else {
+            std::cout << "OTH  | ";
+        }
+
+        // 截断过长的日志行以便显示
+        if (op.length() > 65) {
+            std::cout << op.substr(0, 62) << "..." << std::endl;
+        }
+        else {
+            std::cout << op << std::endl;
+        }
+
+        line_num++;
+    }
+
+    std::cout << std::string(80, '-') << std::endl;
 }
 
 bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)

@@ -544,7 +544,11 @@ std::vector<std::string> LogViewer::GetRecentOperations(int count) {
     std::vector<std::string> operations;
 
     try {
-        std::string op_file = file_manager->GetOperationLogPath();
+        //std::string op_file = file_manager->GetOperationLogPath();
+        std::string op_file = LOG_PATH;
+
+        cout << op_file << endl;
+
         std::ifstream file(op_file);
 
         if (file.is_open()) {
@@ -1129,23 +1133,6 @@ vector<WithdrawLog> EnhancedExecutor::UndoLastOperation(int counts){
     // 获取记录的WAL操作
     RecoveryManager* recovery = logger->GetRecoveryManager();
     auto records = recovery->FindFilteredWALRecords();
-
-    //// 根据类型确定撤销操作
-    //switch (record.record_type)
-    //{
-    //case (int)WALLogRecord::INSERT_OP:
-    //    recovery->UndoInsert(record.transaction_id);
-    //    break;
-    //case (int)WALLogRecord::DELETE_OP:
-    //    recovery->UndoDelete(record);
-    //    break;
-    //case (int)WALLogRecord::UPDATE_OP:
-    //    recovery->UndoUpdate(record.transaction_id);
-    //    break;
-    //default:
-    //    cout << "无法识别的操作" << endl;
-    //    return false;
-    //}
 
     vector<WithdrawLog> logs;
     for (int i = 0; i < std::min<int>(counts, records.size()); i++)

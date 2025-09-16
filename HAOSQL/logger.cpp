@@ -261,7 +261,7 @@ uint32_t WALBuffer::CalculateChecksum(const std::vector<char>& data) {
 // ========== LogFileManager й╣ож ==========
 LogFileManager::LogFileManager(const LogConfigInfo& cfg, const std::string& db)
     : config(cfg), db_name(db) {
-    log_directory = "HAODB/" + db_name + "/logs/";
+    log_directory = "HAODB/" + DBName + "/logs/";
     CreateLogDirectory();
 }
 
@@ -282,7 +282,7 @@ bool LogFileManager::CreateLogDirectory() {
 
 std::string LogFileManager::GetWALFilePath() {
     if (current_wal_file.empty()) {
-        current_wal_file = log_directory + db_name + "_wal.log";
+        current_wal_file = log_directory + DBName + "_wal.log";
     }
     return current_wal_file;
 }
@@ -290,7 +290,7 @@ std::string LogFileManager::GetWALFilePath() {
 std::string LogFileManager::GetOperationLogPath() {
     if (current_op_file.empty()) {
         std::string timestamp = GetCurrentTimestamp();
-        current_op_file = log_directory + db_name + "_ops_" + timestamp + ".log";
+        current_op_file = log_directory + DBName + "_ops_" + timestamp + ".log";
     }
     return current_op_file;
 }
@@ -615,6 +615,8 @@ std::vector<WALLogRecord> RecoveryManager::ReadWALLog() {
 
     try {
         std::ifstream file(file_manager->GetWALFilePath(), std::ios::binary);
+
+        cout << file_manager->GetWALFilePath() << endl;
         if (!file.is_open()) return records;
 
         while (true) {
@@ -786,6 +788,10 @@ bool DatabaseLogger::Initialize() {
         if (!operation_file.is_open()) {
             std::cerr << "Failed to open operation log file" << std::endl;
             return false;
+        }
+        else if(LOG_PATH == "")
+        {
+            SET_LOG_PATH(file_manager->GetOperationLogPath());
         }
 
         error_file.open(file_manager->GetErrorLogPath(), std::ios::app);

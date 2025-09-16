@@ -10,18 +10,21 @@ void SET_BEFORE_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len)
 	WAL_DATA_RECORD.before_slot_id = sid;
 	WAL_DATA_RECORD.before_length = len;
 }
-
 void SET_AFTER_WAL_RECORD(uint16_t pid, uint16_t sid, uint16_t len)
 {
 	WAL_DATA_RECORD.after_page_id = pid;
 	WAL_DATA_RECORD.after_slot_id = sid;
 	WAL_DATA_RECORD.after_length = len;
 }
-
 void SET_SQL_QUAS(string sql, vector<Quadruple> quas)
 {
 	WAL_DATA_RECORD.sql = sql;
 	WAL_DATA_RECORD.quas = quas;
+}
+std::string LOG_PATH;
+void SET_LOG_PATH(std::string path)
+{
+	LOG_PATH = path;
 }
 
 Scan::Scan(BufferPoolManager* bpm, const string& tName, PageId i) :bpm(bpm), tableName(tName), pageOffset(i) {}

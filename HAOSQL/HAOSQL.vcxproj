@@ -148,6 +148,7 @@
     <ClCompile Include="metadata_structures.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="parser.cpp" />
+    <ClCompile Include="rollback.cpp" />
     <ClCompile Include="semantic.cpp" />
     <ClCompile Include="system_config_manager.cpp" />
     <ClCompile Include="test_catalog.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="metadata_structures.h" />
     <ClInclude Include="page.h" />
     <ClInclude Include="parser.h" />
+    <ClInclude Include="rollback.h" />
     <ClInclude Include="semantic.h" />
     <ClInclude Include="system_config_manager.h" />
   </ItemGroup>

@@ -117,6 +117,9 @@
     <ClCompile Include="AI.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="rollback.cpp">
+      <Filter>源文件\engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="test.txt" />
@@ -180,6 +183,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="AI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="rollback.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

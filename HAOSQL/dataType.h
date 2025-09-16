@@ -43,7 +43,8 @@ extern std::string USER_NAME;  // 用户名
 void SET_USER_Name(std::string& name);
 extern std::string DBName;  // 数据库名称
 void setDBName(const std::string& name);
-
+extern std::string LOG_PATH;  // 日志路径
+void SET_LOG_PATH(std::string path);
 extern std::uint32_t LAST_LSN;  // WAL日志lsn序号
 void SET_LSN(uint32_t lsn);
 struct WALDataRecord
