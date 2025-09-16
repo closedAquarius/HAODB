@@ -16,7 +16,7 @@
 #include "executor.h"
 #include "buffer_pool.h";
 #include "B+tree.h"
-#include "AI.h"
+//#include "AI.h"
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
@@ -205,7 +205,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
 int main() {
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    //WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSock == INVALID_SOCKET) {
@@ -436,7 +436,7 @@ vector<Quadruple> sql_compiler(string sql)
         return quads;
     }
     catch (const LexicalError& e) {
-        std::cout << e.what() << std::endl;
+        /*std::cout << e.what() << std::endl;
         std::string correctedSQL;
         try {
             correctedSQL = CALLAI(sql);
@@ -448,22 +448,22 @@ vector<Quadruple> sql_compiler(string sql)
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
         std::cout << "最终执行 SQL: " << finalSQL << std::endl;
         sql = finalSQL;
-        return sql_compiler(sql);
+        return sql_compiler(sql);*/
     }
     catch (const SemanticError& e) {
-        std::cout << "语义分析错误：" << e.what() << std::endl;
-        std::string correctedSQL;
-        try {
-            correctedSQL = CALLAI(sql);
-        }
-        catch (...) {
-            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
-        }
+        //std::cout << "语义分析错误：" << e.what() << std::endl;
+        //std::string correctedSQL;
+        //try {
+        //    correctedSQL = CALLAI(sql);
+        //}
+        //catch (...) {
+        //    std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        //}
 
-        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
-        sql = finalSQL;
-        return sql_compiler(sql);
+        //std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        //std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        //sql = finalSQL;
+        //return sql_compiler(sql);
     }
     catch (const std::exception& e) {
         std::cerr << "[Syntax Error] " << e.what() << std::endl;
