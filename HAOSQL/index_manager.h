@@ -21,7 +21,7 @@ struct IndexInstance {
 
 class IndexManager {
 public:
-    IndexManager(FileManager& fm, CatalogManager& catalog, const std::string& db_name);
+    IndexManager(FileManager& fm, CatalogManager* catalog, const std::string& db_name);
 
     // ---------------- Create / Drop ----------------
     bool CreateIndex(const std::string& table_name,
@@ -64,11 +64,10 @@ public:
 
     // 新增：根据表名查找该表所有索引
     std::vector<IndexInfo> FindIndexesByTable(const std::string& table_name);
-
+    CatalogManager* catalog_;
 
 private:
     FileManager& fm_;
-    CatalogManager& catalog_;
     std::string db_name_;
     std::unordered_map<std::string, std::unique_ptr<IndexInstance>> instances_;
     std::mutex global_mtx_;

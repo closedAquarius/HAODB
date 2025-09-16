@@ -18,6 +18,14 @@ struct Quadruple;
 using Row = std::map<std::string, std::string>;
 using Table = std::vector<Row>;
 
+struct WithdrawLog
+{
+    uint16_t page_id;                // 页面ID
+    uint16_t slot_id;                // 槽位ID
+    uint16_t length;                 // 数据长度
+    int record_type;                 // 1-Delete, 2-Insert, 3-Update_Delete, 4-Update_Insert
+};
+
 // ========== 全局日志管理器 ==========
 class GlobalLoggerManager {
 private:
@@ -267,26 +275,28 @@ private:
     std::string user_name;
 
 public:
-    EnhancedExecutor(const std::string& db_name, const std::string& session = "", const std::string& user = "");
+    EnhancedExecutor(const std::string& db_name, const std::string& user = "", const std::string& session = "");
     ~EnhancedExecutor();
+    bool Initialize();
 
     // 执行SQL语句（带完整日志记录）
     // bool ExecuteSQL(const std::string& sql, const std::vector<OperationLogRecord::SimpleQuadruple>& quads);
 
     // 数据变更操作（带WAL日志）
-    bool InsertRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
-    bool DeleteRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
-    bool UpdateRecord(uint32_t before_page_id, uint32_t before_slot_id, uint32_t before_length, uint32_t after_page_id,
-        uint32_t after_slot_id, uint32_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
+    bool InsertRecord(uint16_t page_id, uint16_t slot_id, uint16_t length, string sql, 
+        vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
+    bool DeleteRecord(uint16_t page_id, uint16_t slot_id, uint16_t length, string sql,
+        vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
+    bool UpdateRecord(uint16_t before_page_id, uint16_t before_slot_id, uint16_t before_length, uint16_t after_page_id,
+        uint16_t after_slot_id, uint16_t after_length, string sql, vector<Quadruple> qua, string user, bool result, uint64_t duration, string message);
 
     // 恢复操作
     bool UndoLastDelete();
     bool UndoLastUpdate();
     bool UndoLastInsert();
     bool PerformCrashRecovery();
-    bool UndoLastOperation();
+    vector<WithdrawLog> UndoLastOperation(int counts);
+    void PrintAllWAL();
 
     // 日志状态查看
     void ShowLoggerStatus();

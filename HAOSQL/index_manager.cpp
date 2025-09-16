@@ -4,8 +4,22 @@
 #include <iostream>
 
 // ---------------- Constructor ----------------
-IndexManager::IndexManager(FileManager& fm, CatalogManager& catalog, const std::string& db_name)
-    : fm_(fm), catalog_(catalog), db_name_(db_name) {}
+IndexManager::IndexManager(FileManager& fm, CatalogManager* catalog, const std::string& db_name)
+    : fm_(fm), catalog_(catalog), db_name_(db_name) {
+    cout << "initIndexManager" << endl;
+    std::cout << "检查catalog对象:" << std::endl;
+    std::cout << "catalog指针: " << catalog_ << std::endl;
+    std::cout << "this指针: " << static_cast<void*>(catalog_) << std::endl;
+
+    // 尝试访问成员变量
+    try {
+        // 如果对象有效，这应该正常工作
+        std::cout << "对象状态检查通过" << std::endl;
+    }
+    catch (...) {
+        std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
+    }
+}
 
 // ---------------- CreateIndex ----------------
 bool IndexManager::CreateIndex(const std::string& table_name,
@@ -14,7 +28,7 @@ bool IndexManager::CreateIndex(const std::string& table_name,
     bool is_unique)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
-    if (catalog_.IndexExists(db_name_, index_name)) return false;
+    if (catalog_->IndexExists(db_name_, index_name)) return false;
 
     uint32_t index_id = 0; // 可以通过 CatalogManager 获取
     std::string indexFileName = "HAODB/index/" + db_name_ + ".idx";
@@ -24,10 +38,10 @@ bool IndexManager::CreateIndex(const std::string& table_name,
     BPlusTree tree(fm_, file_id, degree, 0);
     int root_pid = tree.createIndex(fm_, file_id);
 
-    if (!catalog_.CreateIndex(db_name_, table_name, index_name, column_names, is_unique, root_pid))
+    if (!catalog_->CreateIndex(db_name_, table_name, index_name, column_names, is_unique, root_pid))
         return false;
 
-    catalog_.UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(root_pid));
+    catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(root_pid));
 
     auto inst = std::make_unique<IndexInstance>();
     inst->meta.index_name = index_name;
@@ -47,7 +61,7 @@ bool IndexManager::DropIndex(const std::string& index_name)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
 
-    auto all = catalog_.ListIndexes(db_name_);
+    auto all = catalog_->ListIndexes(db_name_);
     auto it = std::find_if(all.begin(), all.end(),
         [&](const IndexInfo& info) { return info.index_name == index_name; });
     if (it == all.end()) return false;
@@ -71,14 +85,14 @@ bool IndexManager::DropIndex(const std::string& index_name)
         instances_.erase(instIt);
     }
 
-    return catalog_.DropIndex(db_name_, index_name);
+    return catalog_->DropIndex(db_name_, index_name);
 }
 
 // ---------------- DropIndexesOnTable ----------------
 bool IndexManager::DropIndexesOnTable(const std::string& table_name)
 {
     std::lock_guard<std::mutex> g(global_mtx_);
-    auto idxs = catalog_.ListIndexes(db_name_, table_name);
+    auto idxs = catalog_->ListIndexes(db_name_, table_name);
     for (auto& info : idxs) {
         DropIndex(info.index_name);
     }
@@ -125,7 +139,7 @@ bool IndexManager::InsertEntry(const std::string& table_name,
     int currentRoot = inst->tree->getRootPid();
     if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
         inst->meta.root_page_id = currentRoot;
-        catalog_.UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
+        catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
     }
     return true;
 }
@@ -149,7 +163,7 @@ bool IndexManager::DeleteEntry(const std::string& table_name,
     int currentRoot = inst->tree->getRootPid();
     if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
         inst->meta.root_page_id = currentRoot;
-        catalog_.UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
+        catalog_->UpdateIndexRoot(db_name_, index_name, static_cast<uint64_t>(currentRoot));
     }
     return true;
 }
@@ -190,12 +204,12 @@ std::vector<RID> IndexManager::SearchRange(const std::string& table_name,
 // ---------------- ListIndexes / IndexExists ----------------
 std::vector<IndexInfo> IndexManager::ListIndexes(const std::string& table_name)
 {
-    return catalog_.ListIndexes(db_name_, table_name);
+    return catalog_->ListIndexes(db_name_, table_name);
 }
 
 bool IndexManager::IndexExists(const std::string& index_name)
 {
-    return catalog_.IndexExists(db_name_, index_name);
+    return catalog_->IndexExists(db_name_, index_name);
 }
 
 // ---------------- FindIndexesWithColumns ----------------
@@ -204,7 +218,7 @@ std::vector<IndexInfo> IndexManager::FindIndexesWithColumns(
     const std::vector<std::string>& column_names)
 {
     std::vector<IndexInfo> result;
-    auto allIndexes = catalog_.ListIndexes(db_name_, table_name);
+    auto allIndexes = catalog_->ListIndexes(db_name_, table_name);
 
     for (const auto& idx : allIndexes) {
         bool match = true;
@@ -224,7 +238,7 @@ bool IndexManager::ensureIndexLoaded(const std::string& index_name)
 {
     if (instances_.count(index_name)) return true;
 
-    auto all = catalog_.ListIndexes(db_name_);
+    auto all = catalog_->ListIndexes(db_name_);
     for (auto& info : all) {
         if (info.index_name == index_name) {
             return OpenIndex(info);
@@ -261,12 +275,12 @@ bool IndexManager::_updateRootIfNeeded(IndexInstance* inst)
     int currentRoot = inst->tree->getRootPid();
     if (static_cast<uint64_t>(currentRoot) != inst->meta.root_page_id) {
         inst->meta.root_page_id = currentRoot;
-        return catalog_.UpdateIndexRoot(db_name_, inst->meta.index_name, static_cast<uint64_t>(currentRoot));
+        return catalog_->UpdateIndexRoot(db_name_, inst->meta.index_name, static_cast<uint64_t>(currentRoot));
     }
     return true;
 }
 
 
 std::vector<IndexInfo> IndexManager::FindIndexesByTable(const std::string& table_name) {
-    return catalog_.ListIndexes(DBName,table_name);
+    return catalog_->ListIndexes(DBName,table_name);
 }

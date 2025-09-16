@@ -1,8 +1,17 @@
 === HAODB Log Export ===
 Database: TestDB
-Export time: 20250915_105435
+Export time: 20250915_205936
 
 === Operation Logs ===
-[1757904875861] [2] [TXN:1] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176333] [2] [TXN:1] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176336] [2] [TXN:2] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176338] [2] [TXN:3] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176340] [2] [TXN:4] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176342] [2] [TXN:5] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176344] [2] [TXN:6] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176346] [2] [TXN:7] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176348] [2] [TXN:8] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176350] [2] [TXN:9] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
+[1757941176353] [2] [TXN:10] [User:admin] SQL: SELECT id, name, age FROM students WHERE age > 20 | Quads: (FROM,students,-,T1),(WHERE,age > 20,-,T2),(SELECT,id,name,age,T1,T3) | Result: SUCCESS | Time: 12ms
 
 === Error Logs ===

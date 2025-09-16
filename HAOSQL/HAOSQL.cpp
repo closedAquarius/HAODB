@@ -16,16 +16,28 @@
 #include "executor.h"
 #include "buffer_pool.h";
 #include "B+tree.h"
-//#include "AI.h"
+#include "AI.h"
+#include "rollback.h"
 using namespace std;
 
 vector<Quadruple> sql_compiler(string sql);
 int generateDBFile();
 int addDBFile();
-void initIndexManager();
-bool checkDatabaseExists(string sql, CatalogManager &catalog);
+void initIndexManager(CatalogManager* catalog);
+bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock);
+bool checkDatabaseExists(string sql, CatalogManager& catalog);
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm);
+void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog);
 
 IndexManager* indexManager = nullptr;
+
+// 全局变量
+std::string USER_NAME;
+void SET_USER_Name(std::string& name)
+{
+    USER_NAME = name;
+}
+SQLTimer GLOBAL_TIMER;
 
 // 工具函数：封装发送，自动加 >>END
 void sendWithEnd(SOCKET sock, const string& msg) {
@@ -69,6 +81,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
 
 
         if (lm.loginUser(account, password)) {
+            SET_USER_Name(account);
             std::string welcome =
                 "-------------------------------------------------------------------------------\n"
                 "- 名称规范 : 数据库名、表名、列名只能包含字母、数字和下划线，长度不超过63字符 -\n"
@@ -85,18 +98,15 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
     }
     // 加载元数据
-    CatalogManager catalog("HAODB");
-    catalog.Initialize();
-    // 加载元数据
-    setDBName("Test");
+    auto catalog = std::make_unique<CatalogManager>("HAODB");
+    //CatalogManager catalog("HAODB");
+    catalog->Initialize();
+    setDBName("T");
+    initIndexManager(catalog.get());
 
-    cout << catalog.GetStorageConfig(DBName).data_file_path << endl
-        << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+    StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
-    StorageConfigInfo info = catalog.GetStorageConfig(DBName);
-
-    initIndexManager();
+    initIndexManager(catalog.get());
 
     // 创建 DiskManager
     DiskManager dm(info.data_file_path);
@@ -114,8 +124,10 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
 
         string sql = buffer;
-        if (checkDatabaseExists(sql, catalog))
+        if (checkDatabaseExists(sql, *catalog))
             continue;
+        string lowerSql = sql;
+        transform(lowerSql.begin(), lowerSql.end(), lowerSql.begin(), ::tolower);
 
         if (sql == "exit") break;
         if (sql == "gen") {
@@ -129,19 +141,20 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         if (sql.empty()) {
             continue;
         }
-
-        /*std::string correctedSQL;
-        try {
-            correctedSQL = CALLAI(sql);
+        const string prefix = "use database ";
+        if (lowerSql.find(prefix) == 0) {
+            string dbName = sql.substr(prefix.size()); // 保留原大小写
+            // 去掉末尾分号
+            if (!dbName.empty() && dbName.back() == ';') dbName.pop_back();
+            // 去掉首尾空格
+            dbName.erase(0, dbName.find_first_not_of(" \t"));
+            dbName.erase(dbName.find_last_not_of(" \t") + 1);
+            setDBName(dbName);
+            continue;
         }
-        catch (...) {
-            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
-        }
 
-        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
-        sendWithEnd(clientSock, string("SQL语句错误，你可能想输入: ") + finalSQL);
-        sql = finalSQL;*/
+        // 编译SQL，开始计时
+        GLOBAL_TIMER.start();
 
         std::vector<Quadruple> quadruple;
         try {
@@ -159,6 +172,8 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
                     << q.arg2 << ", "
                     << q.result << ")" << std::endl;
             }
+
+            SET_SQL_QUAS(sql, quadruple);
         }
         catch (const std::exception& e) {
             std::cerr << "Error (compile): " << e.what() << std::endl;
@@ -170,7 +185,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         // ----------------------
         try {
             vector<string> columns;
-            Operator* root = buildPlan(quadruple, columns, &bpm, &catalog);
+            Operator* root = buildPlan(quadruple, columns, &bpm, catalog.get());
             vector<Row> result = root->execute();
 
             string resultStr;
@@ -203,6 +218,7 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
     closesocket(clientSock);
 }
 
+/*
 int main() {
     WSADATA wsaData;
     //WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -251,26 +267,28 @@ int main() {
     WSACleanup();
     return 0;
 }
+*/
 
-/*int main()
+int main()
 {
     SetConsoleOutputCP(CP_ACP);   // 控制台输出 UTF-8
     SetConsoleCP(CP_ACP);         // 控制台输入 UTF-8
     std::cout << "Hello World!\n";
-    initIndexManager();
     string sql;
     
     // 加载元数据
-    CatalogManager catalog("HAODB");
-    catalog.Initialize();
-    setDBName("Test");
+    auto catalog = std::make_unique<CatalogManager>("HAODB");
+    //CatalogManager catalog("HAODB");
+    catalog->Initialize();
+    setDBName("T");
+    initIndexManager(catalog.get());
 
+    /*
     cout << catalog.GetStorageConfig(DBName).data_file_path << endl
         << catalog.GetStorageConfig(DBName).index_file_path << endl
-        << catalog.GetStorageConfig(DBName).log_file_path << endl;
+        << catalog.GetStorageConfig(DBName).log_file_path << endl;*/
 
-    StorageConfigInfo info = catalog.GetStorageConfig(DBName);
-
+    StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
     cout << endl
         << "------------------------------------------------------------------------------- " << endl
@@ -282,15 +300,17 @@ int main() {
 
     while (true)
     {
-        // 加载元数据
-        CatalogManager catalog("HAODB");
-        catalog.Initialize();
+        // 创建 DiskManager
+        DiskManager dm(info.data_file_path);
+        // 创建 BufferPoolManager
+        // 缓冲池大小 10
+        BufferPoolManager bpm(10, &dm);
         
         cout << "请输入 SQL 语句: ";
         getline(cin, sql);
         cout << sql << endl;
 
-        if(checkDatabaseExists(sql, catalog))
+        if(checkDatabaseExists(sql, *catalog) || checkRollBack(sql, *catalog, &bpm))
             continue;
 
         if (sql == "exit") break;
@@ -306,16 +326,21 @@ int main() {
             continue;
         }
          
-        std::string correctedSQL;
+        /*std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         } catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
         }
 
         std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;*/
+
+        // 编译SQL，开始计时
+        GLOBAL_TIMER.start();
+
         vector<Quadruple> quadruple = sql_compiler(sql);
+        SET_SQL_QUAS(sql , quadruple);
 
         //vector<TableInfo> tables = catalog.ListTables("HelloDB");
         //cout << "!!!!!!!!!!!!" << endl;
@@ -326,15 +351,9 @@ int main() {
         //    cout << table.table_name << " " << table.data_file_offset << endl;
         //}
 
-        // 创建 DiskManager
-        DiskManager dm(info.data_file_path) ;
-        // 创建 BufferPoolManager
-        // 缓冲池大小 10
-        BufferPoolManager bpm(10, &dm);
-
         // 构建并执行计划
         vector<string> columns;
-        Operator* root = buildPlan(quadruple, columns, &bpm, &catalog);
+        Operator* root = buildPlan(quadruple, columns, &bpm, catalog.get());
         vector<Row> result = root->execute();
 
         if (!result.empty()) {
@@ -355,9 +374,9 @@ int main() {
     }
 
     return 0;
-}*/
+}
 
-bool checkDatabaseExists(string sql, CatalogManager &catalog)
+bool checkDatabaseExists(string sql, CatalogManager& catalog)
 {
     // 将sql转换为小写以进行大小写不敏感的比较
     std::string lower_sql = sql;
@@ -387,20 +406,207 @@ bool checkDatabaseExists(string sql, CatalogManager &catalog)
         setDBName(db_name);
         catalog.CreateDatabase(DBName, current_username);
 
+
         return true;
     }
 
     return false;
 }
 
-void initIndexManager() {
+bool checkRollBack(string sql, CatalogManager& catalog, BufferPoolManager* bpm)
+{
+    // 转换为小写，便于大小写不敏感匹配
+    std::string lower_sql = sql;
+    std::transform(lower_sql.begin(), lower_sql.end(), lower_sql.begin(), ::tolower);
+
+    // 查找 "rollback"
+    std::string keyword = "rollback";
+    size_t pos = lower_sql.find(keyword);
+
+    if (pos != std::string::npos) {
+        size_t start_pos = pos + keyword.length();
+
+        // 跳过空格
+        while (start_pos < sql.length() && std::isspace(sql[start_pos])) {
+            ++start_pos;
+        }
+
+        // 提取数字
+        size_t end_pos = start_pos;
+        while (end_pos < sql.length() && std::isdigit(sql[end_pos])) {
+            ++end_pos;
+        }
+
+        if (start_pos == end_pos) {
+            return false; // 没有数字
+        }
+
+        std::string num_str = sql.substr(start_pos, end_pos - start_pos);
+
+        // 去掉可能的分号
+        if (!num_str.empty() && num_str.back() == ';') {
+            num_str.pop_back();
+        }
+
+        int steps = std::stoi(num_str);
+        EnhancedExecutor enhanced_executor("HAODB", USER_NAME, "");
+        // enhanced_executor.Initialize();
+
+        // 回滚
+        auto logs = enhanced_executor.UndoLastOperation(steps);
+
+        enhanced_executor.PrintAllWAL();
+
+        printRollBackRecords(logs, steps, catalog);
+
+        char continueRollBack;
+        cout << "是否撤销(Y/N): ";
+        cin >> continueRollBack;
+
+        vector<Log> undoLogs;
+        switch (continueRollBack)
+        {
+        case 'Y': case 'y':
+            for (auto& log : logs)
+            {
+                Log undoLog;
+                undoLog.pageId = log.page_id;
+                undoLog.slotId = log.slot_id;
+                undoLog.len = log.length;
+                undoLog.type = log.record_type;
+
+                undoLogs.push_back(undoLog);
+            }
+
+            undos(undoLogs, bpm);
+            cout << "撤销成功！" << endl;
+            break;
+        case 'N': case 'n':
+            break;
+        }
+
+        return true;
+    }
+    return false;
+}
+
+void printRollBackRecords(vector<WithdrawLog> logs, int steps, CatalogManager& catalog)
+{
+    //INIT_LOGGER("HAODB", &catalog);
+    LogViewer log_viewer("HAODB");
+    
+    cout << "-------------------------------" << endl;
+    cout << "最近" << steps << "步的操作为：" << endl;
+
+    auto operations = log_viewer.GetRecentOperations(steps);
+    if (operations.empty()) {
+        std::cout << "  [INFO] No operation logs found." << std::endl;
+        std::cout << "  Tip: Execute some database operations first to generate logs." << std::endl;
+        std::cout << std::string(80, '=') << std::endl;
+        return;
+    }
+
+    std::cout << " Line | Level | Content" << std::endl;
+    std::cout << std::string(80, '-') << std::endl;
+
+    int line_num = 1;
+    for (const auto& op : operations) {
+        // 格式化输出每一行
+        std::cout << std::setw(5) << line_num << " | ";
+
+        // 根据内容判断操作类型并添加标识
+        if (op.find("INSERT") != std::string::npos) {
+            std::cout << "ADD  | ";
+        }
+        else if (op.find("DELETE") != std::string::npos) {
+            std::cout << "DEL  | ";
+        }
+        else if (op.find("UPDATE") != std::string::npos) {
+            std::cout << "UPD  | ";
+        }
+        else if (op.find("SELECT") != std::string::npos) {
+            std::cout << "SEL  | ";
+        }
+        else if (op.find("CREATE") != std::string::npos) {
+            std::cout << "CRT  | ";
+        }
+        else {
+            std::cout << "OTH  | ";
+        }
+
+        // 截断过长的日志行以便显示
+        if (op.length() > 65) {
+            std::cout << op.substr(0, 62) << "..." << std::endl;
+        }
+        else {
+            std::cout << op << std::endl;
+        }
+
+        line_num++;
+    }
+
+    std::cout << std::string(80, '-') << std::endl;
+}
+
+bool checkDatabaseExists(string sql, CatalogManager& catalog, SOCKET clientSock)
+{
+    // 将sql转换为小写以进行大小写不敏感的比较
+    std::string lower_sql = sql;
+    std::transform(lower_sql.begin(), lower_sql.end(), lower_sql.begin(), ::tolower);
+
+    // 查找"create database"子字符串
+    std::string keyword = "create database";
+    size_t pos = lower_sql.find(keyword);
+
+    if (pos != std::string::npos) {
+        // 找到 "CREATE DATABASE"，提取数据库名
+        size_t start_pos = pos + keyword.length();
+
+        // 忽略空白字符，查找数据库名的起始位置
+        while (start_pos < sql.length() && std::isspace(sql[start_pos])) {
+            ++start_pos;
+        }
+
+        // 查找数据库名的结束位置（直到下一个空白或字符串结束）
+        size_t end_pos = start_pos;
+        while (end_pos < sql.length() && !std::isspace(sql[end_pos]) && sql[end_pos] != ';') {
+            ++end_pos;
+        }
+
+        // 提取数据库名
+        std::string db_name = sql.substr(start_pos, end_pos - start_pos);
+        setDBName(db_name);
+        try {
+            catalog.CreateDatabase(DBName, current_username);
+            sendWithEnd(clientSock, "数据库 " + db_name + " 创建成功！");
+        }
+        catch (const std::exception& e) {
+            sendWithEnd(clientSock, string("创建数据库失败: ") + e.what());
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+void initIndexManager(CatalogManager* catalog) {
     // 假设你有 FileManager 和 CatalogManager
     FileManager fm("./HAODB/"+DBName+"/index/");
-    CatalogManager catalog;
-    IndexManager globalIndexManager(fm, catalog, DBName);
+    cout << "initIndexManager" << endl;
+    std::cout << "检查catalog对象:" << std::endl;
+    std::cout << "catalog指针: " << catalog << std::endl;
+    std::cout << "this指针: " << static_cast<void*>(catalog) << std::endl;
 
-    // 给全局指针赋值
-    indexManager = &globalIndexManager;
+    // 尝试访问成员变量
+    try {
+        // 如果对象有效，这应该正常工作
+        std::cout << "对象状态检查通过" << std::endl;
+    }
+    catch (...) {
+        std::cout << "对象状态检查失败 - 对象可能已损坏" << std::endl;
+    }
+    indexManager = new IndexManager(fm, catalog, DBName);
 }
 
 vector<Quadruple> sql_compiler(string sql)
@@ -439,7 +645,7 @@ vector<Quadruple> sql_compiler(string sql)
         /*std::cout << e.what() << std::endl;
         std::string correctedSQL;
         try {
-            correctedSQL = CALLAI(sql);
+            // correctedSQL = CALLAI(sql);
         }
         catch (...) {
             std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
@@ -451,19 +657,19 @@ vector<Quadruple> sql_compiler(string sql)
         return sql_compiler(sql);*/
     }
     catch (const SemanticError& e) {
-        //std::cout << "语义分析错误：" << e.what() << std::endl;
-        //std::string correctedSQL;
-        //try {
-        //    correctedSQL = CALLAI(sql);
-        //}
-        //catch (...) {
-        //    std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
-        //}
+        std::cout << "语义分析错误：" << e.what() << std::endl;
+        std::string correctedSQL;
+        try {
+            // correctedSQL = CALLAI(sql);
+        }
+        catch (...) {
+            std::cerr << "AI调用失败，继续执行原 SQL" << std::endl;
+        }
 
-        //std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
-        //std::cout << "最终执行 SQL: " << finalSQL << std::endl;
-        //sql = finalSQL;
-        //return sql_compiler(sql);
+        std::string finalSQL = correctedSQL.empty() ? sql : correctedSQL;
+        std::cout << "最终执行 SQL: " << finalSQL << std::endl;
+        sql = finalSQL;
+        return sql_compiler(sql);
     }
     catch (const std::exception& e) {
         std::cerr << "[Syntax Error] " << e.what() << std::endl;

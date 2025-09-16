@@ -11,14 +11,18 @@
 #include "buffer_pool.h"
 #include "index_manager.h"
 #include "catalog_manager.h"
+#include "logger_integration.h"
 
 using namespace std;
 
 extern IndexManager* indexManager;
-
+bool tryParseInt(const std::string& str, int& out);
 // ========== 表数据 ==========
 using Row = map<string, string>;
 using Table = vector<Row>;
+
+
+
 
 // ========== 条件 ==========
 class Condition {							// 非算子，挂靠在Filter算子
@@ -64,6 +68,17 @@ class Operator {
 public:
 	virtual ~Operator() {}
 	virtual vector<Row> execute() = 0;
+	std::unique_ptr<EnhancedExecutor> enhanced_executor;
+	Operator()
+		: enhanced_executor(std::make_unique<EnhancedExecutor>(DBName, USER_NAME, "")) {
+		enhanced_executor->Initialize();
+	}
+};
+struct IndexedCondition {
+	std::string col;
+	std::string val;
+	std::string op;
+	Condition cond;
 };
 
 class Scan : public Operator {				// 扫描
@@ -489,3 +504,4 @@ public:
 
 	vector<Row> execute() override;
 };
+
