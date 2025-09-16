@@ -102,19 +102,19 @@ void handle_client(SOCKET clientSock, sockaddr_in clientAddr) {
         }
     }
 
-    setDBName("T");
+    setDBName("System_Data");
     initIndexManager(catalog.get());
     StorageConfigInfo info = catalog->GetStorageConfig(DBName);
 
-
+    // 创建 DiskManager
+    DiskManager dm(info.data_file_path);
+    // 创建 BufferPoolManager
+    // 缓冲池大小 10
+    BufferPoolManager bpm(10, &dm);
     // SQL 循环
     while (true) {
 
-        // 创建 DiskManager
-        DiskManager dm(info.data_file_path);
-        // 创建 BufferPoolManager
-        // 缓冲池大小 10
-        BufferPoolManager bpm(10, &dm);
+
         sendWithEnd(clientSock, "请输入 SQL 语句:");
 
         memset(buffer, 0, sizeof(buffer));
